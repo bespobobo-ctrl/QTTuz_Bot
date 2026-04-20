@@ -22,7 +22,8 @@ import {
   AlertTriangle,
   Send,
   Activity,
-  Layers
+  Layers,
+  Edit3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from './firebase';
@@ -95,7 +96,6 @@ export default function App() {
     };
     await addDoc(collection(db, "history"), logData);
 
-    // Update Live Model Tracking
     if (extraData.model) {
       await setDoc(doc(db, "models", extraData.model.toLowerCase()), {
         modelName: extraData.model,
@@ -141,7 +141,7 @@ export default function App() {
       <main style={{ flex: 1, padding: '15px', paddingBottom: '90px', overflowY: 'auto' }}>
         <AnimatePresence mode="wait">
           {user.role === 'admin' && activeTab === 'dashboard' && <AdminDashboard heads={heads} attendance={attendance} today={today} models={models} />}
-          {user.role === 'admin' && activeTab === 'heads' && <ManageHeads heads={heads} attendance={attendance} today={today} />}
+          {user.role === 'admin' && activeTab === 'heads' && <ManageHeads heads={heads} />}
           {user.role === 'admin' && activeTab === 'models' && <ModelTracker models={models} />}
           {user.role === 'admin' && activeTab === 'history' && <HistoryView history={history} />}
           {(user.role === 'dept' || (user.role === 'admin' && activeTab === 'dept_panel')) && (
@@ -201,17 +201,19 @@ function AdminDashboard({ heads, attendance, today, models }) {
         <StatCard icon={AlertTriangle} label="Kelmaganlar" value={Math.max(0, notCameCount)} color="var(--danger)" />
       </div>
 
-      <h3 style={{ marginBottom: '10px', fontSize: '15px' }}>Eng so'nggi harakatlar</h3>
+      <h3 style={{ marginBottom: '10px', fontSize: '15px' }}>So'nggi harakatlar</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {models.slice(0, 5).sort((a, b) => b.updatedAt - a.updatedAt).map(m => (
-          <div key={m.id} className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px' }}>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 'bold' }}>{m.modelName}</div>
-              <div style={{ fontSize: '10px', color: 'var(--success)' }}>{m.currentDept} da</div>
+        {models.length === 0 ? <p style={{ fontSize: '12px', color: 'var(--text-dim)' }}>Modellar yo'q</p> :
+          models.slice(0, 5).sort((a, b) => b.updatedAt - a.updatedAt).map(m => (
+            <div key={m.id} className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px' }}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 'bold' }}>{m.modelName}</div>
+                <div style={{ fontSize: '10px', color: 'var(--success)' }}>{m.currentDept} da</div>
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>{m.lastAction}</div>
             </div>
-            <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>{m.lastAction}</div>
-          </div>
-        ))}
+          ))
+        }
       </div>
     </motion.div>
   );
@@ -250,7 +252,7 @@ function ModelTracker({ models }) {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', height: '30px', alignItems: 'center' }}>
                 <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '2px', background: 'rgba(255,255,255,0.1)', zIndex: 1 }}></div>
-                <div style={{ position: 'absolute', top: '50%', left: 0, width: `${(m.progress / 5) * 100}%`, height: '2px', background: 'var(--success)', zIndex: 2, transition: '0.5s' }}></div>
+                <div style={{ position: 'absolute', top: '50%', left: 0, width: `${(m.progress / 5) * 100}%`, height: '2px', background: 'var(--success)', zIndex: 2 }}></div>
 
                 {steps.map(s => (
                   <div key={s.name} style={{ zIndex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -258,9 +260,6 @@ function ModelTracker({ models }) {
                     <span style={{ fontSize: '7px', marginTop: '4px', color: m.progress >= s.step ? '#fff' : 'var(--text-dim)' }}>{s.name}</span>
                   </div>
                 ))}
-              </div>
-              <div style={{ marginTop: '10px', fontSize: '10px', textAlign: 'center', color: 'var(--text-dim)' }}>
-                Oxirgi amal: <span style={{ color: '#fff' }}>{m.lastAction}</span>
               </div>
             </div>
           ))
@@ -270,62 +269,68 @@ function ModelTracker({ models }) {
   );
 }
 
-function ManageHeads({ heads, attendance, today }) {
+function ManageHeads({ heads }) {
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ name: '', login: '', password: '', deptId: DEPARTMENTS[0].id });
 
-  const addHead = async (e) => {
+  const saveHead = async (e) => {
     e.preventDefault();
-    await addDoc(collection(db, "heads"), formData);
+    if (editingId) {
+      await updateDoc(doc(db, "heads", editingId), formData);
+      setEditingId(null);
+    } else {
+      await addDoc(collection(db, "heads"), formData);
+    }
     setShowAdd(false);
+    setFormData({ name: '', login: '', password: '', deptId: DEPARTMENTS[0].id });
   };
 
-  const markAttendance = async (headId, status) => {
-    await setDoc(doc(db, "attendance", `${today}_${headId}`), { headId, status, date: today, timestamp: serverTimestamp() });
+  const startEdit = (head) => {
+    setFormData({ name: head.name, login: head.login, password: head.password, deptId: head.deptId });
+    setEditingId(head.id);
+    setShowAdd(true);
   };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-        <h3>DavomatXodimlar</h3>
-        <button onClick={() => setShowAdd(!showAdd)} className="btn-primary" style={{ padding: '6px 12px', fontSize: '12px' }}>+ Yangi</button>
+        <h3>Xodimlarni Boshqarish</h3>
+        <button onClick={() => { setShowAdd(!showAdd); setEditingId(null); }} className="btn-primary" style={{ padding: '6px 12px', fontSize: '12px' }}>
+          {showAdd ? 'Yopish' : '+ Yangi'}
+        </button>
       </div>
 
       {showAdd && (
-        <form onSubmit={addHead} className="glass-card" style={{ marginBottom: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <form onSubmit={saveHead} className="glass-card" style={{ marginBottom: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <input type="text" placeholder="Xodim ismi" className="input-field" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
           <div style={{ display: 'flex', gap: '8px' }}>
-            <input type="text" placeholder="Login yarating" className="input-field" required value={formData.login} onChange={e => setFormData({ ...formData, login: e.target.value })} />
-            <input type="text" placeholder="Parol yarating" className="input-field" required value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+            <input type="text" placeholder="Login" className="input-field" required value={formData.login} onChange={e => setFormData({ ...formData, login: e.target.value })} />
+            <input type="text" placeholder="Parol" className="input-field" required value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
           </div>
           <select className="input-field" value={formData.deptId} onChange={e => setFormData({ ...formData, deptId: e.target.value })} style={{ background: '#1a2a3a' }}>
-            <option value="" disabled>Bo'limni tanlang</option>
             {DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
-          <button type="submit" className="btn-primary">Xodimni saqlash</button>
+          <button type="submit" className="btn-primary">{editingId ? 'O\'zgarishni saqlash' : 'Xodimni saqlash'}</button>
         </form>
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {heads.map(head => {
-          const att = attendance.find(a => a.headId === head.id && a.date === today);
-          return (
-            <div key={head.id} className="glass-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div><div style={{ fontSize: '13px', fontWeight: 'bold' }}>{head.name}</div><div style={{ fontSize: '10px', color: 'var(--accent-color)' }}>{DEPARTMENTS.find(d => d.id === head.deptId)?.name}</div></div>
-                <div style={{ display: 'flex', gap: '5px' }}>
-                  {!att ? (
-                    <>
-                      <button onClick={() => markAttendance(head.id, 'Sababli')} style={{ background: '#00bcd4', color: '#000', border: 'none', padding: '4px 8px', borderRadius: '5px', fontSize: '10px' }}>Sababli</button>
-                      <button onClick={() => markAttendance(head.id, 'Keldi')} style={{ background: 'var(--success)', color: '#000', border: 'none', padding: '4px 8px', borderRadius: '5px', fontSize: '10px' }}>Keldi</button>
-                    </>
-                  ) : (<span style={{ fontSize: '11px', color: att.status === 'Keldi' ? 'var(--success)' : '#00bcd4' }}>{att.status}</span>)}
-                  <button onClick={() => deleteDoc(doc(db, "heads", head.id))} style={{ color: 'var(--danger)', background: 'none', border: 'none' }}><Trash2 size={16} /></button>
-                </div>
+        {heads.map(head => (
+          <div key={head.id} className="glass-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{head.name}</div>
+                <div style={{ fontSize: '11px', color: 'var(--accent-color)' }}>{DEPARTMENTS.find(d => d.id === head.deptId)?.name}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '4px' }}>L: {head.login} | P: {head.password}</div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={() => startEdit(head)} style={{ color: 'var(--accent-color)', background: 'none', border: 'none' }}><Edit3 size={18} /></button>
+                <button onClick={() => deleteDoc(doc(db, "heads", head.id))} style={{ color: 'var(--danger)', background: 'none', border: 'none' }}><Trash2 size={18} /></button>
               </div>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </motion.div>
   );
@@ -334,7 +339,7 @@ function ManageHeads({ heads, attendance, today }) {
 function HistoryView({ history }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <h3 style={{ marginBottom: '15px' }}>To'liq Tarix</h3>
+      <h3 style={{ marginBottom: '15px' }}>Batafsil Tarix</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {history.map(item => (
           <div key={item.id} className="glass-card" style={{ fontSize: '11px' }}>
@@ -343,7 +348,7 @@ function HistoryView({ history }) {
               <span style={{ color: 'var(--text-dim)' }}>{item.timestamp}</span>
             </div>
             <div style={{ margin: '4px 0' }}><b>{item.model}</b>: {item.action} - {item.details}</div>
-            <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Mas'ul: {item.user} {item.toWhom ? `| Kimga: ${item.toWhom}` : ''}</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Xodim: {item.user} {item.toWhom ? `| Kimga: ${item.toWhom}` : ''}</div>
           </div>
         ))}
       </div>
@@ -364,7 +369,7 @@ function DeptPanel({ user, addLog, attendance, today }) {
     e.preventDefault();
     addLog(dept.name, formData.action, `${formData.details} ta`, formData);
     setFormData({ ...formData, model: '', details: '', toWhom: '' });
-    alert('Saqlandi!');
+    alert('Ma\'lumot saqlandi!');
   };
 
   const markNow = async () => {
@@ -375,11 +380,11 @@ function DeptPanel({ user, addLog, attendance, today }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-        <h3 style={{ fontSize: '16px' }}>{dept.name}</h3>
+        <h3 style={{ fontSize: '18px' }}>{dept.name}</h3>
         {!att ? (
           <button onClick={markNow} className="btn-primary" style={{ marginTop: '10px', background: 'var(--success)', width: '100%' }}>Ishga keldim (8:30)</button>
         ) : (
-          <div style={{ marginTop: '8px', color: att.status === 'Keldi' ? 'var(--success)' : '#ff9800', fontSize: '12px' }}>
+          <div style={{ marginTop: '8px', color: att.status === 'Keldi' ? 'var(--success)' : '#ff9800', fontSize: '12px', fontWeight: 'bold' }}>
             Holat: {att.status}
           </div>
         )}
@@ -398,7 +403,7 @@ function DeptPanel({ user, addLog, attendance, today }) {
         {dept.id === 'taqsimot' && <input type="text" placeholder="Kimga / Qayerdan" className="input-field" value={formData.toWhom} onChange={e => setFormData({ ...formData, toWhom: e.target.value })} />}
         <input type="number" placeholder="Soni" className="input-field" required value={formData.details} onChange={e => setFormData({ ...formData, details: e.target.value })} />
         <button type="submit" className="btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-          <Send size={18} /> Saqlash
+          <Send size={18} /> Ma'lumotni saqlash
         </button>
       </form>
     </motion.div>
