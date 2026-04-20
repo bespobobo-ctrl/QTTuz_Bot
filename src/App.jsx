@@ -13,7 +13,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "6.2 FORCE UPDATE";
+const APP_VERSION = "6.5 NETO-CALC";
 
 const DEPARTMENTS = [
   { id: 'ombor', name: 'Ombor Bo\'limi', icon: Warehouse, actions: ['Kirim', 'Chiqim'], step: 0.2 },
@@ -59,8 +59,8 @@ export default function App() {
         supabase.from('history').select('*').order('timestamp', { ascending: false }).limit(30),
         supabase.from('attendance').select('*'),
         supabase.from('models').select('*').order('updatedAt', { ascending: false }),
-        supabase.from('warehouse_items').select('*'),
-        supabase.from('warehouse_log').select('*').order('timestamp', { ascending: false }).limit(30),
+        supabase.from('warehouse_items').select('*').order('name'),
+        supabase.from('warehouse_log').select('*').order('timestamp', { ascending: false }).limit(40),
         supabase.from('warehouse_orders').select('*').order('timestamp', { ascending: false })
       ]);
       setData({ heads: h.data || [], history: hi.data || [], attendance: att.data || [], models: md.data || [], whItems: wi.data || [], whLog: wl.data || [], whOrders: wo.data || [] });
@@ -73,14 +73,12 @@ export default function App() {
     return () => sub.unsubscribe();
   }, [load]);
 
-  useEffect(() => { if (user) localStorage.setItem('qu', JSON.stringify(user)); else localStorage.removeItem('qu'); }, [user]);
-
   const handleScan = () => {
     if (window.Telegram?.WebApp) {
-      window.Telegram.WebApp.showScanQrPopup({ text: "QR kodini skanerlang" }, (text) => {
-        const item = data.whItems.find(i => i.id === text);
+      window.Telegram.WebApp.showScanQrPopup({ text: "QR kodni skanerlang" }, (t) => {
+        const item = data.whItems.find(i => i.id === t);
         if (item) { setScannedItem(item); setTab('wh_items'); window.Telegram.WebApp.closeScanQrPopup(); }
-        else showMsg("Topilmadi: " + text, "err");
+        else showMsg("Nomalum QR!", "err");
       });
     } else showMsg("Telegram kamerasi kerak", "err");
   };
@@ -88,17 +86,12 @@ export default function App() {
   if (!user) return (
     <div style={S.root}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={S.loginBox}>
-        <QrCode color="#00e676" size={40} style={{ margin: '0 auto 15px', display: 'block' }} />
+        <Scale color="#00e676" size={40} style={{ margin: '0 auto 15px', display: 'block' }} />
         <h1 style={S.title}>QTTuz</h1>
-        <p style={{ textAlign: 'center', color: '#555', fontSize: 11, marginBottom: 30 }}>V{APP_VERSION}</p>
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          if (auth.login === '0068' && auth.password === '0068') { setUser({ role: 'admin', name: 'Rahbar' }); return; }
-          const h = data.heads.find(x => x.login === auth.login && x.password === auth.password);
-          if (h) { setUser({ role: 'dept', ...h }); setTab('dept'); } else showMsg('Xato', 'err');
-        }} style={S.form}>
-          <input style={S.input} placeholder="Login" required value={auth.login} onChange={e => setAuth({ ...auth, login: e.target.value })} />
-          <input style={S.input} type="password" placeholder="Parol" required value={auth.password} onChange={e => setAuth({ ...auth, password: e.target.value })} />
+        <p style={{ textAlign: 'center', color: '#555', fontSize: 11, marginBottom: 30 }}>V{APP_VERSION} PRO</p>
+        <form onSubmit={(e) => { e.preventDefault(); if (auth.login === '0068' && auth.password === '0068') { setUser({ role: 'admin', name: 'Rahbar' }); return; } const h = data.heads.find(x => x.login === auth.login && x.password === auth.password); if (h) { setUser({ role: 'dept', ...h }); setTab('dept'); } else showMsg('Xato', 'err'); }} style={S.form}>
+          <input style={S.input} placeholder="Login" required onChange={e => setAuth({ ...auth, login: e.target.value })} />
+          <input style={S.input} type="password" placeholder="Parol" required onChange={e => setAuth({ ...auth, password: e.target.value })} />
           <button type="submit" style={S.btnG}>KIRISH</button>
         </form>
       </motion.div>
@@ -121,27 +114,21 @@ export default function App() {
 
       <main style={S.content}>
         {user.role === 'admin' && tab === 'dashboard' && <AdminDashboard data={data} />}
-        {user.role === 'admin' && tab === 'heads' && <Heads heads={data.heads} showMsg={showMsg} load={load} />}
         {isOmbor && tab === 'dept' && <OmborDashboard user={user} data={data} handleScan={handleScan} />}
         {isOmbor && tab === 'wh_items' && <OmborMahsulotlar whItems={data.whItems} user={user} showMsg={showMsg} load={load} scannedItem={scannedItem} setScannedItem={setScannedItem} />}
         {isOmbor && tab === 'wh_orders' && <OmborZakazlar whOrders={data.whOrders} user={user} showMsg={showMsg} load={load} />}
+        {isOmbor && tab === 'wh_log' && <OmborTarix whLog={data.whLog} />}
         {user.role === 'dept' && !isOmbor && <DeptPanel user={user} data={data} showMsg={showMsg} load={load} />}
       </main>
 
       <nav style={S.nav}>
-        {user.role === 'admin' && [
-          { id: 'dashboard', icon: LayoutDashboard, l: 'Xulosa' },
-          { id: 'heads', icon: Users, l: 'Bo\'limlar' },
-          { id: 'history', icon: HistoryIcon, l: 'Arxiv' }
-        ].map(x => (<button key={x.id} onClick={() => setTab(x.id)} style={{ ...S.nb, color: tab === x.id ? '#00e676' : '#555' }}><x.icon size={18} /><span style={{ fontSize: 9 }}>{x.l}</span></button>))}
+        {user.role === 'admin' && [{ id: 'dashboard', icon: LayoutDashboard, l: 'Xulosa' }, { id: 'heads', icon: Users, l: 'Xodimlar' }, { id: 'history', icon: HistoryIcon, l: 'Arxiv' }].map(x => (<button key={x.id} onClick={() => setTab(x.id)} style={{ ...S.nb, color: tab === x.id ? '#00e676' : '#555' }}><x.icon size={18} /><span style={{ fontSize: 9 }}>{x.l}</span></button>))}
         {isOmbor && [
           { id: 'dept', icon: LayoutDashboard, l: 'Asosiy' },
           { id: 'wh_items', icon: Package, l: 'Ombor' },
           { id: 'wh_orders', icon: ShoppingCart, l: 'Zakazlar' },
-          { id: 'scan', icon: Scan, l: 'Skaner' }
-        ].map(x => (
-          <button key={x.id} onClick={x.id === 'scan' ? handleScan : () => setTab(x.id)} style={{ ...S.nb, color: tab === x.id ? '#00e676' : '#555' }}><x.icon size={18} /><span style={{ fontSize: 9 }}>{x.l}</span></button>
-        ))}
+          { id: 'wh_log', icon: HistoryIcon, l: 'Tarix' }
+        ].map(x => (<button key={x.id} onClick={() => setTab(x.id)} style={{ ...S.nb, color: tab === x.id ? '#00e676' : '#555' }}><x.icon size={18} /><span style={{ fontSize: 9 }}>{x.l}</span></button>))}
       </nav>
     </div>
   );
@@ -150,24 +137,7 @@ export default function App() {
 function AdminDashboard({ data }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-      {[
-        { i: Users, l: 'Bo\'limlar', v: data.heads.length, c: '#00e676' },
-        { i: Activity, l: 'Modellar', v: data.models.length, c: '#40c4ff' },
-        { i: Warehouse, l: 'Matolar', v: data.whItems.filter(i => i.is_fabric).length, c: '#ff9800' },
-        { i: Package, l: 'Mahsulotlar', v: data.whItems.filter(i => !i.is_fabric).length, c: '#00e676' }
-      ].map(x => <div key={x.l} style={S.card}><x.i size={18} color={x.c} style={{ margin: '0 auto 5px' }} /><div style={{ fontSize: 22, fontWeight: 'bold' }}>{x.v}</div><div style={{ fontSize: 9, color: '#555' }}>{x.l}</div></div>)}
-    </div>
-  );
-}
-
-function Heads({ heads, showMsg, load }) {
-  const [open, setOpen] = useState(false);
-  const [f, setF] = useState({ name: '', login: '', password: '', deptId: 'ombor' });
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}><h3>Bo'limlar</h3><button onClick={() => setOpen(!open)} style={S.btnG}>{open ? 'Yopish' : '+'}</button></div>
-      {open && <form onSubmit={async (e) => { e.preventDefault(); await supabase.from('heads').insert([f]); setOpen(false); load(); }} style={S.addForm}><input style={S.input} placeholder="Ism" required onChange={e => setF({ ...f, name: e.target.value })} /><div style={{ display: 'flex', gap: 5 }}><input style={S.input} placeholder="L" onChange={e => setF({ ...f, login: e.target.value })} /><input style={S.input} placeholder="P" onChange={e => setF({ ...f, password: e.target.value })} /></div><select style={S.input} onChange={e => setF({ ...f, deptId: e.target.value })}>{DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select><button type="submit" style={S.btnG}>SAQLASH</button></form>}
-      {heads.map(h => <div key={h.id} style={{ ...S.card, display: 'flex', justifyContent: 'space-between', marginBottom: 8, textAlign: 'left' }}><div>{h.name} <span style={{ fontSize: 9, color: '#00e676' }}>{h.deptId}</span></div><button onClick={async () => { if (confirm('?')) { await supabase.from('heads').delete().eq('id', h.id); load(); } }} style={{ ...S.ib, color: '#ff3b30' }}><Trash2 size={16} /></button></div>)}
+      {[{ i: Users, l: 'Xodimlar', v: data.heads.length, c: '#00e676' }, { i: Activity, l: 'Modellar', v: data.models.length, c: '#40c4ff' }, { i: Warehouse, l: 'Matolar', v: data.whItems.filter(i => i.is_fabric).length, c: '#ff9800' }, { i: Package, l: 'Mahsulotlar', v: data.whItems.filter(i => !i.is_fabric).length, c: '#00e676' }].map(x => <div key={x.l} style={S.card}><x.i size={18} color={x.c} style={{ margin: '0 auto 5px' }} /><div style={{ fontSize: 22, fontWeight: 'bold' }}>{x.v}</div><div style={{ fontSize: 9, color: '#555' }}>{x.l}</div></div>)}
     </div>
   );
 }
@@ -187,6 +157,15 @@ function OmborDashboard({ user, data, handleScan }) {
           <div style={{ fontSize: 9, color: '#555' }}>Tugayotgan</div>
         </div>
       </div>
+      <div style={S.card}>
+        <div style={{ fontWeight: 'bold', fontSize: 11, marginBottom: 10, color: '#00e676' }}>OXIRGI KIRIM/CHIQIMLAR</div>
+        {data.whLog.slice(0, 5).map(l => (
+          <div key={l.id} style={{ fontSize: 9, padding: '5px 0', borderBottom: '1px solid #1a1a2e', display: 'flex', justifyContent: 'space-between' }}>
+            <span>{l.item_name} ({l.type})</span>
+            <b style={{ color: l.type === 'Kirim' ? '#00e676' : '#ff9800' }}>{l.bruto ? `B:${l.bruto}|N:${l.quantity}` : `${l.quantity}`}</b>
+          </div>
+        ))}
+      </div>
     </motion.div>
   );
 }
@@ -196,93 +175,71 @@ function OmborMahsulotlar({ whItems, user, showMsg, load, scannedItem, setScanne
   const [showAdd, setShowAdd] = useState(false);
   const [showMove, setShowMove] = useState(null);
   const [qrItem, setQrItem] = useState(null);
-  const [move, setMove] = useState({ qty: '', type: 'Kirim', note: '' });
-  const [f, setF] = useState({ name: '', is_fabric: true, category: 'bichuv', dept: 'bichuv', quantity: '0', min_quantity: '1', unit: 'kg', color: '', gramaj: '', width: '' });
+  const [move, setMove] = useState({ bruto: '', tara: '', qty: '', type: 'Kirim', note: '' });
+  const [f, setF] = useState({ name: '', is_fabric: true, category: 'Mato', dept: 'Mato', quantity: '0', min_quantity: '1', unit: 'kg', color: '', gramaj: '', width: '' });
 
+  useEffect(() => { if (scannedItem) { setShowMove(scannedItem.id); setSubTab(scannedItem.is_fabric ? 'fabric' : 'production'); setScannedItem(null); } }, [scannedItem]);
+
+  // Neto avto-hisoblash
   useEffect(() => {
-    if (scannedItem) { setShowMove(scannedItem.id); setSubTab(scannedItem.is_fabric ? 'fabric' : 'production'); setScannedItem(null); }
-  }, [scannedItem]);
+    if (subTab === 'fabric' && move.type === 'Kirim') {
+      const n = (Number(move.bruto) || 0) - (Number(move.tara) || 0);
+      setMove(prev => ({ ...prev, qty: n > 0 ? n.toString() : '0' }));
+    }
+  }, [move.bruto, move.tara, subTab, move.type]);
 
-  // Bo'limi yo'q mahsulotlar uchun "Boshqa" filtri
-  const filtered = useMemo(() => {
-    if (subTab === 'fabric') return whItems.filter(i => i.is_fabric);
-    return whItems.filter(i => !i.is_fabric);
-  }, [whItems, subTab]);
-
-  const saveItem = async (e) => {
-    e.preventDefault();
-    try {
-      const { data, error } = await supabase.from('warehouse_items').insert([{
-        ...f,
-        is_fabric: subTab === 'fabric',
-        quantity: Number(f.quantity) || 0,
-        min_quantity: Number(f.min_quantity) || 0,
-        dept: subTab === 'fabric' ? 'Mato' : f.dept,
-        category: subTab === 'fabric' ? 'Mato' : f.dept
-      }]);
-      if (error) throw error;
-      showMsg('Qo\'shildi! ✅'); setShowAdd(false); load();
-    } catch (err) { showMsg('Xato: ' + err.message, 'err'); }
-  };
+  const filtered = whItems.filter(i => subTab === 'fabric' ? i.is_fabric : !i.is_fabric);
 
   const updateQty = async (item) => {
-    const q = Number(move.qty); if (q <= 0) return;
+    const q = Number(move.qty); if (q <= 0 && move.type === 'Kirim') { showMsg('Hajmni kiriting!', 'err'); return; }
     const n = move.type === 'Kirim' ? item.quantity + q : item.quantity - q;
     if (n < 0) { showMsg('Yetarli emas!', 'err'); return; }
-    await supabase.from('warehouse_items').update({ quantity: n, updatedAt: new Date().toISOString() }).eq('id', item.id);
-    await supabase.from('warehouse_log').insert([{ item_id: item.id, item_name: item.name, type: move.type, quantity: q, note: move.note, user: user.name }]);
-    showMsg('OK! ✅'); setShowMove(null); setMove({ qty: '', type: 'Kirim', note: '' }); load();
+
+    try {
+      await supabase.from('warehouse_items').update({ quantity: n, updatedAt: new Date().toISOString() }).eq('id', item.id);
+      await supabase.from('warehouse_log').insert([{
+        item_id: item.id, item_name: item.name, type: move.type,
+        quantity: q, bruto: Number(move.bruto) || null, tara: Number(move.tara) || null,
+        note: move.note, user: user.name
+      }]);
+      showMsg('Bajarildi! ✅'); setShowMove(null); setMove({ bruto: '', tara: '', qty: '', type: 'Kirim', note: '' }); load();
+    } catch (e) { showMsg(e.message, 'err'); }
   };
 
   return (
     <div>
       <div style={{ display: 'flex', gap: 5, marginBottom: 15 }}>
-        <button onClick={() => setSubTab('fabric')} style={{ ...S.subTab, background: subTab === 'fabric' ? '#00e676' : '#12121e', color: subTab === 'fabric' ? '#000' : '#555' }}>Matolar</button>
+        <button onClick={() => setSubTab('fabric')} style={{ ...S.subTab, background: subTab === 'fabric' ? '#00e676' : '#12121e', color: subTab === 'fabric' ? '#000' : '#555' }}>Mato Ombori</button>
         <button onClick={() => setSubTab('production')} style={{ ...S.subTab, background: subTab === 'production' ? '#00e676' : '#12121e', color: subTab === 'production' ? '#000' : '#555' }}>I/Ch Ombori</button>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}>
-        <h3 style={{ fontSize: 13 }}>{subTab === 'fabric' ? 'Mato Ombori' : 'I/Ch Mahsulotlari'} ({filtered.length})</h3>
+        <h3 style={{ fontSize: 13 }}>{subTab === 'fabric' ? 'Matolar' : 'Mahsulotlar'} ({filtered.length})</h3>
         <button onClick={() => setShowAdd(!showAdd)} style={{ ...S.btnG, padding: '5px 12px', fontSize: 11 }}>{showAdd ? 'Yopish' : '+ Qo\'shish'}</button>
       </div>
 
       {showAdd && (
-        <form onSubmit={saveItem} style={S.addForm}>
-          <input style={S.input} placeholder="Mahsulot nomi" required value={f.name} onChange={e => setF({ ...f, name: e.target.value })} />
+        <form onSubmit={async (e) => { e.preventDefault(); try { await supabase.from('warehouse_items').insert([{ ...f, is_fabric: subTab === 'fabric', quantity: Number(f.quantity) || 0, min_quantity: Number(f.min_quantity) || 0, dept: subTab === 'fabric' ? 'Mato' : f.dept, category: subTab === 'fabric' ? 'Mato' : f.category }]); setShowAdd(false); load(); showMsg('OK!'); } catch (err) { showMsg(err.message, 'err'); } }} style={S.addForm}>
+          <input style={S.input} placeholder="Nomi" required onChange={e => setF({ ...f, name: e.target.value })} />
           {subTab === 'fabric' ? (
-            <div style={{ display: 'flex', gap: 5 }}>
-              <input style={S.input} placeholder="Rangi" onChange={e => setF({ ...f, color: e.target.value })} />
-              <input style={S.input} placeholder="Gramaj" onChange={e => setF({ ...f, gramaj: e.target.value })} />
-            </div>
+            <div style={{ display: 'flex', gap: 5 }}><input style={S.input} placeholder="Rangi" onChange={e => setF({ ...f, color: e.target.value })} /><input style={S.input} placeholder="Gramaj" onChange={e => setF({ ...f, gramaj: e.target.value })} /></div>
           ) : (
-            <select style={S.input} value={f.dept} onChange={e => setF({ ...f, dept: e.target.value, category: e.target.value })}>
-              {OMBOR_CATEGORIES.map(c => <option key={c.id} value={c.dept}>{c.name}</option>)}
-            </select>
+            <select style={S.input} onChange={e => setF({ ...f, dept: e.target.value, category: e.target.value })}>{OMBOR_CATEGORIES.map(c => <option key={c.id} value={c.dept}>{c.name}</option>)}</select>
           )}
-          <div style={{ display: 'flex', gap: 5 }}>
-            <input style={S.input} type="number" placeholder="Soni" required onChange={e => setF({ ...f, quantity: e.target.value })} />
-            <input style={S.input} placeholder="Birlik (kg, dona)" required onChange={e => setF({ ...f, unit: e.target.value })} />
-          </div>
+          <div style={{ display: 'flex', gap: 5 }}><input style={S.input} placeholder="Soni" type="number" onChange={e => setF({ ...f, quantity: e.target.value })} /><input style={S.input} placeholder="Birlik" required defaultValue="kg" onChange={e => setF({ ...f, unit: e.target.value })} /></div>
           <button type="submit" style={S.btnG}>SAQLASH</button>
         </form>
       )}
 
-      {whItems.length > 0 && filtered.length === 0 && (
-        <div style={{ textAlign: 'center', padding: 50, color: '#555' }}>
-          <Package size={40} style={{ margin: '0 auto 10px' }} />
-          <p>Bu bo'limda mahsulot yo'q</p>
-        </div>
-      )}
-
       {filtered.map(i => (
-        <div key={i.id} style={{ ...S.card, textAlign: 'left', marginBottom: 10, borderLeft: i.quantity <= i.min_quantity ? '4px solid #ff3b30' : 'none' }}>
+        <div key={i.id} style={{ ...S.card, textAlign: 'left', marginBottom: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <div onClick={() => setQrItem(qrItem === i.id ? null : i.id)}>
-              <div style={{ fontWeight: 'bold', fontSize: 13 }}>{i.name} {i.color && <span style={{ color: '#00e676' }}>— {i.color}</span>}</div>
-              <div style={{ fontSize: 9, color: '#555' }}>Bo'lim: {i.dept || 'Mato'} | G: {i.gramaj || '—'}</div>
+              <div style={{ fontWeight: 'bold', fontSize: 13 }}>{i.name} {i.color && <span style={{ color: '#00e676' }}>({i.color})</span>}</div>
+              <div style={{ fontSize: 9, color: '#555' }}>G: {i.gramaj || '—'} | ID: {i.id.slice(0, 5)}</div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 18, fontWeight: 'bold', color: i.quantity <= i.min_quantity ? '#ff3b30' : '#fff' }}>{i.quantity} <span style={{ fontSize: 10 }}>{i.unit}</span></div>
+              <div style={{ fontSize: 18, fontWeight: 'bold', color: i.quantity <= i.min_quantity ? '#ff3b30' : '#fff' }}>{i.quantity.toFixed(2)} <span style={{ fontSize: 10 }}>{i.unit}</span></div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
@@ -290,18 +247,24 @@ function OmborMahsulotlar({ whItems, user, showMsg, load, scannedItem, setScanne
             <button onClick={() => { setShowMove(showMove === i.id ? null : i.id); setMove({ ...move, type: 'Chiqim' }); }} style={{ ...S.smBtn, background: '#ff9800' }}>Chiqim</button>
             <button onClick={() => setQrItem(qrItem === i.id ? null : i.id)} style={{ ...S.smBtn, background: '#1a1a2e', color: '#888', flex: '0 0 35px' }}><QrCode size={14} /></button>
           </div>
-          {qrItem === i.id && (
-            <div style={{ textAlign: 'center', padding: 15, background: '#fff', borderRadius: 12, marginTop: 10 }}>
-              <QRCodeCanvas value={i.id} size={150} />
-              <div style={{ color: '#000', fontSize: 11, fontWeight: 'bold', marginTop: 5 }}>{i.name}</div>
-              <button onClick={() => window.print()} style={{ marginTop: 5, fontSize: 10 }}>Printer</button>
-            </div>
-          )}
+          {qrItem === i.id && (<div style={{ textAlign: 'center', padding: 15, background: '#fff', borderRadius: 12, marginTop: 10 }}> <QRCodeCanvas value={i.id} size={150} /> <div style={{ color: '#000', fontSize: 11, fontWeight: 'bold' }}>{i.name}</div><button onClick={() => window.print()}>Print</button></div>)}
           {showMove === i.id && (
             <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}><b>{move.type}</b> <X size={14} onClick={() => setShowMove(null)} /></div>
-              <input style={S.input} type="number" placeholder="Soni" autoFocus onChange={e => setMove({ ...move, qty: e.target.value })} />
-              <button onClick={() => updateQty(i)} style={S.btnG}>TASDIQLASH</button>
+              {subTab === 'fabric' && move.type === 'Kirim' ? (
+                <>
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    <input style={S.input} type="number" placeholder="Bruto kg" value={move.bruto} onChange={e => setMove({ ...move, bruto: e.target.value })} />
+                    <input style={S.input} type="number" placeholder="Ftulka kg" value={move.tara} onChange={e => setMove({ ...move, tara: e.target.value })} />
+                  </div>
+                  <div style={{ fontSize: 11, background: '#1a1a2e', padding: 10, borderRadius: 8, textAlign: 'center' }}>
+                    <span style={{ color: '#555' }}>Avto Neto: </span><b style={{ color: '#00e676', fontSize: 15 }}>{move.qty} kg</b>
+                  </div>
+                </>
+              ) : (
+                <input style={S.input} type="number" placeholder="Soni/kg" autoFocus value={move.qty} onChange={e => setMove({ ...move, qty: e.target.value })} />
+              )}
+              <input style={S.input} placeholder="Izoh" value={move.note} onChange={e => setMove({ ...move, note: e.target.value })} />
+              <button onClick={() => updateQty(i)} style={S.btnG}>{move.type.toUpperCase()} TASDIQLASH</button>
             </div>
           )}
         </div>
@@ -310,7 +273,28 @@ function OmborMahsulotlar({ whItems, user, showMsg, load, scannedItem, setScanne
   );
 }
 
-function OmborZakazlar({ whOrders, user, showMsg, load }) { return <div style={S.card}>ZAKAZLAR...</div> }
+function OmborTarix({ whLog }) {
+  return (
+    <div>
+      <h3 style={{ fontSize: 14, marginBottom: 15 }}>Ombor Harakatlari</h3>
+      {whLog.map(l => (
+        <div key={l.id} style={{ ...S.card, marginBottom: 8, textAlign: 'left', borderLeft: `3px solid ${l.type === 'Kirim' ? '#00e676' : '#ff9800'}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+            <b style={{ color: l.type === 'Kirim' ? '#00e676' : '#ff9800' }}>{l.type} - {l.item_name}</b>
+            <span style={{ fontSize: 9, color: '#444' }}>{new Date(l.timestamp).toLocaleString()}</span>
+          </div>
+          <div style={{ fontSize: 12, marginTop: 5 }}>
+            {l.bruto ? `Bruto: ${l.bruto}kg - Tara: ${l.tara}kg = ` : ''}
+            <b style={{ color: '#fff' }}>Neto: {l.quantity} kg</b>
+          </div>
+          <div style={{ fontSize: 9, color: '#555' }}>Xodim: {l.user} {l.note && `| Izoh: ${l.note}`}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OmborZakazlar() { return <div style={S.card}>ZAKAZLAR...</div> }
 function DeptPanel({ user, data, showMsg, load }) { return <div style={S.card}>BO'LIM...</div> }
 
 const S = {
@@ -319,15 +303,15 @@ const S = {
   title: { textAlign: 'center', fontSize: 32, fontWeight: 'bold' },
   form: { display: 'flex', flexDirection: 'column', gap: 12 },
   input: { width: '100%', padding: '12px', background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 10, color: '#fff', fontSize: 13, outline: 'none', boxSizing: 'border-box' },
-  btnG: { padding: '12px', background: '#00e676', color: '#000', border: 'none', borderRadius: 10, fontWeight: 'bold', fontSize: 14, cursor: 'pointer' },
+  btnG: { padding: '12px', background: '#00e676', color: '#000', border: 'none', borderRadius: 10, fontWeight: 'bold', fontSize: 13, cursor: 'pointer' },
   header: { display: 'flex', justifyContent: 'space-between', padding: '12px 18px', borderBottom: '1px solid #1a1a2e' },
   content: { flex: 1, padding: 15, paddingBottom: 85, overflowY: 'auto' },
   card: { background: '#12121e', borderRadius: 16, padding: 15, border: '1px solid #1a1a2e', textAlign: 'center' },
   nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '10px 0', background: 'rgba(10,10,20,0.8)', backdropFilter: 'blur(10px)', borderTop: '1px solid #1a1a2e' },
   nb: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, background: 'none', border: 'none', cursor: 'pointer' },
   ib: { background: 'none', border: 'none', color: '#888', cursor: 'pointer' },
-  smBtn: { flex: 1, padding: '8px', border: 'none', borderRadius: 8, fontSize: 10, fontWeight: 'bold', cursor: 'pointer', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  smBtn: { flex: 1, padding: '7px', border: 'none', borderRadius: 8, fontSize: 10, fontWeight: 'bold', cursor: 'pointer', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   subTab: { flex: 1, padding: '9px', borderRadius: 10, border: 'none', fontSize: 11, fontWeight: 'bold', cursor: 'pointer' },
   addForm: { background: '#12121e', padding: 15, borderRadius: 16, border: '1px solid #00e676', marginBottom: 15, display: 'flex', flexDirection: 'column', gap: 10 },
-  toast: { position: 'fixed', top: 10, left: 10, right: 10, padding: 15, borderRadius: 14, zIndex: 10000, textAlign: 'center', fontWeight: 'bold', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }
+  toast: { position: 'fixed', top: 10, left: 10, right: 10, padding: 12, borderRadius: 12, zIndex: 10000, textAlign: 'center', fontWeight: 'bold', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }
 };
