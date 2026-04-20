@@ -45,13 +45,18 @@ export default function App() {
     const unsub = onSnapshot(collection(db, "heads"), (s) => {
       setHeads(s.docs.map(d => ({ id: d.id, ...d.data() })));
       setDbStatus('ready');
-    }, () => setDbStatus('error'));
+    }, (err) => {
+      console.error(err);
+      setDbStatus('ready'); // Xatolik bo'lsa ham block qilmasligi uchun
+    });
 
     onSnapshot(query(collection(db, "history"), orderBy("timestamp", "desc")), s => setHistory(s.docs.map(d => ({ id: d.id, ...d.data(), timestamp: d.data().timestamp?.toDate()?.toLocaleString('uz-UZ') || 'Hozirgina' }))));
     onSnapshot(collection(db, "attendance"), s => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))));
     onSnapshot(collection(db, "models"), s => setModels(s.docs.map(d => ({ id: d.id, ...d.data() }))));
 
-    return () => { unsub(); };
+    // Agar 3 soniyada baza javob bermasa, baribir ready qilish
+    const timer = setTimeout(() => setDbStatus('ready'), 3000);
+    return () => { unsub(); clearTimeout(timer); };
   }, []);
 
   useEffect(() => {
@@ -64,19 +69,24 @@ export default function App() {
     const l = authData.login.trim();
     const p = authData.password.trim();
 
+    // Rahbar testi (Hech qachon alert chiqmaydi)
     if (l === '0068' && p === '0068') {
       setUser({ role: 'admin', name: 'Rahbar' });
       setActiveTab('dashboard');
       return;
     }
 
-    if (dbStatus !== 'ready') return alert('Baza yuklanmoqda...');
-
     const head = heads.find(h => String(h.login).trim() === l && String(h.password).trim() === p);
     if (head) {
       setUser({ role: 'dept', ...head });
       setActiveTab('dept_panel');
-    } else { alert('Xato!'); }
+    } else {
+      if (dbStatus === 'loading') {
+        alert('Ma\'lumotlar yuklanmoqda, bir soniya kuting...');
+      } else {
+        alert('Login yoki parol noto\'g\'ri!');
+      }
+    }
   };
 
   const addLog = async (deptName, action, details, extraData = {}) => {
@@ -97,12 +107,14 @@ export default function App() {
   if (!user) {
     return (
       <div className="app-container" style={{ justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card" style={{ width: '100%', maxWidth: '380px' }}>
-          <h1 style={{ textAlign: 'center', color: 'var(--accent-color)', marginBottom: '30px' }}>QTTuz Production</h1>
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card" style={{ width: '100%', maxWidth: '380px' }}>
+          <h1 style={{ textAlign: 'center', color: 'var(--accent-color)', marginBottom: '30px', fontSize: '24px' }}>QTTuz Production</h1>
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <input type="text" placeholder="Login" className="input-field" required value={authData.login} onChange={e => setAuthData({ ...authData, login: e.target.value })} />
             <input type="password" placeholder="Parol" className="input-field" required value={authData.password} onChange={e => setAuthData({ ...authData, password: e.target.value })} />
-            <button type="submit" className="btn-primary" style={{ height: '50px' }}>Kirish</button>
+            <button type="submit" className="btn-primary" style={{ height: '50px' }}>
+              {dbStatus === 'loading' && authData.login !== '0068' ? 'Bazaga bog\'lanmoqda...' : 'Kirish'}
+            </button>
           </form>
         </motion.div>
       </div>
@@ -169,63 +181,32 @@ function DeptPanel({ user, addLog, attendance, today, history, heads }) {
   const [formData, setFormData] = useState({ model: '', action: '', details: '', toWhom: '' });
   const dept = DEPARTMENTS.find(d => d.id === user.deptId) || DEPARTMENTS[5];
   const att = attendance.find(a => a.headId === user.id && a.date === today);
-
-  // Bo'lim statistikasi
   const deptHeads = heads.filter(h => h.deptId === user.deptId);
   const deptAtt = attendance.filter(a => a.date === today && deptHeads.find(h => h.id === a.headId));
   const present = deptAtt.filter(a => a.status === 'Keldi' || a.status === 'Kechikdi').length;
-
   const deptHistory = history.filter(h => h.dept === dept.name).slice(0, 5);
-
   useEffect(() => { if (dept.actions.length > 0) setFormData(p => ({ ...p, action: dept.actions[0] })); }, [dept]);
-
   const handle = (e) => { e.preventDefault(); addLog(dept.name, formData.action, `${formData.details} ta`, formData); setFormData({ ...formData, model: '', details: '', toWhom: '' }); alert('Saqlandi!'); };
-
   const mark = async () => {
     const s = new Date().getHours() < 8 || (new Date().getHours() === 8 && new Date().getMinutes() <= 30) ? 'Keldi' : 'Kechikdi';
     await setDoc(doc(db, "attendance", `${today}_${user.id}`), { headId: user.id, status: s, date: today, timestamp: serverTimestamp() });
   };
-
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-        <h3 style={{ fontSize: '20px', color: 'var(--accent-color)' }}>{dept.name}</h3>
-        {!att ? <button onClick={mark} className="btn-primary" style={{ marginTop: '10px', background: 'var(--success)' }}>Ishga keldim (8:30)</button> :
-          <div style={{ marginTop: '5px', color: 'var(--success)', fontSize: '12px' }}>🟢 Davomat qayd etilgan ({att.status})</div>}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '15px' }}>
-        <div className="glass-card" style={{ padding: '10px', textAlign: 'center' }}>
-          <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Bo'lim ishchilari</div>
-          <div style={{ fontSize: '16px', fontWeight: 'bold' }}>{deptHeads.length}</div>
-        </div>
-        <div className="glass-card" style={{ padding: '10px', textAlign: 'center' }}>
-          <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Kelganlar</div>
-          <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--success)' }}>{present}</div>
-        </div>
-      </div>
-
+      <div style={{ textAlign: 'center', marginBottom: '15px' }}><h3 style={{ fontSize: '20px', color: 'var(--accent-color)' }}>{dept.name}</h3>{!att ? <button onClick={mark} className="btn-primary" style={{ marginTop: '10px', background: 'var(--success)' }}>Ishga keldim (8:30)</button> : <div style={{ marginTop: '5px', color: 'var(--success)', fontSize: '12px' }}>🟢 Davomat qayd etilgan ({att.status})</div>}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '15px' }}><div className="glass-card" style={{ padding: '10px', textAlign: 'center' }}><div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Ishchilar</div><div style={{ fontSize: '16px', fontWeight: 'bold' }}>{deptHeads.length}</div></div><div className="glass-card" style={{ padding: '10px', textAlign: 'center' }}><div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Kelganlar</div><div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--success)' }}>{present}</div></div></div>
       <form onSubmit={handle} className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}>
         <input type="text" placeholder="Model nomi" className="input-field" required value={formData.model} onChange={e => setFormData({ ...formData, model: e.target.value })} />
-        <div style={{ display: 'flex', gap: '5px' }}>
-          {dept.actions.map(act => (
-            <button key={act} type="button" onClick={() => setFormData({ ...formData, action: act })}
-              style={{ flex: 1, padding: '10px', fontSize: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: formData.action === act ? 'var(--accent-color)' : 'transparent', color: formData.action === act ? '#000' : '#fff' }}>{act}</button>
-          ))}
-        </div>
+        <div style={{ display: 'flex', gap: '5px' }}>{dept.actions.map(act => (
+          <button key={act} type="button" onClick={() => setFormData({ ...formData, action: act })} style={{ flex: 1, padding: '10px', fontSize: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: formData.action === act ? 'var(--accent-color)' : 'transparent', color: formData.action === act ? '#000' : '#fff' }}>{act}</button>
+        ))}</div>
         <input type="number" placeholder="Soni" className="input-field" required value={formData.details} onChange={e => setFormData({ ...formData, details: e.target.value })} />
         <button type="submit" className="btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}><Send size={16} /> Saqlash</button>
       </form>
-
-      <h4 style={{ fontSize: '13px', marginBottom: '8px' }}>Bo'lim Tarixi (Oxirgi 5 ta)</h4>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {deptHistory.map(h => (
-          <div key={h.id} className="glass-card" style={{ fontSize: '11px', padding: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}><b>{h.model}</b> <span>{h.timestamp}</span></div>
-            <div style={{ color: h.action === 'Kirim' ? 'var(--success)' : 'var(--danger)' }}>{h.action}: {h.details}</div>
-          </div>
-        ))}
-      </div>
+      <h4 style={{ fontSize: '13px', marginBottom: '8px' }}>Bo'lim Tarixi</h4>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>{deptHistory.map(h => (
+        <div key={h.id} className="glass-card" style={{ fontSize: '11px', padding: '10px' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><b>{h.model}</b> <span>{h.timestamp}</span></div><div style={{ color: h.action === 'Kirim' ? 'var(--success)' : 'var(--danger)' }}>{h.action}: {h.details}</div></div>
+      ))}</div>
     </motion.div>
   );
 }
@@ -234,12 +215,7 @@ function ManageHeads({ heads }) {
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ name: '', login: '', password: '', deptId: DEPARTMENTS[5].id });
-  const save = async (e) => {
-    e.preventDefault();
-    if (editingId) await updateDoc(doc(db, "heads", editingId), formData);
-    else await addDoc(collection(db, "heads"), formData);
-    setShowAdd(false); setEditingId(null); setFormData({ name: '', login: '', password: '', deptId: DEPARTMENTS[5].id });
-  };
+  const save = async (e) => { e.preventDefault(); if (editingId) await updateDoc(doc(db, "heads", editingId), formData); else await addDoc(collection(db, "heads"), formData); setShowAdd(false); setEditingId(null); setFormData({ name: '', login: '', password: '', deptId: DEPARTMENTS[5].id }); };
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}><h3>Xodimlar</h3><button onClick={() => { setShowAdd(!showAdd); setEditingId(null); }} className="btn-primary" style={{ padding: '6px 12px' }}>{showAdd ? 'Yopish' : '+ Yangi'}</button></div>
@@ -269,7 +245,7 @@ function ModelTracker({ models }) {
   const steps = [{ n: 'Ombor', s: 0.2 }, { n: 'Mato', s: 0.5 }, { n: 'Bichuv', s: 1 }, { n: 'Taqsim', s: 2 }, { n: 'Tikuv', s: 3 }, { n: 'Upak', s: 4 }, { n: 'Tayyor', s: 5 }];
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <h3 style={{ marginBottom: '15px' }}>Modellar Nazorati (Live)</h3>
+      <h3 style={{ marginBottom: '15px' }}>Modellar (Live)</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {models.map(m => (
           <div key={m.id} className="glass-card">
@@ -289,7 +265,7 @@ function ModelTracker({ models }) {
 function HistoryView({ history }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <h3 style={{ marginBottom: '15px' }}>Batafsil Tarix</h3>
+      <h3 style={{ marginBottom: '15px' }}>Tarix</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {history.map(item => (
           <div key={item.id} className="glass-card" style={{ fontSize: '11px' }}>
