@@ -16,7 +16,7 @@ import {
   Warehouse,
   CheckCircle2,
   Home,
-  Tool
+  Wrench
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from './firebase';
@@ -39,7 +39,7 @@ const DEPARTMENTS = [
   { id: 'ombor', name: 'Ombor Bo\'limi', icon: Warehouse },
   { id: 'tayyor', name: 'Tayyor mahsulot', icon: CheckCircle2 },
   { id: 'xo\x27jalik', name: 'Xo\'jalik Bo\'limi', icon: Home },
-  { id: 'ekspremetal', name: 'Ekspremetal Bo\'limi', icon: Tool },
+  { id: 'ekspremetal', name: 'Ekspremetal Bo\'limi', icon: Wrench },
 ];
 
 export default function App() {
