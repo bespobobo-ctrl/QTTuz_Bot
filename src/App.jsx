@@ -159,8 +159,33 @@ export default function App() {
 }
 
 function AdminDashboard({ heads }) {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatDate = (date) => {
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    return date.toLocaleDateString('uz-UZ', options);
+  };
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <div className="glass-card" style={{ marginBottom: '20px', borderLeft: '4px solid var(--accent-color)', padding: '15px' }}>
+        <p style={{ fontSize: '12px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          {formatDate(time)}
+        </p>
+        <h2 style={{ fontSize: '32px', fontWeight: 'bold', color: 'var(--accent-color)', margin: '5px 0' }}>
+          {formatTime(time)}
+        </h2>
+      </div>
+
       <h3 style={{ marginBottom: '20px' }}>Umumiy Holat</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '25px' }}>
         <div className="glass-card" style={{ textAlign: 'center' }}>
