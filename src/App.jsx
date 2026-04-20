@@ -162,7 +162,7 @@ export default function App() {
           </button>
           <button onClick={() => setActiveTab('heads')} className={`nav-item ${activeTab === 'heads' ? 'active' : ''}`} style={{ background: 'none', border: 'none' }}>
             <Users size={20} />
-            <span>Davomat</span>
+            <span>Xodimlar</span>
           </button>
           <button onClick={() => setActiveTab('history')} className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} style={{ background: 'none', border: 'none' }}>
             <History size={20} />
@@ -293,15 +293,16 @@ function ManageHeads({ heads, attendance, today }) {
 
       {showAdd && (
         <form onSubmit={addHead} className="glass-card" style={{ marginBottom: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <input type="text" placeholder="Ism" className="input-field" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+          <input type="text" placeholder="Xodim ismi" className="input-field" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
           <div style={{ display: 'flex', gap: '8px' }}>
-            <input type="text" placeholder="L" className="input-field" required value={formData.login} onChange={e => setFormData({ ...formData, login: e.target.value })} />
-            <input type="text" placeholder="P" className="input-field" required value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+            <input type="text" placeholder="Login yarating" className="input-field" required value={formData.login} onChange={e => setFormData({ ...formData, login: e.target.value })} />
+            <input type="text" placeholder="Parol yarating" className="input-field" required value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
           </div>
-          <select className="input-field" value={formData.deptId} onChange={e => setFormData({ ...formData, deptId: e.target.value })}>
+          <select className="input-field" value={formData.deptId} onChange={e => setFormData({ ...formData, deptId: e.target.value })} style={{ background: '#1a2a3a' }}>
+            <option value="" disabled>Bo'limni tanlang</option>
             {DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
-          <button type="submit" className="btn-primary">Saqlash</button>
+          <button type="submit" className="btn-primary">Xodimni saqlash</button>
         </form>
       )}
 
