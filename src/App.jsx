@@ -13,7 +13,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "6.1 QR FIX";
+const APP_VERSION = "6.2 FORCE UPDATE";
 
 const DEPARTMENTS = [
   { id: 'ombor', name: 'Ombor Bo\'limi', icon: Warehouse, actions: ['Kirim', 'Chiqim'], step: 0.2 },
@@ -59,7 +59,7 @@ export default function App() {
         supabase.from('history').select('*').order('timestamp', { ascending: false }).limit(30),
         supabase.from('attendance').select('*'),
         supabase.from('models').select('*').order('updatedAt', { ascending: false }),
-        supabase.from('warehouse_items').select('*').order('name', { ascending: true }),
+        supabase.from('warehouse_items').select('*'),
         supabase.from('warehouse_log').select('*').order('timestamp', { ascending: false }).limit(30),
         supabase.from('warehouse_orders').select('*').order('timestamp', { ascending: false })
       ]);
@@ -80,7 +80,7 @@ export default function App() {
       window.Telegram.WebApp.showScanQrPopup({ text: "QR kodini skanerlang" }, (text) => {
         const item = data.whItems.find(i => i.id === text);
         if (item) { setScannedItem(item); setTab('wh_items'); window.Telegram.WebApp.closeScanQrPopup(); }
-        else showMsg("Noma'lum QR! ID: " + text, "err");
+        else showMsg("Topilmadi: " + text, "err");
       });
     } else showMsg("Telegram kamerasi kerak", "err");
   };
@@ -90,7 +90,7 @@ export default function App() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={S.loginBox}>
         <QrCode color="#00e676" size={40} style={{ margin: '0 auto 15px', display: 'block' }} />
         <h1 style={S.title}>QTTuz</h1>
-        <p style={{ textAlign: 'center', color: '#555', fontSize: 11, marginBottom: 30 }}>REPAIR V{APP_VERSION}</p>
+        <p style={{ textAlign: 'center', color: '#555', fontSize: 11, marginBottom: 30 }}>V{APP_VERSION}</p>
         <form onSubmit={(e) => {
           e.preventDefault();
           if (auth.login === '0068' && auth.password === '0068') { setUser({ role: 'admin', name: 'Rahbar' }); return; }
@@ -111,7 +111,7 @@ export default function App() {
     <div style={S.root}>
       <AnimatePresence>{msg && (<motion.div initial={{ y: -80 }} animate={{ y: 0 }} exit={{ y: -80 }} style={{ ...S.toast, background: msg.type === 'err' ? '#ff3b30' : '#00e676', color: msg.type === 'err' ? '#fff' : '#000' }}>{msg.t}</motion.div>)}</AnimatePresence>
       <header style={S.header}>
-        <div><div style={{ fontSize: 14, fontWeight: 'bold' }}>{user.name}</div><div style={{ fontSize: 9, color: '#00e676' }}>{APP_VERSION} PRO</div></div>
+        <div><div style={{ fontSize: 14, fontWeight: 'bold' }}>{user.name}</div><div style={{ fontSize: 9, color: '#00e676' }}>{APP_VERSION}</div></div>
         <div style={{ display: 'flex', gap: 10 }}>
           {isOmbor && <button onClick={handleScan} style={{ ...S.ib, color: '#00e676' }}><Scan size={20} /></button>}
           <button onClick={load} style={S.ib}><RefreshCcw size={16} /></button>
@@ -176,8 +176,8 @@ function OmborDashboard({ user, data, handleScan }) {
   const low = data.whItems.filter(i => i.quantity <= i.min_quantity);
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <button onClick={handleScan} style={{ ...S.btnG, width: '100%', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: '#00e676', color: '#000', padding: 20, borderRadius: 20 }}>
-        <Scan size={24} /> <b>QR SKANERLASH</b>
+      <button onClick={handleScan} style={{ ...S.btnG, width: '100%', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: '#00e676', color: '#000', padding: 15, borderRadius: 15 }}>
+        <Scan size={24} /> <b>QR SKANER</b>
       </button>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 15 }}>
         <div style={S.card}><Package size={18} color="#00e676" style={{ margin: '0 auto 5px' }} /><div style={{ fontSize: 20, fontWeight: 'bold' }}>{data.whItems.length}</div><div style={{ fontSize: 9, color: '#555' }}>Mahsulotlar</div></div>
@@ -197,13 +197,17 @@ function OmborMahsulotlar({ whItems, user, showMsg, load, scannedItem, setScanne
   const [showMove, setShowMove] = useState(null);
   const [qrItem, setQrItem] = useState(null);
   const [move, setMove] = useState({ qty: '', type: 'Kirim', note: '' });
-  const [f, setF] = useState({ name: '', is_fabric: true, category: 'bichuv', dept: 'bichuv', quantity: '0', min_quantity: '5', unit: 'kg', color: '', gramaj: '', width: '' });
+  const [f, setF] = useState({ name: '', is_fabric: true, category: 'bichuv', dept: 'bichuv', quantity: '0', min_quantity: '1', unit: 'kg', color: '', gramaj: '', width: '' });
 
   useEffect(() => {
     if (scannedItem) { setShowMove(scannedItem.id); setSubTab(scannedItem.is_fabric ? 'fabric' : 'production'); setScannedItem(null); }
   }, [scannedItem]);
 
-  const filtered = whItems.filter(i => subTab === 'fabric' ? i.is_fabric : !i.is_fabric);
+  // Bo'limi yo'q mahsulotlar uchun "Boshqa" filtri
+  const filtered = useMemo(() => {
+    if (subTab === 'fabric') return whItems.filter(i => i.is_fabric);
+    return whItems.filter(i => !i.is_fabric);
+  }, [whItems, subTab]);
 
   const saveItem = async (e) => {
     e.preventDefault();
@@ -211,8 +215,10 @@ function OmborMahsulotlar({ whItems, user, showMsg, load, scannedItem, setScanne
       const { data, error } = await supabase.from('warehouse_items').insert([{
         ...f,
         is_fabric: subTab === 'fabric',
-        quantity: Number(f.quantity),
-        min_quantity: Number(f.min_quantity)
+        quantity: Number(f.quantity) || 0,
+        min_quantity: Number(f.min_quantity) || 0,
+        dept: subTab === 'fabric' ? 'Mato' : f.dept,
+        category: subTab === 'fabric' ? 'Mato' : f.dept
       }]);
       if (error) throw error;
       showMsg('Qo\'shildi! ✅'); setShowAdd(false); load();
@@ -230,22 +236,23 @@ function OmborMahsulotlar({ whItems, user, showMsg, load, scannedItem, setScanne
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 15 }}>
+      <div style={{ display: 'flex', gap: 5, marginBottom: 15 }}>
         <button onClick={() => setSubTab('fabric')} style={{ ...S.subTab, background: subTab === 'fabric' ? '#00e676' : '#12121e', color: subTab === 'fabric' ? '#000' : '#555' }}>Matolar</button>
         <button onClick={() => setSubTab('production')} style={{ ...S.subTab, background: subTab === 'production' ? '#00e676' : '#12121e', color: subTab === 'production' ? '#000' : '#555' }}>I/Ch Ombori</button>
       </div>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}>
-        <h3 style={{ fontSize: 14 }}>{subTab === 'fabric' ? 'Mato Ombori' : 'I/Ch Mahsulotlari'}</h3>
+        <h3 style={{ fontSize: 13 }}>{subTab === 'fabric' ? 'Mato Ombori' : 'I/Ch Mahsulotlari'} ({filtered.length})</h3>
         <button onClick={() => setShowAdd(!showAdd)} style={{ ...S.btnG, padding: '5px 12px', fontSize: 11 }}>{showAdd ? 'Yopish' : '+ Qo\'shish'}</button>
       </div>
 
       {showAdd && (
         <form onSubmit={saveItem} style={S.addForm}>
-          <input style={S.input} placeholder="Nomi" required value={f.name} onChange={e => setF({ ...f, name: e.target.value })} />
+          <input style={S.input} placeholder="Mahsulot nomi" required value={f.name} onChange={e => setF({ ...f, name: e.target.value })} />
           {subTab === 'fabric' ? (
             <div style={{ display: 'flex', gap: 5 }}>
-              <input style={S.input} placeholder="Rangi" value={f.color} onChange={e => setF({ ...f, color: e.target.value })} />
-              <input style={S.input} placeholder="Gramaj" value={f.gramaj} onChange={e => setF({ ...f, gramaj: e.target.value })} />
+              <input style={S.input} placeholder="Rangi" onChange={e => setF({ ...f, color: e.target.value })} />
+              <input style={S.input} placeholder="Gramaj" onChange={e => setF({ ...f, gramaj: e.target.value })} />
             </div>
           ) : (
             <select style={S.input} value={f.dept} onChange={e => setF({ ...f, dept: e.target.value, category: e.target.value })}>
@@ -253,11 +260,18 @@ function OmborMahsulotlar({ whItems, user, showMsg, load, scannedItem, setScanne
             </select>
           )}
           <div style={{ display: 'flex', gap: 5 }}>
-            <input style={S.input} type="number" placeholder="Soni" required value={f.quantity} onChange={e => setF({ ...f, quantity: e.target.value })} />
-            <input style={S.input} placeholder="Birlik" required value={f.unit} onChange={e => setF({ ...f, unit: e.target.value })} />
+            <input style={S.input} type="number" placeholder="Soni" required onChange={e => setF({ ...f, quantity: e.target.value })} />
+            <input style={S.input} placeholder="Birlik (kg, dona)" required onChange={e => setF({ ...f, unit: e.target.value })} />
           </div>
-          <button type="submit" style={S.btnG}>BAZAGA QO'SHISH</button>
+          <button type="submit" style={S.btnG}>SAQLASH</button>
         </form>
+      )}
+
+      {whItems.length > 0 && filtered.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 50, color: '#555' }}>
+          <Package size={40} style={{ margin: '0 auto 10px' }} />
+          <p>Bu bo'limda mahsulot yo'q</p>
+        </div>
       )}
 
       {filtered.map(i => (
@@ -265,7 +279,7 @@ function OmborMahsulotlar({ whItems, user, showMsg, load, scannedItem, setScanne
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <div onClick={() => setQrItem(qrItem === i.id ? null : i.id)}>
               <div style={{ fontWeight: 'bold', fontSize: 13 }}>{i.name} {i.color && <span style={{ color: '#00e676' }}>— {i.color}</span>}</div>
-              <div style={{ fontSize: 9, color: '#555' }}>ID: {i.id.slice(0, 8)} | B: {i.dept || 'Mato'}</div>
+              <div style={{ fontSize: 9, color: '#555' }}>Bo'lim: {i.dept || 'Mato'} | G: {i.gramaj || '—'}</div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 18, fontWeight: 'bold', color: i.quantity <= i.min_quantity ? '#ff3b30' : '#fff' }}>{i.quantity} <span style={{ fontSize: 10 }}>{i.unit}</span></div>
@@ -274,23 +288,20 @@ function OmborMahsulotlar({ whItems, user, showMsg, load, scannedItem, setScanne
           <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
             <button onClick={() => { setShowMove(showMove === i.id ? null : i.id); setMove({ ...move, type: 'Kirim' }); }} style={{ ...S.smBtn, background: '#00e676' }}>Kirim</button>
             <button onClick={() => { setShowMove(showMove === i.id ? null : i.id); setMove({ ...move, type: 'Chiqim' }); }} style={{ ...S.smBtn, background: '#ff9800' }}>Chiqim</button>
-            <button onClick={() => setQrItem(qrItem === i.id ? null : i.id)} style={{ ...S.smBtn, background: '#1a1a2e', color: '#888' }}><QrCode size={14} /></button>
+            <button onClick={() => setQrItem(qrItem === i.id ? null : i.id)} style={{ ...S.smBtn, background: '#1a1a2e', color: '#888', flex: '0 0 35px' }}><QrCode size={14} /></button>
           </div>
-          <AnimatePresence>
-            {qrItem === i.id && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ textAlign: 'center', padding: 20, background: '#fff', borderRadius: 12, marginTop: 10 }}>
-                <QRCodeCanvas value={i.id} size={150} level="H" />
-                <div style={{ color: '#000', fontSize: 12, fontWeight: 'bold', marginTop: 10 }}>{i.name} {i.color || ''}</div>
-                <button onClick={() => window.print()} style={{ marginTop: 10, background: '#eee', border: 'none', padding: '5px 10px', borderRadius: 5, fontSize: 10 }}><Printer size={12} /> Print</button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {qrItem === i.id && (
+            <div style={{ textAlign: 'center', padding: 15, background: '#fff', borderRadius: 12, marginTop: 10 }}>
+              <QRCodeCanvas value={i.id} size={150} />
+              <div style={{ color: '#000', fontSize: 11, fontWeight: 'bold', marginTop: 5 }}>{i.name}</div>
+              <button onClick={() => window.print()} style={{ marginTop: 5, fontSize: 10 }}>Printer</button>
+            </div>
+          )}
           {showMove === i.id && (
             <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}><b>{move.type}</b> <X size={14} onClick={() => setShowMove(null)} /></div>
-              <input style={S.input} type="number" placeholder="Soni" autoFocus value={move.qty} onChange={e => setMove({ ...move, qty: e.target.value })} />
-              <input style={S.input} placeholder="Izoh" value={move.note} onChange={e => setMove({ ...move, note: e.target.value })} />
-              <button onClick={() => updateQty(i)} style={S.btnG}>{move.type.toUpperCase()}</button>
+              <input style={S.input} type="number" placeholder="Soni" autoFocus onChange={e => setMove({ ...move, qty: e.target.value })} />
+              <button onClick={() => updateQty(i)} style={S.btnG}>TASDIQLASH</button>
             </div>
           )}
         </div>
@@ -315,7 +326,7 @@ const S = {
   nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '10px 0', background: 'rgba(10,10,20,0.8)', backdropFilter: 'blur(10px)', borderTop: '1px solid #1a1a2e' },
   nb: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, background: 'none', border: 'none', cursor: 'pointer' },
   ib: { background: 'none', border: 'none', color: '#888', cursor: 'pointer' },
-  smBtn: { flex: 1, padding: '7px', border: 'none', borderRadius: 8, fontSize: 10, fontWeight: 'bold', cursor: 'pointer', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  smBtn: { flex: 1, padding: '8px', border: 'none', borderRadius: 8, fontSize: 10, fontWeight: 'bold', cursor: 'pointer', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   subTab: { flex: 1, padding: '9px', borderRadius: 10, border: 'none', fontSize: 11, fontWeight: 'bold', cursor: 'pointer' },
   addForm: { background: '#12121e', padding: 15, borderRadius: 16, border: '1px solid #00e676', marginBottom: 15, display: 'flex', flexDirection: 'column', gap: 10 },
   toast: { position: 'fixed', top: 10, left: 10, right: 10, padding: 15, borderRadius: 14, zIndex: 10000, textAlign: 'center', fontWeight: 'bold', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }
