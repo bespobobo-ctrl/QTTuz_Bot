@@ -53,35 +53,60 @@ const DEPARTMENTS = [
 ];
 
 export default function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('qtt_user');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [authData, setAuthData] = useState({ login: '', password: '' });
   const [heads, setHeads] = useState([]);
   const [history, setHistory] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [models, setModels] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
-    onSnapshot(collection(db, "heads"), s => setHeads(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-    onSnapshot(query(collection(db, "history"), orderBy("timestamp", "desc")), s => setHistory(s.docs.map(d => ({ id: d.id, ...d.data(), timestamp: d.data().timestamp?.toDate()?.toLocaleString('uz-UZ') || 'Hozirgina' }))));
-    onSnapshot(collection(db, "attendance"), s => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-    onSnapshot(collection(db, "models"), s => setModels(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubHeads = onSnapshot(collection(db, "heads"), s => {
+      setHeads(s.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    });
+    const unsubHistory = onSnapshot(query(collection(db, "history"), orderBy("timestamp", "desc")), s => setHistory(s.docs.map(d => ({ id: d.id, ...d.data(), timestamp: d.data().timestamp?.toDate()?.toLocaleString('uz-UZ') || 'Hozirgina' }))));
+    const unsubAtt = onSnapshot(collection(db, "attendance"), s => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubModels = onSnapshot(collection(db, "models"), s => setModels(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+
+    return () => { unsubHeads(); unsubHistory(); unsubAtt(); unsubModels(); };
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('qtt_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('qtt_user');
+    }
+  }, [user]);
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (authData.login === '0068' && authData.password === '0068') {
+    if (loading) return alert('Ma\'lumotlar yuklanmoqda, iltimos kuting...');
+
+    const loginTrim = authData.login.trim();
+    const passTrim = authData.password.trim();
+
+    if (loginTrim === '0068' && passTrim === '0068') {
       setUser({ role: 'admin', name: 'Rahbar' });
       setActiveTab('dashboard');
     } else {
-      const head = heads.find(h => h.login === authData.login && h.password === authData.password);
+      const head = heads.find(h =>
+        h.login.toString().trim() === loginTrim &&
+        h.password.toString().trim() === passTrim
+      );
       if (head) {
         setUser({ role: 'dept', ...head });
         setActiveTab('dept_panel');
       } else {
-        alert('Login yoki parol xato!');
+        alert('Login yoki parol xato! Xodim ma\'lumotini tekshirib ko\'ring.');
       }
     }
   };
@@ -117,9 +142,11 @@ export default function App() {
             <p style={{ color: 'var(--text-dim)', fontSize: '12px' }}>Tizimga kirish</p>
           </div>
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <input type="text" placeholder="Login" className="input-field" value={authData.login} onChange={(e) => setAuthData({ ...authData, login: e.target.value })} />
-            <input type="password" placeholder="Parol" className="input-field" value={authData.password} onChange={(e) => setAuthData({ ...authData, password: e.target.value })} />
-            <button type="submit" className="btn-primary">Kirish</button>
+            <input type="text" placeholder="Login" className="input-field" required value={authData.login} onChange={(e) => setAuthData({ ...authData, login: e.target.value })} />
+            <input type="password" placeholder="Parol" className="input-field" required value={authData.password} onChange={(e) => setAuthData({ ...authData, password: e.target.value })} />
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? 'Yuklanmoqda...' : 'Kirish'}
+            </button>
           </form>
         </motion.div>
       </div>
@@ -201,7 +228,7 @@ function AdminDashboard({ heads, attendance, today, models }) {
         <StatCard icon={AlertTriangle} label="Kelmaganlar" value={Math.max(0, notCameCount)} color="var(--danger)" />
       </div>
 
-      <h3 style={{ marginBottom: '10px', fontSize: '15px' }}>So'nggi harakatlar</h3>
+      <h3 style={{ marginBottom: '10px', fontSize: '15px' }}>Eng so'nggi harakatlar</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {models.length === 0 ? <p style={{ fontSize: '12px', color: 'var(--text-dim)' }}>Modellar yo'q</p> :
           models.slice(0, 5).sort((a, b) => b.updatedAt - a.updatedAt).map(m => (
@@ -230,13 +257,7 @@ function StatCard({ icon: Icon, label, value, color }) {
 }
 
 function ModelTracker({ models }) {
-  const steps = [
-    { name: 'Bichuv', step: 1 },
-    { name: 'Taqsimot', step: 2 },
-    { name: 'Tikuv', step: 3 },
-    { name: 'Upakovka', step: 4 },
-    { name: 'Tayyor', step: 5 }
-  ];
+  const steps = [{ name: 'Bichuv', step: 1 }, { name: 'Taqsimot', step: 2 }, { name: 'Tikuv', step: 3 }, { name: 'Upakovka', step: 4 }, { name: 'Tayyor', step: 5 }];
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -249,11 +270,9 @@ function ModelTracker({ models }) {
                 <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'var(--accent-color)' }}>{m.modelName}</span>
                 <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{m.quantity}</span>
               </div>
-
               <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', height: '30px', alignItems: 'center' }}>
                 <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '2px', background: 'rgba(255,255,255,0.1)', zIndex: 1 }}></div>
                 <div style={{ position: 'absolute', top: '50%', left: 0, width: `${(m.progress / 5) * 100}%`, height: '2px', background: 'var(--success)', zIndex: 2 }}></div>
-
                 {steps.map(s => (
                   <div key={s.name} style={{ zIndex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: m.progress >= s.step ? 'var(--success)' : '#333', border: '2px solid var(--primary-bg)' }}></div>
@@ -294,7 +313,7 @@ function ManageHeads({ heads }) {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', alignItems: 'center' }}>
         <h3>Xodimlarni Boshqarish</h3>
         <button onClick={() => { setShowAdd(!showAdd); setEditingId(null); }} className="btn-primary" style={{ padding: '6px 12px', fontSize: '12px' }}>
           {showAdd ? 'Yopish' : '+ Yangi'}
@@ -343,10 +362,7 @@ function HistoryView({ history }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {history.map(item => (
           <div key={item.id} className="glass-card" style={{ fontSize: '11px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--accent-color)', fontWeight: 'bold' }}>{item.dept}</span>
-              <span style={{ color: 'var(--text-dim)' }}>{item.timestamp}</span>
-            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--accent-color)', fontWeight: 'bold' }}>{item.dept}</span><span style={{ color: 'var(--text-dim)' }}>{item.timestamp}</span></div>
             <div style={{ margin: '4px 0' }}><b>{item.model}</b>: {item.action} - {item.details}</div>
             <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Xodim: {item.user} {item.toWhom ? `| Kimga: ${item.toWhom}` : ''}</div>
           </div>
