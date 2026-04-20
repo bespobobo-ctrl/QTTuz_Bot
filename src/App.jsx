@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import {
   Users, History, LayoutDashboard, LogOut, Plus, Trash2, ChevronRight, Package, Scissors,
   Truck, Box, Warehouse, CheckCircle2, Home, Wrench, Clock, UserCheck, UserX, UserMinus,
-  AlertTriangle, Send, Activity, Layers, Edit3, ShoppingBag, ScrollText
+  AlertTriangle, Send, Activity, Layers, Edit3, ShoppingBag, ScrollText, RefreshCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from './firebase';
 import {
   collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, serverTimestamp, setDoc, updateDoc
 } from 'firebase/firestore';
+
+const APP_VERSION = "1.2";
 
 const DEPARTMENTS = [
   { id: 'matolar', name: 'Matolar Bo\'limi', icon: ScrollText, actions: ['Kirim', 'Chiqim'], step: 0.5 },
@@ -27,6 +29,11 @@ export default function App() {
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem('qtt_user');
+      const version = localStorage.getItem('qtt_version');
+      if (version !== APP_VERSION) {
+        localStorage.clear();
+        return null;
+      }
       return saved ? JSON.parse(saved) : null;
     } catch { return null; }
   });
@@ -42,21 +49,24 @@ export default function App() {
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "heads"), (s) => {
+    localStorage.setItem('qtt_version', APP_VERSION);
+
+    const unsubs = [];
+
+    unsubs.push(onSnapshot(collection(db, "heads"), s => {
       setHeads(s.docs.map(d => ({ id: d.id, ...d.data() })));
       setDbStatus('ready');
-    }, (err) => {
-      console.error(err);
-      setDbStatus('ready'); // Xatolik bo'lsa ham block qilmasligi uchun
-    });
+    }));
 
-    onSnapshot(query(collection(db, "history"), orderBy("timestamp", "desc")), s => setHistory(s.docs.map(d => ({ id: d.id, ...d.data(), timestamp: d.data().timestamp?.toDate()?.toLocaleString('uz-UZ') || 'Hozirgina' }))));
-    onSnapshot(collection(db, "attendance"), s => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-    onSnapshot(collection(db, "models"), s => setModels(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    unsubs.push(onSnapshot(query(collection(db, "history"), orderBy("timestamp", "desc")), s => {
+      setHistory(s.docs.map(d => ({ id: d.id, ...d.data(), timestamp: d.data().timestamp?.toDate()?.toLocaleString('uz-UZ') || 'Hozirgina' })));
+    }));
 
-    // Agar 3 soniyada baza javob bermasa, baribir ready qilish
-    const timer = setTimeout(() => setDbStatus('ready'), 3000);
-    return () => { unsub(); clearTimeout(timer); };
+    unsubs.push(onSnapshot(collection(db, "attendance"), s => setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() })))));
+    unsubs.push(onSnapshot(collection(db, "models"), s => setModels(s.docs.map(d => ({ id: d.id, ...d.data() })))));
+
+    const timer = setTimeout(() => setDbStatus('ready'), 5000);
+    return () => { unsubs.forEach(u => u()); clearTimeout(timer); };
   }, []);
 
   useEffect(() => {
@@ -69,7 +79,6 @@ export default function App() {
     const l = authData.login.trim();
     const p = authData.password.trim();
 
-    // Rahbar testi (Hech qachon alert chiqmaydi)
     if (l === '0068' && p === '0068') {
       setUser({ role: 'admin', name: 'Rahbar' });
       setActiveTab('dashboard');
@@ -81,11 +90,7 @@ export default function App() {
       setUser({ role: 'dept', ...head });
       setActiveTab('dept_panel');
     } else {
-      if (dbStatus === 'loading') {
-        alert('Ma\'lumotlar yuklanmoqda, bir soniya kuting...');
-      } else {
-        alert('Login yoki parol noto\'g\'ri!');
-      }
+      alert(dbStatus === 'loading' ? 'Yuklanmoqda, kuting...' : 'Login yoki parol xato!');
     }
   };
 
@@ -112,10 +117,9 @@ export default function App() {
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <input type="text" placeholder="Login" className="input-field" required value={authData.login} onChange={e => setAuthData({ ...authData, login: e.target.value })} />
             <input type="password" placeholder="Parol" className="input-field" required value={authData.password} onChange={e => setAuthData({ ...authData, password: e.target.value })} />
-            <button type="submit" className="btn-primary" style={{ height: '50px' }}>
-              {dbStatus === 'loading' && authData.login !== '0068' ? 'Bazaga bog\'lanmoqda...' : 'Kirish'}
-            </button>
+            <button type="submit" className="btn-primary" style={{ height: '50px' }}>Kirish</button>
           </form>
+          <p style={{ fontSize: '9px', textAlign: 'center', marginTop: '15px', color: 'var(--text-dim)' }}>Versiya: {APP_VERSION}</p>
         </motion.div>
       </div>
     );
@@ -125,7 +129,10 @@ export default function App() {
     <div className="app-container">
       <header className="header">
         <div><h2 style={{ fontSize: '16px' }}>{user.name}</h2><p style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{user.role === 'admin' ? 'Rahbar Panel' : 'Xodim Panel'}</p></div>
-        <button onClick={() => setUser(null)} style={{ background: 'none', border: 'none', color: 'var(--danger)' }}><LogOut size={18} /></button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={() => window.location.reload()} style={{ background: 'none', border: 'none', color: 'var(--text-dim)' }}><RefreshCcw size={16} /></button>
+          <button onClick={() => setUser(null)} style={{ background: 'none', border: 'none', color: 'var(--danger)' }}><LogOut size={18} /></button>
+        </div>
       </header>
 
       <main style={{ flex: 1, padding: '15px', paddingBottom: '90px', overflowY: 'auto' }}>
@@ -154,9 +161,7 @@ function AdminDashboard({ heads, attendance, today, models }) {
   const [time, setTime] = useState(new Date());
   useEffect(() => { const t = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(t); }, []);
   const todayAtt = attendance.filter(a => a.date === today);
-  const onTime = todayAtt.filter(a => a.status === 'Keldi').length;
-  const late = todayAtt.filter(a => a.status === 'Kechikdi').length;
-  const perm = todayAtt.filter(a => a.status === 'Sababli' || a.status === 'Ruhsatli').length;
+  const onTime = todayAtt.filter(a => a.status === 'Keldi' || a.status === 'Kechikdi').length;
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div className="glass-card" style={{ marginBottom: '15px' }}>
@@ -164,10 +169,10 @@ function AdminDashboard({ heads, attendance, today, models }) {
         <h2 style={{ fontSize: '26px', color: 'var(--accent-color)', fontWeight: 'bold' }}>{time.toLocaleTimeString('uz-UZ')}</h2>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-        <StatCard icon={Users} label="Jami ishchi" value={heads.length} color="var(--accent-color)" />
-        <StatCard icon={Activity} label="Ishdagi Modellar" value={models.length} color="var(--success)" />
-        <StatCard icon={Clock} label="Kechikkan" value={late} color="#ff9800" />
-        <StatCard icon={AlertTriangle} label="Kelmagan" value={Math.max(0, heads.length - (onTime + late + perm))} color="var(--danger)" />
+        <StatCard icon={Users} label="Xodimlar" value={heads.length} color="var(--accent-color)" />
+        <StatCard icon={Activity} label="Modellar" value={models.length} color="var(--success)" />
+        <StatCard icon={UserCheck} label="Kelganlar" value={onTime} color="var(--success)" />
+        <StatCard icon={AlertTriangle} label="Yo'qlar" value={Math.max(0, heads.length - todayAtt.length)} color="var(--danger)" />
       </div>
     </motion.div>
   );
@@ -179,11 +184,10 @@ function StatCard({ icon: Icon, label, value, color }) {
 
 function DeptPanel({ user, addLog, attendance, today, history, heads }) {
   const [formData, setFormData] = useState({ model: '', action: '', details: '', toWhom: '' });
-  const dept = DEPARTMENTS.find(d => d.id === user.deptId) || DEPARTMENTS[5];
+  const dept = DEPARTMENTS.find(d => d.id === user.deptId) || { name: 'Noma\'lum', actions: ['Kirim', 'Chiqim'] };
   const att = attendance.find(a => a.headId === user.id && a.date === today);
   const deptHeads = heads.filter(h => h.deptId === user.deptId);
   const deptAtt = attendance.filter(a => a.date === today && deptHeads.find(h => h.id === a.headId));
-  const present = deptAtt.filter(a => a.status === 'Keldi' || a.status === 'Kechikdi').length;
   const deptHistory = history.filter(h => h.dept === dept.name).slice(0, 5);
   useEffect(() => { if (dept.actions.length > 0) setFormData(p => ({ ...p, action: dept.actions[0] })); }, [dept]);
   const handle = (e) => { e.preventDefault(); addLog(dept.name, formData.action, `${formData.details} ta`, formData); setFormData({ ...formData, model: '', details: '', toWhom: '' }); alert('Saqlandi!'); };
@@ -194,18 +198,17 @@ function DeptPanel({ user, addLog, attendance, today, history, heads }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div style={{ textAlign: 'center', marginBottom: '15px' }}><h3 style={{ fontSize: '20px', color: 'var(--accent-color)' }}>{dept.name}</h3>{!att ? <button onClick={mark} className="btn-primary" style={{ marginTop: '10px', background: 'var(--success)' }}>Ishga keldim (8:30)</button> : <div style={{ marginTop: '5px', color: 'var(--success)', fontSize: '12px' }}>🟢 Davomat qayd etilgan ({att.status})</div>}</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '15px' }}><div className="glass-card" style={{ padding: '10px', textAlign: 'center' }}><div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Ishchilar</div><div style={{ fontSize: '16px', fontWeight: 'bold' }}>{deptHeads.length}</div></div><div className="glass-card" style={{ padding: '10px', textAlign: 'center' }}><div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Kelganlar</div><div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--success)' }}>{present}</div></div></div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '15px' }}><div className="glass-card" style={{ padding: '10px', textAlign: 'center' }}><div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Bo'limdagilar</div><div style={{ fontSize: '16px', fontWeight: 'bold' }}>{deptHeads.length}</div></div><div className="glass-card" style={{ padding: '10px', textAlign: 'center' }}><div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Kelganlar</div><div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--success)' }}>{deptAtt.length}</div></div></div>
       <form onSubmit={handle} className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}>
         <input type="text" placeholder="Model nomi" className="input-field" required value={formData.model} onChange={e => setFormData({ ...formData, model: e.target.value })} />
-        <div style={{ display: 'flex', gap: '5px' }}>{dept.actions.map(act => (
-          <button key={act} type="button" onClick={() => setFormData({ ...formData, action: act })} style={{ flex: 1, padding: '10px', fontSize: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: formData.action === act ? 'var(--accent-color)' : 'transparent', color: formData.action === act ? '#000' : '#fff' }}>{act}</button>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>{dept.actions.map(act => (
+          <button key={act} type="button" onClick={() => setFormData({ ...formData, action: act })} style={{ flex: '1 0 45%', padding: '10px', fontSize: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: formData.action === act ? 'var(--accent-color)' : 'transparent', color: formData.action === act ? '#000' : '#fff' }}>{act}</button>
         ))}</div>
         <input type="number" placeholder="Soni" className="input-field" required value={formData.details} onChange={e => setFormData({ ...formData, details: e.target.value })} />
-        <button type="submit" className="btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}><Send size={16} /> Saqlash</button>
+        <button type="submit" className="btn-primary"><Send size={16} /> Saqlash</button>
       </form>
-      <h4 style={{ fontSize: '13px', marginBottom: '8px' }}>Bo'lim Tarixi</h4>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>{deptHistory.map(h => (
-        <div key={h.id} className="glass-card" style={{ fontSize: '11px', padding: '10px' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><b>{h.model}</b> <span>{h.timestamp}</span></div><div style={{ color: h.action === 'Kirim' ? 'var(--success)' : 'var(--danger)' }}>{h.action}: {h.details}</div></div>
+        <div key={h.id} className="glass-card" style={{ fontSize: '11px', padding: '10px' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><b>{h.model}</b> <span>{h.timestamp}</span></div><div>{h.action}: {h.details}</div></div>
       ))}</div>
     </motion.div>
   );
@@ -214,8 +217,8 @@ function DeptPanel({ user, addLog, attendance, today, history, heads }) {
 function ManageHeads({ heads }) {
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', login: '', password: '', deptId: DEPARTMENTS[5].id });
-  const save = async (e) => { e.preventDefault(); if (editingId) await updateDoc(doc(db, "heads", editingId), formData); else await addDoc(collection(db, "heads"), formData); setShowAdd(false); setEditingId(null); setFormData({ name: '', login: '', password: '', deptId: DEPARTMENTS[5].id }); };
+  const [formData, setFormData] = useState({ name: '', login: '', password: '', deptId: DEPARTMENTS[0].id });
+  const save = async (e) => { e.preventDefault(); if (editingId) await updateDoc(doc(db, "heads", editingId), formData); else await addDoc(collection(db, "heads"), formData); setShowAdd(false); setEditingId(null); setFormData({ name: '', login: '', password: '', deptId: DEPARTMENTS[0].id }); };
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}><h3>Xodimlar</h3><button onClick={() => { setShowAdd(!showAdd); setEditingId(null); }} className="btn-primary" style={{ padding: '6px 12px' }}>{showAdd ? 'Yopish' : '+ Yangi'}</button></div>
@@ -225,13 +228,13 @@ function ManageHeads({ heads }) {
           <div style={{ display: 'flex', gap: '8px' }}><input type="text" placeholder="Login" className="input-field" required value={formData.login} onChange={e => setFormData({ ...formData, login: e.target.value })} />
             <input type="text" placeholder="Parol" className="input-field" required value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} /></div>
           <select className="input-field" value={formData.deptId} onChange={e => setFormData({ ...formData, deptId: e.target.value })} style={{ background: '#1a2a3a' }}>{DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select>
-          <button type="submit" className="btn-primary">{editingId ? 'Saqlash' : 'Qo\'shish'}</button>
+          <button type="submit" className="btn-primary">{editingId ? 'O\'zgarishni saqlash' : 'Xodimni saqlash'}</button>
         </form>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {heads.map(h => (
           <div key={h.id} className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px' }}>
-            <div><div style={{ fontSize: '13px', fontWeight: 'bold' }}>{h.name}</div><div style={{ fontSize: '10px', color: 'var(--accent-color)' }}>{DEPARTMENTS.find(d => d.id === h.deptId)?.name}</div></div>
+            <div><div style={{ fontSize: '13px', fontWeight: 'bold' }}>{h.name}</div><div style={{ fontSize: '10px', color: 'var(--accent-color)' }}>{DEPARTMENTS.find(d => d.id === h.deptId)?.name || 'Noma\'lum'}</div></div>
             <div style={{ display: 'flex', gap: '10px' }}><button onClick={() => { setFormData(h); setEditingId(h.id); setShowAdd(true); }} style={{ color: 'var(--accent-color)', background: 'none' }}><Edit3 size={16} /></button>
               <button onClick={() => deleteDoc(doc(db, "heads", h.id))} style={{ color: 'var(--danger)', background: 'none' }}><Trash2 size={16} /></button></div>
           </div>
@@ -245,10 +248,10 @@ function ModelTracker({ models }) {
   const steps = [{ n: 'Ombor', s: 0.2 }, { n: 'Mato', s: 0.5 }, { n: 'Bichuv', s: 1 }, { n: 'Taqsim', s: 2 }, { n: 'Tikuv', s: 3 }, { n: 'Upak', s: 4 }, { n: 'Tayyor', s: 5 }];
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <h3 style={{ marginBottom: '15px' }}>Modellar (Live)</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {models.map(m => (
-          <div key={m.id} className="glass-card">
+      <h3 style={{ marginBottom: '15px' }}>Jarayon Nazorati</h3>
+      {models.length === 0 ? <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '12px' }}>Hozircha modellar yo'q</p> :
+        models.map(m => (
+          <div key={m.id} className="glass-card" style={{ marginBottom: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}><b>{m.modelName}</b> <span>{m.quantity}</span></div>
             <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', height: '24px', alignItems: 'center' }}>
               <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
@@ -257,7 +260,6 @@ function ModelTracker({ models }) {
             </div>
           </div>
         ))}
-      </div>
     </motion.div>
   );
 }
@@ -270,7 +272,7 @@ function HistoryView({ history }) {
         {history.map(item => (
           <div key={item.id} className="glass-card" style={{ fontSize: '11px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--accent-color)', fontWeight: 'bold' }}>{item.dept}</span><span>{item.timestamp}</span></div>
-            <div><b>{item.model}</b>: {item.action} - {item.details}</div>
+            <div>{item.model}: {item.action} - {item.details}</div>
           </div>
         ))}
       </div>
