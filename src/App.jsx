@@ -5,7 +5,7 @@ import {
   AlertTriangle, Activity, Layers, ScrollText, RefreshCcw, Plus, Minus,
   Zap, CheckCircle, Package, ArrowDown, ArrowUp, Bell, ShoppingCart,
   Settings, Palette, Ruler, Scale, QrCode, Scan, X, Printer, Clock, Coffee, Search, Filter as FilterIcon,
-  Download, Upload, ChevronRight, Maximize, RulerIcon, Info, ChevronDown
+  Download, Upload, ChevronRight, Maximize, RulerIcon, Info, ChevronDown, Camera, Image as ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
@@ -864,12 +864,12 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
 
                             {isBrak && (
                               <div style={{ marginTop: 15, borderTop: '1px solid rgba(255,68,68,0.2)', paddingTop: 15 }}>
-                                <div style={{ fontSize: 11, marginBottom: 10, color: '#ff4444' }}><b>MUHIM:</b> Brak bo'lganini tasdiqlash uchun 5 ta gacha rasm yuklang.</div>
-                                <input
-                                  type="file" accept="image/*" multiple
-                                  onChange={async (e) => {
-                                    if (e.target.files.length > 5) return showMsg('Maksimal 5 ta rasm!', 'err');
-                                    let imgs = [];
+                                <div style={{ fontSize: 11, marginBottom: 10, color: '#ff4444' }}><b>MUHIM:</b> Brak bo'lganini tasdiqlash uchun isbot rasm yuklang.</div>
+                                {(() => {
+                                  const handleImgs = async (e) => {
+                                    if (!e.target.files.length) return;
+                                    if ((f.bImgs?.length || 0) + e.target.files.length > 5) return showMsg('Maksimal 5 ta rasm!', 'err');
+                                    let newImgs = [...(f.bImgs || [])];
                                     for (let file of e.target.files) {
                                       const reader = new FileReader();
                                       reader.onload = (ev) => {
@@ -881,16 +881,28 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                                           if (w > 800) { h *= 800 / w; w = 800; }
                                           canvas.width = w; canvas.height = h;
                                           ctx.drawImage(img, 0, 0, w, h);
-                                          imgs.push(canvas.toDataURL('image/jpeg', 0.6));
-                                          if (imgs.length === e.target.files.length) setF({ ...f, bImgs: imgs });
+                                          newImgs.push(canvas.toDataURL('image/jpeg', 0.6));
+                                          if (newImgs.length === (f.bImgs?.length || 0) + e.target.files.length) setF({ ...f, bImgs: newImgs });
                                         };
                                         img.src = ev.target.result;
                                       };
                                       reader.readAsDataURL(file);
                                     }
-                                  }}
-                                  style={{ fontSize: 10, width: '100%' }}
-                                />
+                                  };
+                                  return (
+                                    <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+                                      <label style={{ flex: 1, background: '#ff4444', color: '#fff', padding: '12px 10px', borderRadius: 8, textAlign: 'center', fontSize: 12, fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                                        <Camera size={18} /> KAMERA 📷
+                                        <input type="file" accept="image/*" capture="environment" onChange={handleImgs} style={{ display: 'none' }} />
+                                      </label>
+
+                                      <label style={{ flex: 1, background: '#333', color: '#fff', padding: '12px 10px', borderRadius: 8, textAlign: 'center', fontSize: 12, fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                                        <ImageIcon size={18} /> GALEREYA 🖼️
+                                        <input type="file" accept="image/*" multiple onChange={handleImgs} style={{ display: 'none' }} />
+                                      </label>
+                                    </div>
+                                  );
+                                })()}
                                 {f.bImgs?.length > 0 && (
                                   <div style={{ display: 'flex', gap: 5, marginTop: 10, overflowX: 'auto' }}>
                                     {f.bImgs.map((img, i) => <img key={i} src={img} width={50} height={50} style={{ objectFit: 'cover', borderRadius: 6, border: '1px solid #ff4444' }} />)}
