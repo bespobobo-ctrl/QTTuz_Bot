@@ -4,8 +4,8 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function update() {
-    const { error } = await supabase.from('system_config').update({ value: '11.5 WAREHOUSE-ULTRA' }).eq('key', 'app_version');
+    const { error } = await supabase.from('system_config').update({ value: '11.8 WAREHOUSE-ULTRA PRO' }).eq('key', 'app_version');
     if (error) console.error(error);
-    else console.log('Reverted DB version to 11.5 WAREHOUSE-ULTRA (emergency entry)');
+    else console.log('Updated DB version to 11.8 WAREHOUSE-ULTRA PRO');
 }
 update();
