@@ -152,7 +152,7 @@ function Login({ data, setUser, setTab, showMsg }) {
 
 function OmborUltra({ tab, user, data, showMsg, load, setTab }) {
   const [m, setM] = useState('fabric');
-  const [f, setF] = useState({ bn: '', n: '', c: '', b: '', en: '', gr: '', rS: 1, activeRollId: null, rT: '', rE: '', rG: '', qrRoll: null, eC: '', eW: '' });
+  const [f, setF] = useState({ bn: '', n: '', c: '', b: '', en: '', gr: '', rS: 1, activeRollId: null, rT: '', rE: '', rG: '', qrRoll: null, eC: '', eW: '', sup: '', rCC: '', rComp: '', rD: { s: 0, t: 0, d: 0 } });
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [q, setQ] = useState('');
 
@@ -190,35 +190,42 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab }) {
       <h3 style={{ marginBottom: 20, color: '#00e676', textAlign: 'center' }}>📦 YANGI PARTIYA QABULI</h3>
       <form onSubmit={async (e) => {
         e.preventDefault();
-        if (!f.bn || !f.eC || !f.eW) return showMsg('Barcha ma\'lumotlarni kiriting!', 'err');
+        if (!f.bn || !f.eC || !f.eW || !f.sup) return showMsg('Barcha ma\'lumotlarni kiriting!', 'err');
         try {
           const { data: bData, error: bErr } = await supabase.from('warehouse_batches').insert([{
             batch_number: f.bn,
             user_name: user.name,
+            supplier_name: f.sup,
             expected_count: Number(f.eC),
             expected_weight: Number(f.eW),
             status: 'IN_PROGRESS'
           }]).select().single();
           if (bErr) throw bErr;
-          showMsg('Partiya ochildi. Rulonlarni taroziga qo\'ying!');
+          showMsg('Partiya ochildi. Taminotchi: ' + f.sup);
           setSelectedBatch(bData);
           setTab('ombor');
-          setF({ ...f, bn: '', eC: '', eW: '' });
+          setF({ ...f, bn: '', eC: '', eW: '', sup: '' });
           load(true);
         } catch (err) { showMsg(err.message, 'err'); }
       }} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-        <div>
-          <label style={{ fontSize: 11, color: '#666', display: 'block', marginBottom: 5 }}>PARTIYA RAQAMI (INVOICE #)</label>
-          <input style={S.input} placeholder="Masalan: P-9980" required value={f.bn} onChange={e => setF({ ...f, bn: e.target.value })} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label style={{ fontSize: 11, color: '#666', display: 'block', marginBottom: 5 }}>PARTIYA (INVOICE #)</label>
+            <input style={S.input} placeholder="P-9980" required value={f.bn} onChange={e => setF({ ...f, bn: e.target.value })} />
+          </div>
+          <div>
+            <label style={{ fontSize: 11, color: '#666', display: 'block', marginBottom: 5 }}>TAMINOTCHI (FABRIKA)</label>
+            <input style={S.input} placeholder="Nomi..." required value={f.sup} onChange={e => setF({ ...f, sup: e.target.value })} />
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
-            <label style={{ fontSize: 11, color: '#666', display: 'block', marginBottom: 5 }}>RULON SONI (DONA)</label>
+            <label style={{ fontSize: 11, color: '#666', display: 'block', marginBottom: 5 }}>RULON SONI</label>
             <input style={S.input} type="number" placeholder="0" required value={f.eC} onChange={e => setF({ ...f, eC: e.target.value })} />
           </div>
           <div>
-            <label style={{ fontSize: 11, color: '#666', display: 'block', marginBottom: 5 }}>JAMI VAZN (BRUTO KM)</label>
+            <label style={{ fontSize: 11, color: '#666', display: 'block', marginBottom: 5 }}>JAMI VAZN (KG)</label>
             <input style={S.input} type="number" step="0.01" placeholder="0.00" required value={f.eW} onChange={e => setF({ ...f, eW: e.target.value })} />
           </div>
         </div>
@@ -328,29 +335,66 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab }) {
 
                   {isControlling && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} style={{ marginTop: 15, paddingTop: 15, borderTop: '1px solid #1a1a2e' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 10 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
                         <div>
-                          <label style={{ fontSize: 10, color: '#666', display: 'block', marginBottom: 4 }}>FTULKA (KG)</label>
+                          <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>RANG KODI</label>
+                          <input style={S.input} placeholder="#000" value={f.rCC} onChange={e => setF({ ...f, rCC: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>MATO TARKIBI</label>
+                          <input style={S.input} placeholder="95% Cotton..." value={f.rComp} onChange={e => setF({ ...f, rComp: e.target.value })} />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 15 }}>
+                        <div>
+                          <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>FTULKA (KG)</label>
                           <input style={S.input} type="number" step="0.01" value={f.rT} onChange={e => setF({ ...f, rT: e.target.value })} />
                         </div>
                         <div>
-                          <label style={{ fontSize: 10, color: '#666', display: 'block', marginBottom: 4 }}>ENI (SM)</label>
+                          <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>ENI (SM)</label>
                           <input style={S.input} type="number" value={f.rE} onChange={e => setF({ ...f, rE: e.target.value })} />
                         </div>
                         <div>
-                          <label style={{ fontSize: 10, color: '#666', display: 'block', marginBottom: 4 }}>GRAMAJ</label>
+                          <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>GRAMAJ</label>
                           <input style={S.input} value={f.rG} onChange={e => setF({ ...f, rG: e.target.value })} />
                         </div>
                       </div>
+
+                      {/* DEFECTS SECTION */}
+                      <div style={{ background: 'rgba(255,68,68,0.05)', padding: 12, borderRadius: 12, border: '1px solid rgba(255,68,68,0.2)', marginBottom: 15 }}>
+                        <div style={{ fontSize: 10, fontWeight: 'bold', color: '#ff4444', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 5 }}><AlertTriangle size={14} /> DEFEKTLAR (BRAK)</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <span style={{ fontSize: 11 }}>Dog'lar</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <button onClick={() => setF({ ...f, rD: { ...f.rD, s: Math.max(0, f.rD.s - 1) } })} style={{ ...S.ib, color: '#ff4444' }}><Minus size={16} /></button>
+                            <b>{f.rD.s}</b>
+                            <button onClick={() => setF({ ...f, rD: { ...f.rD, s: f.rD.s + 1 } })} style={{ ...S.ib, color: '#00e676' }}><Plus size={16} /></button>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <span style={{ fontSize: 11 }}>Sirtiq/Teshik</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <button onClick={() => setF({ ...f, rD: { ...f.rD, t: Math.max(0, f.rD.t - 1) } })} style={{ ...S.ib, color: '#ff4444' }}><Minus size={16} /></button>
+                            <b>{f.rD.t}</b>
+                            <button onClick={() => setF({ ...f, rD: { ...f.rD, t: f.rD.t + 1 } })} style={{ ...S.ib, color: '#00e676' }}><Plus size={16} /></button>
+                          </div>
+                        </div>
+                      </div>
+
                       <div style={{ display: 'flex', gap: 8 }}>
                         <button onClick={() => setF({ ...f, activeRollId: null })} style={{ ...S.btnG, background: '#333', color: '#fff', flex: 1 }}>BEKOR</button>
                         <button
                           onClick={async () => {
-                            if (!f.rT || !f.rE || !f.rG) return showMsg('Barcha maydonlarni to\'ldiring!', 'err');
+                            if (!f.rT || !f.rE || !f.rG) return showMsg('Minimal maydonlarni to\'ldiring!', 'err');
                             const n = r.bruto - Number(f.rT);
-                            await supabase.from('warehouse_rolls').update({ tara: Number(f.rT), neto: n, en: Number(f.rE), gramaj: f.rG, status: 'Tayyor' }).eq('id', r.id);
+                            await supabase.from('warehouse_rolls').update({
+                              tara: Number(f.rT), neto: n, en: Number(f.rE), gramaj: f.rG,
+                              color_code: f.rCC, composition: f.rComp, defects: f.rD,
+                              status: 'Tayyor'
+                            }).eq('id', r.id);
                             setF({ ...f, activeRollId: null });
-                            showMsg('Rulon tayyor holatga keltirildi!');
+                            showMsg('Rulon nazoratdan o\'tdi!');
                             load(true);
                           }}
                           style={{ ...S.btnG, flex: 2 }}
@@ -363,10 +407,16 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab }) {
 
                   {r.status === 'Tayyor' && (
                     <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #1a1a2e' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 8 }}>
                         <div><div style={{ fontSize: 9, color: '#666' }}>TARA</div><div style={{ fontSize: 13, fontWeight: 'bold' }}>{r.tara} kg</div></div>
                         <div><div style={{ fontSize: 9, color: '#666' }}>ENI</div><div style={{ fontSize: 13, fontWeight: 'bold' }}>{r.en} sm</div></div>
                         <div><div style={{ fontSize: 9, color: '#666' }}>GR</div><div style={{ fontSize: 13, fontWeight: 'bold' }}>{r.gramaj}</div></div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+                        <div><div style={{ fontSize: 9, color: '#666' }}>KOD / TARKIB</div><div style={{ fontSize: 11 }}>{r.color_code || '-'} / {r.composition || '-'}</div></div>
+                        {r.defects && (r.defects.s > 0 || r.defects.t > 0) && (
+                          <div style={{ textAlign: 'right' }}><div style={{ fontSize: 9, color: '#ff4444' }}>BRAK</div><div style={{ fontSize: 11, color: '#ff4444' }}>{r.defects.s} D | {r.defects.t} S</div></div>
+                        )}
                       </div>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <button
@@ -375,6 +425,20 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab }) {
                         >
                           <QrCode size={16} /> QR YORLIQ
                         </button>
+
+                        {(r.defects?.s > 0 || r.defects?.t > 0) && (
+                          <button
+                            onClick={() => {
+                              const batch = data.whBatches.find(b => b.id === r.batch_id);
+                              const txt = `Hurmatli ${batch?.supplier_name || 'Taminotchi'},\nSiz yuborgan ${r.batch_number} partiyasidagi ${r.fabric_name} (Rang: ${r.color}, Kod: ${r.color_code || '-'}) rulonida kamchilik aniqlandi:\n- Dog'lar: ${r.defects?.s || 0} ta\n- Sirtiq/Teshik: ${r.defects?.t || 0} ta\nIltimos, ushbu rulonni brak sifatida ko'rib chiqing.\nID: ${r.id}`;
+                              window.open(`https://t.me/share/url?url=${encodeURIComponent(txt)}`, '_blank');
+                            }}
+                            style={{ ...S.btnG, background: '#ff4444', color: '#fff', padding: '10px', fontSize: 10, flex: 1 }}
+                          >
+                            BRAK HISOBOTI 📨
+                          </button>
+                        )}
+
                         <button
                           onClick={() => { if (confirm('O\'chirish?')) { supabase.from('warehouse_rolls').delete().eq('id', r.id).then(() => load(true)); } }}
                           style={{ ...S.btnG, background: '#1a1a2e', color: '#ff4444', border: '1px solid #ff4444', padding: '10px', width: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
