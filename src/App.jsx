@@ -656,7 +656,7 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                       {f.selectedBrutoBatch.status === 'ACCEPTED' && (
                         <div style={{ ...S.card, borderColor: '#40c4ff', background: 'rgba(64,196,255,0.05)', marginBottom: 20 }}>
                           <div style={{ fontSize: 13, fontWeight: 'bold', color: '#40c4ff', textAlign: 'center', marginBottom: 15 }}>PARTIYA QABUL QILINGAN ✅</div>
-                          <button onClick={() => window.print()} style={{ ...S.btnG, width: '100%', background: '#40c4ff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                          <button onClick={() => setF({ ...f, showBatchQRs: true })} style={{ ...S.btnG, width: '100%', background: '#40c4ff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
                             <Printer size={18} /> BARCODELARNI CHOP ETISH 🖨️
                           </button>
                         </div>
@@ -674,22 +674,37 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                         ))}
                       </div>
 
-                      {/* YASHIRIN PECHAT (PRINT) MAYDONI */}
-                      <div className="print-area" style={{ display: 'none' }}>
-                        {bRolls.map((r, i) => (
-                          <div key={r.id} className="label page-break" style={{ padding: '40px 20px', textAlign: 'center', border: '2px solid #000', margin: '20px auto', maxWidth: 400, background: '#fff', color: '#000' }}>
-                            <h2 style={{ fontSize: 26, margin: '0 0 5px 0', borderBottom: '2px solid #000', paddingBottom: 10 }}>QTTuz WAREHOUSE</h2>
-                            <p style={{ fontSize: 22, fontWeight: 'bold', margin: '15px 0' }}>{f.selectedBrutoBatch.batch_number}</p>
-                            <p style={{ fontSize: 16, margin: '5px 0' }}>Mato: {f.selectedBrutoBatch.color} | Supplier: {f.selectedBrutoBatch.supplier_name}</p>
-                            <p style={{ fontSize: 18, color: '#444', fontWeight: 'bold', margin: '15px 0' }}>RULON #{bRolls.length - i}</p>
-                            <div style={{ margin: '30px auto', display: 'block' }}>
-                              <QRCodeCanvas value={JSON.stringify({ id: r.id, b: r.batch_number, w: r.bruto })} size={220} />
+                      {/* YAKUNIY BARCODELAR OYNASI */}
+                      <AnimatePresence>
+                        {f.showBatchQRs && (
+                          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, background: '#fff', zIndex: 3000, overflowY: 'auto' }}>
+                            {/* BOSHQA ELEMENTLAR PRINTDA KO'RINMASLIGI UCHUN class qo'shmadim, maxsus print CSS ishlashida butun window qoladi */}
+                            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', padding: '15px 20px', background: '#1a1a2e', color: '#fff', position: 'sticky', top: 0, zIndex: 10 }}>
+                              <b style={{ fontSize: 16 }}>YORLIQLAR (Pechatga tayyor)</b>
+                              <div style={{ display: 'flex', gap: 10 }}>
+                                <button onClick={() => window.print()} style={{ ...S.btnG, padding: '5px 15px', background: '#00e676', border: 'none' }}><Printer size={16} /></button>
+                                <button onClick={() => setF({ ...f, showBatchQRs: false })} style={{ background: '#ff3b30', border: 'none', color: '#fff', padding: '5px 15px', borderRadius: 8 }}>YOPISH <X size={16} /></button>
+                              </div>
                             </div>
-                            <h1 style={{ fontSize: 40, margin: '10px 0', fontWeight: '900' }}>{r.bruto} KG <small style={{ fontSize: 20 }}>BRUTO</small></h1>
-                            <p style={{ fontSize: 12, color: '#666' }}>ID: {r.id}</p>
-                          </div>
-                        ))}
-                      </div>
+
+                            <div className="print-area-active" style={{ padding: 20, color: '#000' }}>
+                              {bRolls.map((r, i) => (
+                                <div key={r.id} className="page-break" style={{ padding: '30px 20px', textAlign: 'center', border: '2px dashed #ccc', margin: '0 auto 40px auto', maxWidth: 400, background: '#fff' }}>
+                                  <h2 style={{ fontSize: 28, margin: '0 0 10px 0', borderBottom: '2px solid #000', paddingBottom: 10 }}>QTTuz WAREHOUSE</h2>
+                                  <p style={{ fontSize: 24, fontWeight: 'bold', margin: '15px 0' }}>{f.selectedBrutoBatch.batch_number}</p>
+                                  <p style={{ fontSize: 18, margin: '5px 0' }}>Mato: {f.selectedBrutoBatch.color} | Supplier: {f.selectedBrutoBatch.supplier_name}</p>
+                                  <div style={{ margin: '30px auto', display: 'flex', justifyContent: 'center' }}>
+                                    <QRCodeCanvas value={JSON.stringify({ id: r.id, b: r.batch_number, w: r.bruto })} size={250} />
+                                  </div>
+                                  <h1 style={{ fontSize: 50, margin: '20px 0', fontWeight: '900' }}>{r.bruto} KG</h1>
+                                  <p style={{ fontSize: 16, color: '#444', fontWeight: 'bold' }}>Bruto Rulon</p>
+                                  <p style={{ fontSize: 12, color: '#666', marginTop: 10 }}>ID: {r.id}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </>
                   );
                 })()}
