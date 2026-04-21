@@ -156,6 +156,12 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab }) {
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [q, setQ] = useState('');
 
+  const isResting = (d) => {
+    if (!d) return false;
+    const diff = (Date.now() - new Date(d).getTime()) / (1000 * 60 * 60);
+    return diff < 48; // 48 soatdan kam bo'lsa "Resting"
+  };
+
   if (tab === 'dashboard') return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -318,8 +324,13 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab }) {
                       <div style={{ fontSize: 18, fontWeight: 'bold', color: r.status === 'Tayyor' ? '#00e676' : '#fff' }}>
                         {r.status === 'Tayyor' ? r.neto.toFixed(2) : r.bruto.toFixed(2)} <small style={{ fontSize: 10 }}>kg</small>
                       </div>
-                      <div style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: r.status === 'Tayyor' ? 'rgba(0,230,118,0.1)' : 'rgba(64,196,255,0.1)', color: r.status === 'Tayyor' ? '#00e676' : '#40c4ff', display: 'inline-block', marginTop: 4 }}>
-                        {r.status.toUpperCase()}
+                      <div style={{
+                        fontSize: 8, padding: '2px 6px', borderRadius: 4,
+                        background: r.status === 'Neto' ? (isResting(r.neto_date) ? 'rgba(255,235,59,0.1)' : 'rgba(0,230,118,0.1)') : r.status === 'Bichuvda' ? 'rgba(156,39,176,0.1)' : 'rgba(64,196,255,0.1)',
+                        color: r.status === 'Neto' ? (isResting(r.neto_date) ? '#fbc02d' : '#00e676') : r.status === 'Bichuvda' ? '#9c27b0' : '#40c4ff',
+                        display: 'inline-block', marginTop: 4
+                      }}>
+                        {r.status === 'Neto' ? (isResting(r.neto_date) ? `⏳ DAM OLMOQDA (${(48 - (Date.now() - new Date(r.neto_date).getTime()) / (1000 * 60 * 60)).toFixed(1)} s)` : 'TAYYOR ✅') : r.status.toUpperCase()}
                       </div>
                     </div>
                   </div>
@@ -388,10 +399,12 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab }) {
                           onClick={async () => {
                             if (!f.rT || !f.rE || !f.rG) return showMsg('Minimal maydonlarni to\'ldiring!', 'err');
                             const n = r.bruto - Number(f.rT);
+                            const now = new Date().toISOString();
                             await supabase.from('warehouse_rolls').update({
                               tara: Number(f.rT), neto: n, en: Number(f.rE), gramaj: f.rG,
                               color_code: f.rCC, composition: f.rComp, defects: f.rD,
-                              status: 'Tayyor'
+                              status: 'Neto',
+                              neto_date: now
                             }).eq('id', r.id);
                             setF({ ...f, activeRollId: null });
                             showMsg('Rulon nazoratdan o\'tdi!');
