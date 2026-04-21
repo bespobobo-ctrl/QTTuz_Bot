@@ -802,16 +802,7 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                 <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: '6px solid #ff9800' }}>
                   {isControlling ? (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} style={{ padding: 5 }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
-                        <div>
-                          <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>RANG KODI</label>
-                          <input style={S.input} placeholder="#000" value={f.rCC} onChange={e => setF({ ...f, rCC: e.target.value })} />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>MATO TARKIBI</label>
-                          <input style={S.input} placeholder="95% Cotton..." value={f.rComp} onChange={e => setF({ ...f, rComp: e.target.value })} />
-                        </div>
-                      </div>
+                      {/* Rang kodi va tarkib olib tashlandi, mato rangi va nomi oldindan ma'lum bo'lgani uchun */}
 
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 15 }}>
                         <div>
@@ -864,48 +855,67 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
 
                             {isBrak && (
                               <div style={{ marginTop: 15, borderTop: '1px solid rgba(255,68,68,0.2)', paddingTop: 15 }}>
-                                <div style={{ fontSize: 11, marginBottom: 10, color: '#ff4444' }}><b>MUHIM:</b> Brak bo'lganini tasdiqlash uchun isbot rasm yuklang.</div>
+                                <div style={{ fontSize: 11, marginBottom: 10, color: '#ff4444' }}><b>MUHIM:</b> Brak bo'lganini tasdiqlash uchun isbot rasm yoki video yuklang.</div>
                                 {(() => {
-                                  const handleImgs = async (e) => {
+                                  const handleMedia = async (e) => {
                                     if (!e.target.files.length) return;
-                                    if ((f.bImgs?.length || 0) + e.target.files.length > 5) return showMsg('Maksimal 5 ta rasm!', 'err');
+                                    if ((f.bImgs?.length || 0) + e.target.files.length > 5) return showMsg('Maksimal 5 ta isbot!', 'err');
                                     let newImgs = [...(f.bImgs || [])];
-                                    for (let file of e.target.files) {
-                                      const reader = new FileReader();
-                                      reader.onload = (ev) => {
-                                        const img = new Image();
-                                        img.onload = () => {
-                                          const canvas = document.createElement('canvas');
-                                          const ctx = canvas.getContext('2d');
-                                          let w = img.width, h = img.height;
-                                          if (w > 800) { h *= 800 / w; w = 800; }
-                                          canvas.width = w; canvas.height = h;
-                                          ctx.drawImage(img, 0, 0, w, h);
-                                          newImgs.push(canvas.toDataURL('image/jpeg', 0.6));
-                                          if (newImgs.length === (f.bImgs?.length || 0) + e.target.files.length) setF({ ...f, bImgs: newImgs });
+                                    let filesArr = Array.from(e.target.files);
+                                    let processedCount = 0;
+
+                                    for (let file of filesArr) {
+                                      if (file.type.startsWith('video/')) {
+                                        if (file.size > 15 * 1024 * 1024) { showMsg('Video hajmi 15MB dan oshmasligi kerak!', 'err'); processedCount++; continue; }
+                                        const vReader = new FileReader();
+                                        vReader.onload = (vEv) => {
+                                          newImgs.push(vEv.target.result);
+                                          processedCount++;
+                                          if (processedCount === filesArr.length) setF({ ...f, bImgs: newImgs });
                                         };
-                                        img.src = ev.target.result;
-                                      };
-                                      reader.readAsDataURL(file);
+                                        vReader.readAsDataURL(file);
+                                      } else {
+                                        const reader = new FileReader();
+                                        reader.onload = (ev) => {
+                                          const img = new Image();
+                                          img.onload = () => {
+                                            const canvas = document.createElement('canvas');
+                                            const ctx = canvas.getContext('2d');
+                                            let w = img.width, h = img.height;
+                                            if (w > 800) { h *= 800 / w; w = 800; }
+                                            canvas.width = w; canvas.height = h;
+                                            ctx.drawImage(img, 0, 0, w, h);
+                                            newImgs.push(canvas.toDataURL('image/jpeg', 0.6));
+                                            processedCount++;
+                                            if (processedCount === filesArr.length) setF({ ...f, bImgs: newImgs });
+                                          };
+                                          img.src = ev.target.result;
+                                        };
+                                        reader.readAsDataURL(file);
+                                      }
                                     }
                                   };
                                   return (
                                     <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
                                       <label style={{ flex: 1, background: '#ff4444', color: '#fff', padding: '12px 10px', borderRadius: 8, textAlign: 'center', fontSize: 12, fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                                        <Camera size={18} /> KAMERA 📷
-                                        <input type="file" accept="image/*" capture="environment" onChange={handleImgs} style={{ display: 'none' }} />
+                                        <Camera size={18} /> KAMERA & VIDEO 📷
+                                        <input type="file" accept="image/*,video/*" capture="environment" onChange={handleMedia} style={{ display: 'none' }} />
                                       </label>
 
                                       <label style={{ flex: 1, background: '#333', color: '#fff', padding: '12px 10px', borderRadius: 8, textAlign: 'center', fontSize: 12, fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                                         <ImageIcon size={18} /> GALEREYA 🖼️
-                                        <input type="file" accept="image/*" multiple onChange={handleImgs} style={{ display: 'none' }} />
+                                        <input type="file" accept="image/*,video/*" multiple onChange={handleMedia} style={{ display: 'none' }} />
                                       </label>
                                     </div>
                                   );
                                 })()}
                                 {f.bImgs?.length > 0 && (
                                   <div style={{ display: 'flex', gap: 5, marginTop: 10, overflowX: 'auto' }}>
-                                    {f.bImgs.map((img, i) => <img key={i} src={img} width={50} height={50} style={{ objectFit: 'cover', borderRadius: 6, border: '1px solid #ff4444' }} />)}
+                                    {f.bImgs.map((media, i) => media.startsWith('data:video') ? (
+                                      <video key={i} src={media} width={50} height={50} style={{ objectFit: 'cover', borderRadius: 6, border: '1px solid #ff4444' }} autoPlay muted loop />
+                                    ) : (
+                                      <img key={i} src={media} width={50} height={50} style={{ objectFit: 'cover', borderRadius: 6, border: '1px solid #ff4444' }} />
+                                    ))}
                                   </div>
                                 )}
                               </div>
@@ -994,16 +1004,26 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                 )}
                 {r.defect_images && r.defect_images.length > 0 && (
                   <div>
-                    <div style={{ fontSize: 10, marginBottom: 5 }}><b>ISBOT RASMLARI ({r.defect_images.length} ta):</b></div>
+                    <div style={{ fontSize: 10, marginBottom: 5 }}><b>ISBOT DALILLAR ({r.defect_images.length} ta):</b></div>
                     <div style={{ display: 'flex', gap: 5, overflowX: 'auto', paddingBottom: 5 }}>
-                      {r.defect_images.map((img, i) => (
-                        <div key={i} onClick={() => {
-                          const w = window.open();
-                          w.document.write(`<img src="${img}" style="width:100%; max-width:500px;" />`);
-                        }} style={{ cursor: 'pointer' }}>
-                          <img src={img} width={60} height={60} style={{ objectFit: 'cover', borderRadius: 8, border: '1px solid #ff4444' }} />
-                        </div>
-                      ))}
+                      {r.defect_images.map((media, i) => {
+                        const isVid = media.startsWith('data:video');
+                        return (
+                          <div key={i} onClick={() => {
+                            const w = window.open();
+                            w.document.write(isVid
+                              ? `<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh;"><video src="${media}" style="width:100%; max-width:500px;" controls autoplay></video></body>`
+                              : `<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh;"><img src="${media}" style="width:100%; max-width:500px; object-fit:contain;" /></body>`
+                            );
+                          }} style={{ cursor: 'pointer', position: 'relative' }}>
+                            {isVid && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}><div style={{ width: 20, height: 20, background: '#fff', clipPath: 'polygon(0 0, 100% 50%, 0 100%)' }} /></div>}
+                            {isVid
+                              ? <video src={media} width={60} height={60} style={{ objectFit: 'cover', borderRadius: 8, border: '1px solid #ff4444' }} autoPlay muted loop playsInline />
+                              : <img src={media} width={60} height={60} style={{ objectFit: 'cover', borderRadius: 8, border: '1px solid #ff4444' }} />
+                            }
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
