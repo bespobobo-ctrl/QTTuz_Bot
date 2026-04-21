@@ -152,7 +152,7 @@ function Login({ data, setUser, setTab, showMsg }) {
 
 function OmborUltra({ tab, user, data, showMsg, load }) {
   const [m, setM] = useState('fabric');
-  const [f, setF] = useState({ bn: '', n: '', c: '', b: '', en: '', gr: '', rS: 1, activeRollId: null, rT: '', rE: '', rG: '', qrRoll: null });
+  const [f, setF] = useState({ bn: '', n: '', c: '', b: '', en: '', gr: '', rS: 1, activeRollId: null, rT: '', rE: '', rG: '', qrRoll: null, eC: '', eW: '' });
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [q, setQ] = useState('');
 
@@ -187,18 +187,43 @@ function OmborUltra({ tab, user, data, showMsg, load }) {
 
   if (tab === 'kirim') return (
     <div style={S.card}>
-      <h3 style={{ marginBottom: 20, color: '#00e676' }}>YANGI PARTIYA QABULI</h3>
+      <h3 style={{ marginBottom: 20, color: '#00e676', textAlign: 'center' }}>📦 YANGI PARTIYA QABULI</h3>
       <form onSubmit={async (e) => {
         e.preventDefault();
+        if (!f.bn || !f.eC || !f.eW) return showMsg('Barcha ma\'lumotlarni kiriting!', 'err');
         try {
-          const { data: bData, error: bErr } = await supabase.from('warehouse_batches').insert([{ batch_number: f.bn, user_name: user.name }]).select().single();
+          const { data: bData, error: bErr } = await supabase.from('warehouse_batches').insert([{
+            batch_number: f.bn,
+            user_name: user.name,
+            expected_count: Number(f.eC),
+            expected_weight: Number(f.eW),
+            status: 'IN_PROGRESS'
+          }]).select().single();
           if (bErr) throw bErr;
-          showMsg('Partiya ochildi. Endi rulonlarni qo\'shing!'); setSelectedBatch(bData); setTab('ombor'); load(true);
+          showMsg('Partiya ochildi. Rulonlarni taroziga qo\'ying!');
+          setSelectedBatch(bData);
+          setTab('ombor');
+          setF({ ...f, bn: '', eC: '', eW: '' });
+          load(true);
         } catch (err) { showMsg(err.message, 'err'); }
-      }} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ textAlign: 'left', fontSize: 11, color: '#555', marginBottom: 2 }}>Partiya raqami (masalan: P-9980):</div>
-        <input style={S.input} placeholder="P-0000" required value={f.bn} onChange={e => setF({ ...f, bn: e.target.value })} />
-        <button type="submit" style={S.btnG}>PARTIYA OCHISH ➕</button>
+      }} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+        <div>
+          <label style={{ fontSize: 11, color: '#666', display: 'block', marginBottom: 5 }}>PARTIYA RAQAMI (INVOICE #)</label>
+          <input style={S.input} placeholder="Masalan: P-9980" required value={f.bn} onChange={e => setF({ ...f, bn: e.target.value })} />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label style={{ fontSize: 11, color: '#666', display: 'block', marginBottom: 5 }}>RULON SONI (DONA)</label>
+            <input style={S.input} type="number" placeholder="0" required value={f.eC} onChange={e => setF({ ...f, eC: e.target.value })} />
+          </div>
+          <div>
+            <label style={{ fontSize: 11, color: '#666', display: 'block', marginBottom: 5 }}>JAMI VAZN (BRUTO KM)</label>
+            <input style={S.input} type="number" step="0.01" placeholder="0.00" required value={f.eW} onChange={e => setF({ ...f, eW: e.target.value })} />
+          </div>
+        </div>
+
+        <button type="submit" style={{ ...S.btnG, marginTop: 10 }}>PARTIYA OCHISH VA QABULNI BOSHLASH 🚀</button>
       </form>
     </div>
   );
@@ -212,20 +237,62 @@ function OmborUltra({ tab, user, data, showMsg, load }) {
             <button onClick={() => setSelectedBatch(null)} style={{ ...S.ib, color: '#00e676', display: 'flex', alignItems: 'center', gap: 4 }}><ArrowDown style={{ transform: 'rotate(90deg)' }} size={18} /> Orqaga</button>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontWeight: 'bold', fontSize: 16 }}>{selectedBatch.batch_number}</div>
-              <div style={{ fontSize: 10, color: '#00e676' }}>{rolls.length} Rulon | {rolls.reduce((sum, r) => sum + (r.neto || 0), 0).toFixed(2)} kg</div>
+              <div style={{ fontSize: 10, color: '#00e676' }}>{rolls.length} Rulon | {rolls.reduce((sum, r) => sum + (r.bruto || 0), 0).toFixed(2)} kg (Bruto)</div>
             </div>
           </div>
 
+          {/* RECEPTION WIZARD SUMMARY */}
+          <div style={{ ...S.card, background: 'rgba(0,145,234,0.05)', borderColor: '#0091ea', marginBottom: 15 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 'bold', color: '#0091ea' }}>QABUL QILISH HOLATI</div>
+              <div style={{ fontSize: 10, background: '#0091ea', color: '#fff', padding: '2px 6px', borderRadius: 4 }}>O'LCHASH JARAYONI</div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, textAlign: 'center' }}>
+              <div><small style={{ color: '#666' }}>Kutilgan</small><div style={{ fontSize: 16, fontWeight: 'bold' }}>{selectedBatch.expected_weight} <small style={{ fontSize: 9 }}>kg</small></div></div>
+              <div><small style={{ color: '#666' }}>O'lchangan</small><div style={{ fontSize: 16, fontWeight: 'bold' }}>{rolls.reduce((s, x) => s + Number(x.bruto), 0).toFixed(2)} <small style={{ fontSize: 9 }}>kg</small></div></div>
+              <div>
+                <small style={{ color: '#666' }}>Farq</small>
+                <div style={{ fontSize: 16, fontWeight: 'bold', color: (rolls.reduce((s, x) => s + Number(x.bruto), 0) - selectedBatch.expected_weight) === 0 ? '#00e676' : '#ff4444' }}>
+                  {(rolls.reduce((s, x) => s + Number(x.bruto), 0) - (selectedBatch.expected_weight || 0)).toFixed(2)} <small style={{ fontSize: 9 }}>kg</small>
+                </div>
+              </div>
+            </div>
+
+            {rolls.length >= (selectedBatch.expected_count || 0) && (
+              <button
+                onClick={async () => {
+                  const actual = rolls.reduce((s, x) => s + Number(x.bruto), 0);
+                  const choice = confirm(`Qabulni yakunlaymizmi?\nKutilgan: ${selectedBatch.expected_weight} kg\nO'lchangan: ${actual.toFixed(2)} kg\n\nOk - O'lchangan vaznni qabul qilish\nCancel - Bekor qilish`);
+                  if (choice) {
+                    await supabase.from('warehouse_batches').update({ status: 'ACCEPTED', actual_weight: actual }).eq('id', selectedBatch.id);
+                    showMsg('Partiya muvaffaqiyatli qabul qilindi!');
+                    setSelectedBatch(null); load(true);
+                  }
+                }}
+                style={{ ...S.btnG, width: '100%', marginTop: 15, background: '#0091ea', color: '#fff' }}
+              >
+                QABULNI YAKUNLASH ✅
+              </button>
+            )}
+          </div>
+
           <div style={{ ...S.card, marginBottom: 15 }}>
-            <div style={{ fontWeight: 'bold', marginBottom: 12, fontSize: 13 }}>Rulon qo'shish (Bruto o'lchov)</div>
+            <div style={{ fontWeight: 'bold', marginBottom: 12, fontSize: 13, borderBottom: '1px solid #1a1a2e', paddingBottom: 8 }}>Tarozi (Bruto o'lchov)</div>
             <form onSubmit={async (e) => {
               e.preventDefault();
-              await supabase.from('warehouse_rolls').insert([{ batch_id: selectedBatch.id, batch_number: selectedBatch.batch_number, fabric_name: f.n, color: f.c, bruto: Number(f.b), user_name: user.name }]);
-              setF({ ...f, b: '' }); load(true); showMsg('Rulon qo\'shildi!');
+              if (rolls.length >= selectedBatch.expected_count) return showMsg('Barcha kutilgan rulonlar o\'lchab bo\'lingan!', 'err');
+              await supabase.from('warehouse_rolls').insert([{ batch_id: selectedBatch.id, batch_number: selectedBatch.batch_number, fabric_name: f.n, color: f.c, bruto: Number(f.b), user_name: user.name, status: 'Kirim' }]);
+              setF({ ...f, b: '' }); load(true); showMsg('Rulon vazni saqlandi!');
             }} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input style={S.input} placeholder="Mato nomi" required value={f.n} onChange={e => setF({ ...f, n: e.target.value })} />
-              <input style={S.input} placeholder="Rangi" required value={f.c} onChange={e => setF({ ...f, c: e.target.value })} />
-              <div style={{ display: 'flex', gap: 5 }}><input style={S.input} type="number" step="0.01" placeholder="Bruto (kg)" required value={f.b} onChange={e => setF({ ...f, b: e.target.value })} /><button style={S.btnG}>+</button></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <input style={S.input} placeholder="Mato" required value={f.n} onChange={e => setF({ ...f, n: e.target.value })} />
+                <input style={S.input} placeholder="Rang" required value={f.c} onChange={e => setF({ ...f, c: e.target.value })} />
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input style={{ ...S.input, fontSize: 20, fontWeight: 'bold' }} type="number" step="0.01" placeholder="0.00 kg" required value={f.b} onChange={e => setF({ ...f, b: e.target.value })} />
+                <button style={{ ...S.btnG, width: 60 }}><Plus /></button>
+              </div>
             </form>
           </div>
 
