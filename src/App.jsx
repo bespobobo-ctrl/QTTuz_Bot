@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "10.7 WAREHOUSE-ULTRA";
+const APP_VERSION = "10.8 WAREHOUSE-ULTRA";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -28,6 +28,7 @@ export default function App() {
   const [msg, setMsg] = useState(null);
   const [loading, setLoading] = useState(false);
   const [needsUpdate, setNeedsUpdate] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState(null);
 
   const showMsg = useCallback((t, type = 'ok') => { setMsg({ t, type }); setTimeout(() => setMsg(null), 3000); }, []);
 
@@ -101,7 +102,7 @@ export default function App() {
       <main style={S.content}>
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            {isOmbor ? <OmborUltra tab={tab} user={user} data={data} showMsg={showMsg} load={load} setTab={setTab} /> : <div style={S.card}>Admin bo'limi...</div>}
+            {isOmbor ? <OmborUltra tab={tab} user={user} data={data} showMsg={showMsg} load={load} setTab={setTab} selectedBatch={selectedBatch} setSelectedBatch={setSelectedBatch} /> : <div style={S.card}>Admin bo'limi...</div>}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -172,10 +173,9 @@ function Login({ data, setUser, setTab, showMsg }) {
   );
 }
 
-function OmborUltra({ tab, user, data, showMsg, load, setTab }) {
+function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, setSelectedBatch }) {
   const [m, setM] = useState('fabric');
   const [f, setF] = useState({ bn: '', n: '', c: '', b: '', en: '', gr: '', rS: 1, activeRollId: null, rT: '', rE: '', rG: '', qrRoll: null, eC: '', eW: '', sup: '', rCC: '', rComp: '', rD: { s: 0, t: 0, d: 0 } });
-  const [selectedBatch, setSelectedBatch] = useState(null);
   const [q, setQ] = useState('');
 
   const isResting = (d) => {
