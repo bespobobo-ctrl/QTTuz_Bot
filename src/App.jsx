@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "11.1 WAREHOUSE-ULTRA";
+const APP_VERSION = "11.2 WAREHOUSE-ULTRA";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -569,17 +569,21 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
         {m === 'bruto' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {!f.selectedBrutoBatch ? (
-              data.whBatches.filter(b => b.status === 'ACCEPTED').filter(b => b.batch_number.toLowerCase().includes(q.toLowerCase())).map(b => {
+              // BATCH LIST (Accepted + In Progress)
+              data.whBatches.filter(b => b.status === 'ACCEPTED' || b.status === 'IN_PROGRESS').filter(b => b.batch_number.toLowerCase().includes(q.toLowerCase())).map(b => {
                 const bRolls = data.whRolls.filter(r => r.batch_id === b.id && (r.status === 'BRUTO' || r.status === 'Kirim'));
-                if (bRolls.length === 0) return null;
+                const isInProgress = b.status === 'IN_PROGRESS';
+
                 return (
-                  <div key={b.id} onClick={() => setF({ ...f, selectedBrutoBatch: b })} style={{ ...S.card, textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '6px solid #40c4ff' }}>
+                  <div key={b.id} onClick={() => setSelectedBatch(b)} style={{ ...S.card, textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: `6px solid ${isInProgress ? '#ff9800' : '#40c4ff'}`, background: isInProgress ? 'rgba(255,152,0,0.05)' : '#12121e' }}>
                     <div>
-                      <div style={{ fontWeight: 'bold', fontSize: 16 }}>{b.batch_number}</div>
-                      <div style={{ fontSize: 10, color: '#666' }}>{b.supplier_name} | {b.color}</div>
+                      <div style={{ fontWeight: 'bold', fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {b.batch_number} {isInProgress && <span style={{ fontSize: 8, background: '#ff9800', color: '#000', padding: '2px 6px', borderRadius: 4 }}>JARAYONDA ⏳</span>}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#666' }}>{b.supplier_name || 'Taminotchi'} | {b.color || 'Rangsiz'}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 16, color: '#40c4ff' }}>{bRolls.length} rulon</div>
+                      <div style={{ fontSize: 16, color: isInProgress ? '#ff9800' : '#40c4ff' }}>{bRolls.length} rulon</div>
                       <div style={{ fontSize: 10, color: '#00e676' }}>{bRolls.reduce((s, r) => s + r.bruto, 0).toFixed(2)} kg</div>
                     </div>
                   </div>
