@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "11.8 WAREHOUSE-ULTRA PRO";
+const APP_VERSION = "11.9 WAREHOUSE-RADAR";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -599,8 +599,19 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                   <div style={{ textAlign: 'left', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, fontSize: 13 }}>
                     <div><small style={{ color: '#888' }}>MATO:</small><div><b>{f.qrRoll.fabric_name}</b></div></div>
                     <div><small style={{ color: '#888' }}>RANGI:</small><div><b>{f.qrRoll.color}</b></div></div>
-                    <div><small style={{ color: '#888' }}>SOFT (NETO):</small><div style={{ fontSize: 18, color: '#00c853' }}><b>{f.qrRoll.neto.toFixed(2)} KG</b></div></div>
-                    <div><small style={{ color: '#888' }}>EN/GR:</small><div><b>{f.qrRoll.en}sm / {f.qrRoll.gramaj}</b></div></div>
+                    <div style={{ gridColumn: '1 / 3' }}><small style={{ color: '#888' }}>SOFT (NETO):</small><div style={{ fontSize: 18, color: f.qrRoll.neto ? '#00c853' : '#ff9800' }}><b>{f.qrRoll.neto ? `${f.qrRoll.neto.toFixed(2)} KG` : 'TAROZI KUTILMOQDA...'}</b></div></div>
+
+                    <div style={{ padding: '8px', background: '#f5f5f5', borderRadius: 8 }}>
+                      <small style={{ color: '#888' }}>EN / GRAMAJ:</small>
+                      <div><b>{f.qrRoll.en}sm / {f.qrRoll.gramaj}</b></div>
+                    </div>
+
+                    <div style={{ padding: '8px', background: '#f5f5f5', borderRadius: 8 }}>
+                      <small style={{ color: '#888' }}>TOPILGAN NUQSONLAR:</small>
+                      <div style={{ fontSize: 11, color: '#d32f2f', fontWeight: 'bold' }}>
+                        {f.qrRoll.defects ? Object.keys(f.qrRoll.defects).filter(k => f.qrRoll.defects[k] > 0).map(k => `${k.toUpperCase()}: ${f.qrRoll.defects[k]}`).join(', ') || 'TOPILMADI' : 'TOPILMADI'}
+                      </div>
+                    </div>
                   </div>
 
                   <button onClick={() => window.print()} style={{ ...S.btnG, width: '100%', marginTop: 25, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
@@ -804,11 +815,7 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} style={{ padding: 5 }}>
                       {/* Rang kodi va tarkib olib tashlandi, mato rangi va nomi oldindan ma'lum bo'lgani uchun */}
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 15 }}>
-                        <div>
-                          <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>FTULKA (KG)</label>
-                          <input style={S.input} type="number" step="0.01" value={f.rT} onChange={e => setF({ ...f, rT: e.target.value })} />
-                        </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 15 }}>
                         <div>
                           <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>ENI (SM)</label>
                           <input style={S.input} type="number" value={f.rE} onChange={e => setF({ ...f, rE: e.target.value })} />
@@ -928,28 +935,32 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                         <button onClick={() => setF({ ...f, activeRollId: null, bImgs: [] })} style={{ ...S.btnG, background: '#333', color: '#fff', flex: 1 }}>BEKOR</button>
                         <button
                           onClick={async () => {
-                            if (!f.rT || !f.rE || !f.rG) return showMsg('Minimal maydonlarni to\'ldiring!', 'err');
+                            if (!f.rE || !f.rG) return showMsg('Minimal maydonlarni to\'ldiring!', 'err');
 
                             const defs = [{ id: 'teshik' }, { id: 'sirtiq' }, { id: 'poliester' }, { id: 'chiziq' }, { id: 'uloq' }];
                             const totalDefects = defs.reduce((sum, d) => sum + (f.rD[d.id] || 0), 0);
-                            const finalStatus = totalDefects > 15 ? 'BRAK' : 'Neto';
+                            const finalStatus = totalDefects > 15 ? 'BRAK' : 'KONTROLDAN_OTDI';
 
                             if (finalStatus === 'BRAK' && (!f.bImgs || f.bImgs.length === 0)) {
                               return showMsg('Brakni isbotlash uchun rasmlarni yuklang!', 'err');
                             }
 
-                            const n = r.bruto - Number(f.rT);
                             const now = new Date().toISOString();
                             await supabase.from('warehouse_rolls').update({
-                              tara: Number(f.rT), neto: n, en: Number(f.rE), gramaj: f.rG,
-                              color_code: f.rCC, composition: f.rComp, defects: f.rD,
+                              en: Number(f.rE), gramaj: f.rG,
+                              defects: f.rD,
                               defect_images: finalStatus === 'BRAK' ? f.bImgs : null,
                               status: finalStatus,
-                              neto_date: now
+                              kontrol_date: now
                             }).eq('id', r.id);
 
-                            setF({ ...f, activeRollId: null, bImgs: [] });
-                            showMsg(`Rulon nazoratdan o'tdi! Holati: ${finalStatus}`);
+                            if (finalStatus !== 'BRAK') {
+                              setF({ ...f, activeRollId: null, bImgs: [], qrRoll: { ...r, status: finalStatus, en: Number(f.rE), gramaj: f.rG, defects: f.rD } });
+                              showMsg(`Nazoratdan o'tdi! Pasport chop eting.`);
+                            } else {
+                              setF({ ...f, activeRollId: null, bImgs: [] });
+                              showMsg(`Rulon BRAK deb topildi.`);
+                            }
                             load(true);
                           }}
                           style={{ ...S.btnG, flex: 2 }}
@@ -960,8 +971,12 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                     </motion.div>
                   ) : (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div><b>{r.batch_number}</b><br /><small>{r.bruto} kg</small></div>
-                      <button onClick={() => setF({ ...f, activeRollId: r.id })} style={{ ...S.btnG, padding: '10px', fontSize: 11 }}>O'LCHASH 📏</button>
+                      <div><b>{r.batch_number}</b><br /><small>{r.bruto} kg | Hozirgi: {r.status}</small></div>
+                      {r.status === 'KO\'RIKDA' ? (
+                        <button onClick={() => setF({ ...f, activeRollId: r.id })} style={{ ...S.btnG, padding: '10px', fontSize: 11 }}>O'LCHASH 📏</button>
+                      ) : (
+                        <button onClick={() => setF({ ...f, qrRoll: r })} style={{ ...S.btnG, background: '#1a1a2e', color: '#00e676', border: '1px solid #00e676', padding: '10px', fontSize: 11 }}>PASPORT NUXSASI 🖨️</button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -972,6 +987,56 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
 
         {m === 'neto' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+            <button
+              onClick={() => {
+                const processScan = async (rollId) => {
+                  const roll = data.whRolls.find(r => r.id === rollId);
+                  if (!roll) return showMsg("Bunday o'lchamli Muloqot topilmadi!", "err");
+                  if (roll.status !== 'KONTROLDAN_OTDI') return showMsg("Bu rulon hali Kontroldan o'tmagan yoki allaqachon Neto bo'lgan!", "err");
+
+                  const val = prompt(`${roll.batch_number} ruloni aniqlandi!\n\nTarozida ko'rinib turgan NETO (tayyor) vaznni kiriting (kg):`);
+                  if (val && !isNaN(val)) {
+                    const numNeto = Number(val.replace(',', '.'));
+                    const taraAmount = roll.bruto - numNeto;
+                    const now = new Date().toISOString();
+
+                    try {
+                      await supabase.from('warehouse_rolls').update({
+                        neto: numNeto,
+                        tara: taraAmount,
+                        status: 'Neto',
+                        neto_date: now
+                      }).eq('id', roll.id);
+                      showMsg(`${roll.batch_number} uchun Neto saqlandi!`);
+                      load(true);
+                    } catch (e) {
+                      showMsg(e.message, 'err');
+                    }
+                  }
+                };
+
+                if (window.Telegram?.WebApp?.showScanQrPopup) {
+                  window.Telegram.WebApp.showScanQrPopup({ text: "Rulon pasportidagi QR kodni skaner qiling 🔍" }, (text) => {
+                    window.Telegram.WebApp.closeScanQrPopup();
+                    try {
+                      const res = JSON.parse(text);
+                      if (res.id) processScan(res.id);
+                    } catch (e) {
+                      showMsg('Xato QR kod formati!', 'err');
+                    }
+                  });
+                } else {
+                  // Fallback for non-telegram
+                  const fakeId = prompt("TEST: Rulon ID sini kiriting:");
+                  if (fakeId) processScan(fakeId);
+                }
+              }}
+              style={{ padding: 20, background: '#00e676', border: 'none', borderRadius: 16, color: '#000', fontSize: 16, fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 4px 15px rgba(0,230,118,0.3)', cursor: 'pointer', marginBottom: 15 }}
+            >
+              <Scan size={24} /> SKANER (RADAR) BILAN NETO KIRITISH
+            </button>
+
             {data.whRolls.filter(r => r.status === 'Neto').filter(r => r.batch_number?.toLowerCase().includes(q.toLowerCase())).map((r, idx) => {
               const defCount = (r.defects?.teshik || 0) + (r.defects?.sirtiq || 0) + (r.defects?.poliester || 0) + (r.defects?.chiziq || 0) + (r.defects?.uloq || 0);
               return (
