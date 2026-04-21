@@ -419,41 +419,108 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                       </div>
 
                       {/* DEFECTS SECTION */}
-                      <div style={{ background: 'rgba(255,68,68,0.05)', padding: 12, borderRadius: 12, border: '1px solid rgba(255,68,68,0.2)', marginBottom: 15 }}>
-                        <div style={{ fontSize: 10, fontWeight: 'bold', color: '#ff4444', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 5 }}><AlertTriangle size={14} /> DEFEKTLAR (BRAK)</div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                          <span style={{ fontSize: 11 }}>Dog'lar</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <button onClick={() => setF({ ...f, rD: { ...f.rD, s: Math.max(0, f.rD.s - 1) } })} style={{ ...S.ib, color: '#ff4444' }}><Minus size={16} /></button>
-                            <b>{f.rD.s}</b>
-                            <button onClick={() => setF({ ...f, rD: { ...f.rD, s: f.rD.s + 1 } })} style={{ ...S.ib, color: '#00e676' }}><Plus size={16} /></button>
+                      {(() => {
+                        const defs = [
+                          { id: 'teshik', l: 'Teshik' },
+                          { id: 'sirtiq', l: 'Sirtiq' },
+                          { id: 'poliester', l: 'Poliester' },
+                          { id: 'chiziq', l: 'Chiziq' },
+                          { id: 'uloq', l: 'Uloq' }
+                        ];
+                        const totalDefects = defs.reduce((sum, d) => sum + (f.rD[d.id] || 0), 0);
+                        const isBrak = totalDefects > 15;
+
+                        return (
+                          <div style={{ background: isBrak ? 'rgba(255,68,68,0.1)' : 'rgba(255,152,0,0.05)', padding: 15, borderRadius: 12, border: `1px solid ${isBrak ? 'rgba(255,68,68,0.5)' : 'rgba(255,152,0,0.2)'}`, marginBottom: 15 }}>
+                            <div style={{ fontSize: 13, fontWeight: 'bold', color: isBrak ? '#ff4444' : '#ff9800', marginBottom: 15, display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <AlertTriangle size={18} /> NUQSONLAR (DEFEKT) {isBrak && ' - MATO BRAK!'}
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 15 }}>
+                              {defs.map(d => (
+                                <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '5px 10px', borderRadius: 8 }}>
+                                  <span style={{ fontSize: 11 }}>{d.l}</span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <button onClick={() => setF({ ...f, rD: { ...f.rD, [d.id]: Math.max(0, (f.rD[d.id] || 0) - 1) } })} style={{ ...S.ib, color: '#ff4444', background: 'rgba(255,68,68,0.2)', borderRadius: 4, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Minus size={14} /></button>
+                                    <b style={{ width: 14, textAlign: 'center', fontSize: 13 }}>{f.rD[d.id] || 0}</b>
+                                    <button onClick={() => setF({ ...f, rD: { ...f.rD, [d.id]: (f.rD[d.id] || 0) + 1 } })} style={{ ...S.ib, color: '#00e676', background: 'rgba(0,230,118,0.2)', borderRadius: 4, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Plus size={14} /></button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div style={{ textAlign: 'right', fontWeight: 'bold', fontSize: 14, color: isBrak ? '#ff4444' : '#fff' }}>
+                              Jami Nuqson: {totalDefects}
+                            </div>
+
+                            {isBrak && (
+                              <div style={{ marginTop: 15, borderTop: '1px solid rgba(255,68,68,0.2)', paddingTop: 15 }}>
+                                <div style={{ fontSize: 11, marginBottom: 10, color: '#ff4444' }}><b>MUHIM:</b> Brak bo'lganini tasdiqlash uchun 5 ta gacha rasm yuklang.</div>
+                                <input
+                                  type="file" accept="image/*" multiple
+                                  onChange={async (e) => {
+                                    if (e.target.files.length > 5) return showMsg('Maksimal 5 ta rasm!', 'err');
+                                    let imgs = [];
+                                    for (let file of e.target.files) {
+                                      // Rasm xajmini kichraytirish (Compression) uchun FileReader
+                                      const reader = new FileReader();
+                                      reader.onload = (ev) => {
+                                        const img = new Image();
+                                        img.onload = () => {
+                                          const canvas = document.createElement('canvas');
+                                          const ctx = canvas.getContext('2d');
+                                          let w = img.width, h = img.height;
+                                          if (w > 800) { h *= 800 / w; w = 800; }
+                                          canvas.width = w; canvas.height = h;
+                                          ctx.drawImage(img, 0, 0, w, h);
+                                          imgs.push(canvas.toDataURL('image/jpeg', 0.6));
+                                          if (imgs.length === e.target.files.length) setF({ ...f, bImgs: imgs });
+                                        };
+                                        img.src = ev.target.result;
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
+                                  }}
+                                  style={{ fontSize: 10, width: '100%' }}
+                                />
+                                {f.bImgs?.length > 0 && (
+                                  <div style={{ display: 'flex', gap: 5, marginTop: 10, overflowX: 'auto' }}>
+                                    {f.bImgs.map((img, i) => <img key={i} src={img} width={50} height={50} style={{ objectFit: 'cover', borderRadius: 6, border: '1px solid #ff4444' }} />)}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
                           </div>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                          <span style={{ fontSize: 11 }}>Sirtiq/Teshik</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <button onClick={() => setF({ ...f, rD: { ...f.rD, t: Math.max(0, f.rD.t - 1) } })} style={{ ...S.ib, color: '#ff4444' }}><Minus size={16} /></button>
-                            <b>{f.rD.t}</b>
-                            <button onClick={() => setF({ ...f, rD: { ...f.rD, t: f.rD.t + 1 } })} style={{ ...S.ib, color: '#00e676' }}><Plus size={16} /></button>
-                          </div>
-                        </div>
-                      </div>
+                        );
+                      })()}
 
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => setF({ ...f, activeRollId: null })} style={{ ...S.btnG, background: '#333', color: '#fff', flex: 1 }}>BEKOR</button>
+                        <button onClick={() => setF({ ...f, activeRollId: null, bImgs: [] })} style={{ ...S.btnG, background: '#333', color: '#fff', flex: 1 }}>BEKOR</button>
                         <button
                           onClick={async () => {
                             if (!f.rT || !f.rE || !f.rG) return showMsg('Minimal maydonlarni to\'ldiring!', 'err');
+
+                            const defs = [{ id: 'teshik' }, { id: 'sirtiq' }, { id: 'poliester' }, { id: 'chiziq' }, { id: 'uloq' }];
+                            const totalDefects = defs.reduce((sum, d) => sum + (f.rD[d.id] || 0), 0);
+                            const finalStatus = totalDefects > 15 ? 'BRAK' : 'Neto';
+
+                            if (finalStatus === 'BRAK' && (!f.bImgs || f.bImgs.length === 0)) {
+                              return showMsg('Brakni isbotlash uchun rasmlarni yuklang!', 'err');
+                            }
+
                             const n = r.bruto - Number(f.rT);
                             const now = new Date().toISOString();
                             await supabase.from('warehouse_rolls').update({
                               tara: Number(f.rT), neto: n, en: Number(f.rE), gramaj: f.rG,
                               color_code: f.rCC, composition: f.rComp, defects: f.rD,
-                              status: 'Neto',
+                              defect_images: finalStatus === 'BRAK' ? f.bImgs : null,
+                              status: finalStatus,
                               neto_date: now
                             }).eq('id', r.id);
-                            setF({ ...f, activeRollId: null });
-                            showMsg('Rulon nazoratdan o\'tdi!');
+
+                            setF({ ...f, activeRollId: null, bImgs: [] });
+                            showMsg(`Rulon nazoratdan o'tdi! Holati: ${finalStatus}`);
                             load(true);
                           }}
                           style={{ ...S.btnG, flex: 2 }}
@@ -555,6 +622,7 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
             { id: 'bruto', l: 'BRUTO', icon: Scale },
             { id: 'kontrol', l: 'KONTROL', icon: Search },
             { id: 'neto', l: 'NETO', icon: CheckCircle2 },
+            { id: 'brak', l: 'BRAK', icon: AlertTriangle },
             { id: 'acc', l: 'AKSESUAR', icon: Layers }
           ].map(x => (
             <button key={x.id} onClick={() => setM(x.id)} style={{ ...S.btn, flex: 1, fontSize: 8, padding: '8px 2px', background: m === x.id ? '#00e676' : 'transparent', color: m === x.id ? '#000' : '#fff', borderRadius: 8, border: 'none', cursor: 'pointer' }}>
@@ -656,8 +724,21 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                       {f.selectedBrutoBatch.status === 'ACCEPTED' && (
                         <div style={{ ...S.card, borderColor: '#40c4ff', background: 'rgba(64,196,255,0.05)', marginBottom: 20 }}>
                           <div style={{ fontSize: 13, fontWeight: 'bold', color: '#40c4ff', textAlign: 'center', marginBottom: 15 }}>PARTIYA QABUL QILINGAN ✅</div>
-                          <button onClick={() => setF({ ...f, showBatchQRs: true })} style={{ ...S.btnG, width: '100%', background: '#40c4ff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                          <button onClick={() => setF({ ...f, showBatchQRs: true })} style={{ ...S.btnG, width: '100%', background: '#40c4ff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 10 }}>
                             <Printer size={18} /> BARCODELARNI CHOP ETISH 🖨️
+                          </button>
+
+                          <button
+                            onClick={async () => {
+                              if (confirm('Butun partiyadagi barcha rulonlarni Nazoratga o\'tkazamizmi?')) {
+                                await supabase.from('warehouse_rolls').update({ status: 'KO\'RIKDA' }).eq('batch_id', f.selectedBrutoBatch.id).eq('status', 'BRUTO');
+                                load(true);
+                                showMsg('Barcha rulonlar Nazoratga o\'tkazildi!');
+                              }
+                            }}
+                            style={{ ...S.btnG, width: '100%', background: '#ff9800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+                          >
+                            <Search size={18} /> BUTUN PARTIYANI NAZORATGA O'TKAZISH
                           </button>
                         </div>
                       )}
@@ -720,8 +801,141 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
               return (
                 <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: '6px solid #ff9800' }}>
                   {isControlling ? (
-                    /* Standard Control Logic here - similar to previous but focused */
-                    <div style={{ padding: 10 }}>Nazorat qilinmoqda... (Avvalgi interfeys)</div>
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} style={{ padding: 5 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+                        <div>
+                          <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>RANG KODI</label>
+                          <input style={S.input} placeholder="#000" value={f.rCC} onChange={e => setF({ ...f, rCC: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>MATO TARKIBI</label>
+                          <input style={S.input} placeholder="95% Cotton..." value={f.rComp} onChange={e => setF({ ...f, rComp: e.target.value })} />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 15 }}>
+                        <div>
+                          <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>FTULKA (KG)</label>
+                          <input style={S.input} type="number" step="0.01" value={f.rT} onChange={e => setF({ ...f, rT: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>ENI (SM)</label>
+                          <input style={S.input} type="number" value={f.rE} onChange={e => setF({ ...f, rE: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>GRAMAJ</label>
+                          <input style={S.input} value={f.rG} onChange={e => setF({ ...f, rG: e.target.value })} />
+                        </div>
+                      </div>
+
+                      {(() => {
+                        const defs = [
+                          { id: 'teshik', l: 'Teshik' },
+                          { id: 'sirtiq', l: 'Sirtiq' },
+                          { id: 'poliester', l: 'Poliester' },
+                          { id: 'chiziq', l: 'Chiziq' },
+                          { id: 'uloq', l: 'Uloq' }
+                        ];
+                        const totalDefects = defs.reduce((sum, d) => sum + (f.rD[d.id] || 0), 0);
+                        const isBrak = totalDefects > 15;
+
+                        return (
+                          <div style={{ background: isBrak ? 'rgba(255,68,68,0.1)' : 'rgba(255,152,0,0.05)', padding: 15, borderRadius: 12, border: `1px solid ${isBrak ? 'rgba(255,68,68,0.5)' : 'rgba(255,152,0,0.2)'}`, marginBottom: 15 }}>
+                            <div style={{ fontSize: 13, fontWeight: 'bold', color: isBrak ? '#ff4444' : '#ff9800', marginBottom: 15, display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <AlertTriangle size={18} /> NUQSONLAR (DEFEKT) {isBrak && ' - MATO BRAK!'}
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 15 }}>
+                              {defs.map(d => (
+                                <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '5px 10px', borderRadius: 8 }}>
+                                  <span style={{ fontSize: 11 }}>{d.l}</span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <button onClick={() => setF({ ...f, rD: { ...f.rD, [d.id]: Math.max(0, (f.rD[d.id] || 0) - 1) } })} style={{ ...S.ib, color: '#ff4444', background: 'rgba(255,68,68,0.2)', borderRadius: 4, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Minus size={14} /></button>
+                                    <b style={{ width: 14, textAlign: 'center', fontSize: 13 }}>{f.rD[d.id] || 0}</b>
+                                    <button onClick={() => setF({ ...f, rD: { ...f.rD, [d.id]: (f.rD[d.id] || 0) + 1 } })} style={{ ...S.ib, color: '#00e676', background: 'rgba(0,230,118,0.2)', borderRadius: 4, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Plus size={14} /></button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div style={{ textAlign: 'right', fontWeight: 'bold', fontSize: 14, color: isBrak ? '#ff4444' : '#fff' }}>
+                              Jami Nuqson: {totalDefects}
+                            </div>
+
+                            {isBrak && (
+                              <div style={{ marginTop: 15, borderTop: '1px solid rgba(255,68,68,0.2)', paddingTop: 15 }}>
+                                <div style={{ fontSize: 11, marginBottom: 10, color: '#ff4444' }}><b>MUHIM:</b> Brak bo'lganini tasdiqlash uchun 5 ta gacha rasm yuklang.</div>
+                                <input
+                                  type="file" accept="image/*" multiple
+                                  onChange={async (e) => {
+                                    if (e.target.files.length > 5) return showMsg('Maksimal 5 ta rasm!', 'err');
+                                    let imgs = [];
+                                    for (let file of e.target.files) {
+                                      const reader = new FileReader();
+                                      reader.onload = (ev) => {
+                                        const img = new Image();
+                                        img.onload = () => {
+                                          const canvas = document.createElement('canvas');
+                                          const ctx = canvas.getContext('2d');
+                                          let w = img.width, h = img.height;
+                                          if (w > 800) { h *= 800 / w; w = 800; }
+                                          canvas.width = w; canvas.height = h;
+                                          ctx.drawImage(img, 0, 0, w, h);
+                                          imgs.push(canvas.toDataURL('image/jpeg', 0.6));
+                                          if (imgs.length === e.target.files.length) setF({ ...f, bImgs: imgs });
+                                        };
+                                        img.src = ev.target.result;
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
+                                  }}
+                                  style={{ fontSize: 10, width: '100%' }}
+                                />
+                                {f.bImgs?.length > 0 && (
+                                  <div style={{ display: 'flex', gap: 5, marginTop: 10, overflowX: 'auto' }}>
+                                    {f.bImgs.map((img, i) => <img key={i} src={img} width={50} height={50} style={{ objectFit: 'cover', borderRadius: 6, border: '1px solid #ff4444' }} />)}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => setF({ ...f, activeRollId: null, bImgs: [] })} style={{ ...S.btnG, background: '#333', color: '#fff', flex: 1 }}>BEKOR</button>
+                        <button
+                          onClick={async () => {
+                            if (!f.rT || !f.rE || !f.rG) return showMsg('Minimal maydonlarni to\'ldiring!', 'err');
+
+                            const defs = [{ id: 'teshik' }, { id: 'sirtiq' }, { id: 'poliester' }, { id: 'chiziq' }, { id: 'uloq' }];
+                            const totalDefects = defs.reduce((sum, d) => sum + (f.rD[d.id] || 0), 0);
+                            const finalStatus = totalDefects > 15 ? 'BRAK' : 'Neto';
+
+                            if (finalStatus === 'BRAK' && (!f.bImgs || f.bImgs.length === 0)) {
+                              return showMsg('Brakni isbotlash uchun rasmlarni yuklang!', 'err');
+                            }
+
+                            const n = r.bruto - Number(f.rT);
+                            const now = new Date().toISOString();
+                            await supabase.from('warehouse_rolls').update({
+                              tara: Number(f.rT), neto: n, en: Number(f.rE), gramaj: f.rG,
+                              color_code: f.rCC, composition: f.rComp, defects: f.rD,
+                              defect_images: finalStatus === 'BRAK' ? f.bImgs : null,
+                              status: finalStatus,
+                              neto_date: now
+                            }).eq('id', r.id);
+
+                            setF({ ...f, activeRollId: null, bImgs: [] });
+                            showMsg(`Rulon nazoratdan o'tdi! Holati: ${finalStatus}`);
+                            load(true);
+                          }}
+                          style={{ ...S.btnG, flex: 2 }}
+                        >
+                          SAQLASH ✓
+                        </button>
+                      </div>
+                    </motion.div>
                   ) : (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div><b>{r.batch_number}</b><br /><small>{r.bruto} kg</small></div>
@@ -744,6 +958,48 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {m === 'brak' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {data.whRolls.filter(r => r.status === 'BRAK').filter(r => r.batch_number?.toLowerCase().includes(q.toLowerCase())).map((r, idx) => (
+              <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: `6px solid #ff4444` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div>
+                    <b>{r.batch_number}</b><br />
+                    <small style={{ color: '#ff4444', fontWeight: 'bold' }}>BRAK MATO | {r.bruto} kg</small>
+                  </div>
+                  <div style={{ fontSize: 9, color: '#888' }}>ID: {r.id}</div>
+                </div>
+                {r.defects && (
+                  <div style={{ background: 'rgba(255,68,68,0.05)', padding: 10, borderRadius: 8, marginBottom: 10, fontSize: 11 }}>
+                    <b style={{ color: '#ff4444' }}>Topilgan nuqsonlar:</b>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginTop: 5, color: '#aaa' }}>
+                      {Object.keys(r.defects).map(k => r.defects[k] > 0 && <div key={k}>{k.toUpperCase()}: <b style={{ color: '#fff' }}>{r.defects[k]} ta</b></div>)}
+                    </div>
+                  </div>
+                )}
+                {r.defect_images && r.defect_images.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 10, marginBottom: 5 }}><b>ISBOT RASMLARI ({r.defect_images.length} ta):</b></div>
+                    <div style={{ display: 'flex', gap: 5, overflowX: 'auto', paddingBottom: 5 }}>
+                      {r.defect_images.map((img, i) => (
+                        <div key={i} onClick={() => {
+                          const w = window.open();
+                          w.document.write(`<img src="${img}" style="width:100%; max-width:500px;" />`);
+                        }} style={{ cursor: 'pointer' }}>
+                          <img src={img} width={60} height={60} style={{ objectFit: 'cover', borderRadius: 8, border: '1px solid #ff4444' }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            {data.whRolls.filter(r => r.status === 'BRAK').length === 0 && (
+              <div style={{ textAlign: 'center', padding: 20, color: '#ff4444', opacity: 0.5, fontSize: 12 }}>Brak rulonlar mavjud emas.</div>
+            )}
           </div>
         )}
       </div>
