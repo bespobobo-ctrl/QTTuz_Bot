@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "12.2 WAREHOUSE-NETO-PRO";
+const APP_VERSION = "12.3 WAREHOUSE-NETO-PRO";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -580,101 +580,6 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
             })}
           </div>
 
-          {/* QR MODAL (PREMIUM VIEW) */}
-          <AnimatePresence>
-            {f.qrRoll && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-                <motion.div className="print-area" initial={{ scale: 0.8 }} animate={{ scale: 1 }} exit={{ scale: 0.8 }} style={{ ...S.card, width: '100%', maxWidth: 320, background: '#fff', color: '#000', textAlign: 'center', padding: 25 }}>
-                  <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-                    <div style={{ textAlign: 'left' }}>
-                      <div style={{ fontSize: 20, fontWeight: 'bold' }}>QTTuz PRO</div>
-                      <div style={{ fontSize: 10, color: '#666' }}>Rulon Yorlig'i | {f.qrRoll.batch_number}</div>
-                    </div>
-                    <button onClick={() => setF({ ...f, qrRoll: null })} style={{ background: '#f5f5f5', border: 'none', borderRadius: '50%', width: 30, height: 30 }}><X size={18} /></button>
-                  </div>
-
-                  <div style={{ background: '#fff', padding: 15, borderRadius: 15, border: '1px solid #eee', display: 'inline-block', marginBottom: 20 }}>
-                    <QRCodeCanvas value={JSON.stringify({ id: f.qrRoll.id, b: f.qrRoll.batch_number })} size={200} />
-                  </div>
-
-                  <div style={{ textAlign: 'left', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, fontSize: 13 }}>
-                    <div><small style={{ color: '#888' }}>MATO:</small><div><b style={{ fontSize: 16 }}>{f.qrRoll.fabric_name}</b></div></div>
-                    <div><small style={{ color: '#888' }}>RANGI:</small><div><b style={{ fontSize: 16 }}>{f.qrRoll.color}</b></div></div>
-                    <div style={{ gridColumn: '1 / 3' }}><small style={{ color: '#888' }}>SOFT (NETO):</small><div style={{ fontSize: 24, color: f.qrRoll.neto ? '#00c853' : '#ff9800' }}><b>{f.qrRoll.neto ? `${f.qrRoll.neto.toFixed(2)} KG` : 'TAROZI KUTILMOQDA...'}</b></div></div>
-
-                    <div style={{ padding: '8px', background: '#f5f5f5', borderRadius: 8 }}>
-                      <small style={{ color: '#888' }}>EN / GRAMAJ:</small>
-                      <div><b style={{ fontSize: 16 }}>{f.qrRoll.en}sm / {f.qrRoll.gramaj}</b></div>
-                    </div>
-
-                    <div style={{ padding: '8px', background: '#f5f5f5', borderRadius: 8 }}>
-                      <small style={{ color: '#888' }}>TOPILGAN NUQSONLAR:</small>
-                      <div style={{ fontSize: 12, color: '#d32f2f', fontWeight: 'bold' }}>
-                        {f.qrRoll.defects ? Object.keys(f.qrRoll.defects).filter(k => f.qrRoll.defects[k] > 0).map(k => `${k.toUpperCase()}: ${f.qrRoll.defects[k]}`).join(', ') || 'TOPILMADI' : 'TOPILMADI'}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button className="no-print" onClick={() => window.print()} style={{ ...S.btnG, width: '100%', marginTop: 25, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                    <Printer size={18} /> PRINTERGA YUBORISH
-                  </button>
-                </motion.div>
-              </motion.div>
-            )}
-
-            {/* SCANNED ROLL DETAILS MODAL */}
-            {f.scannedRoll && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-                <motion.div initial={{ scale: 0.8, y: 50 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.8, y: 50 }} style={{ ...S.card, width: '100%', maxWidth: 350, background: '#fff', color: '#000', padding: 25, borderRadius: 24 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-                    <div style={{ textAlign: 'left' }}>
-                      <div style={{ fontSize: 13, color: '#666' }}>SKANER QILINDI ✅</div>
-                      <div style={{ fontSize: 22, fontWeight: '900' }}>{f.scannedRoll.batch_number}</div>
-                    </div>
-                    <button onClick={() => setF({ ...f, scannedRoll: null })} style={{ background: '#f5f5f5', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={18} /></button>
-                  </div>
-
-                  <div style={{ background: '#f5f5f5', borderRadius: 16, padding: 15, marginBottom: 20 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, fontSize: 13, textAlign: 'left' }}>
-                      <div><small style={{ color: '#888' }}>MATO:</small><div><b>{f.scannedRoll.fabric_name}</b></div></div>
-                      <div><small style={{ color: '#888' }}>RANGI:</small><div><b>{f.scannedRoll.color}</b></div></div>
-                      <div><small style={{ color: '#888' }}>BRUTO / TARA:</small><div><b style={{ color: '#666' }}>{f.scannedRoll.bruto} / {f.scannedRoll.tara} kg</b></div></div>
-                      <div><small style={{ color: '#888' }}>EN / GRAMAJ:</small><div><b>{f.scannedRoll.en}sm / {f.scannedRoll.gramaj}</b></div></div>
-                    </div>
-                  </div>
-
-                  <div style={{ textAlign: 'center', background: '#00e676', color: '#000', padding: '15px', borderRadius: 16, marginBottom: 20 }}>
-                    <div style={{ fontSize: 12, fontWeight: 'bold', opacity: 0.8 }}>TAYYOR SOF (NETO) VAZNI</div>
-                    <div style={{ fontSize: 36, fontWeight: '900' }}>{f.scannedRoll.neto.toFixed(2)} <span style={{ fontSize: 16 }}>kg</span></div>
-                  </div>
-
-                  <div style={{ padding: '12px', background: 'rgba(255,0,0,0.05)', borderRadius: 12, marginBottom: 25, textAlign: 'left' }}>
-                    <small style={{ color: '#d32f2f', fontWeight: 'bold' }}>TOPILGAN NUQSONLAR:</small>
-                    <div style={{ fontSize: 12, color: '#333', marginTop: 5 }}>
-                      {f.scannedRoll.defects ? Object.keys(f.scannedRoll.defects).filter(k => f.scannedRoll.defects[k] > 0).map(k => `${k.toUpperCase()}: ${f.scannedRoll.defects[k]}`).join(' | ') || 'Topilmadi' : 'Topilmadi'}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={async () => {
-                      const now = new Date().toISOString();
-                      try {
-                        await supabase.from('warehouse_rolls').update({ status: 'Neto', neto_date: now }).eq('id', f.scannedRoll.id);
-                        showMsg(`${f.scannedRoll.batch_number} Neto Omboriga tushdi!`);
-                        setF({ ...f, scannedRoll: null });
-                        load(true);
-                      } catch (e) {
-                        showMsg(e.message, 'err');
-                      }
-                    }}
-                    style={{ ...S.btnG, width: '100%', background: '#000', color: '#00e676', padding: '15px', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 16 }}
-                  >
-                    TASDIQLASH VA NETOGA OLISH <CheckCircle2 size={18} />
-                  </button>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       );
     }
@@ -1215,6 +1120,100 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
             <button onClick={async () => { if (confirm('Bichuvga chiqim?')) { await supabase.from('warehouse_rolls').delete().eq('id', r.id); await supabase.from('warehouse_log').insert([{ item_name: r.fabric_name, type: 'Bichuvga Chiqim', quantity: r.neto, note: r.batch_number, user: user.name }]); load(true); showMsg('Chiqim qilindi! 🚀'); } }} style={{ ...S.btnG, width: '100%', background: '#ff4444', color: '#fff' }}>BICHUVGA TOPSHIRISH 📤</button>
           </div>
         ))}
+        {/* GLOBAL MODALS */}
+        <AnimatePresence>
+          {f.qrRoll && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+              <motion.div className="print-area" initial={{ scale: 0.8 }} animate={{ scale: 1 }} exit={{ scale: 0.8 }} style={{ ...S.card, width: '100%', maxWidth: 320, background: '#fff', color: '#000', textAlign: 'center', padding: 25 }}>
+                <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: 20, fontWeight: 'bold' }}>QTTuz PRO</div>
+                    <div style={{ fontSize: 10, color: '#666' }}>Rulon Yorlig'i | {f.qrRoll.batch_number}</div>
+                  </div>
+                  <button onClick={() => setF({ ...f, qrRoll: null })} style={{ background: '#f5f5f5', border: 'none', borderRadius: '50%', width: 30, height: 30 }}><X size={18} /></button>
+                </div>
+
+                <div style={{ background: '#fff', padding: 15, borderRadius: 15, border: '1px solid #eee', display: 'inline-block', marginBottom: 20 }}>
+                  <QRCodeCanvas value={JSON.stringify({ id: f.qrRoll.id, b: f.qrRoll.batch_number })} size={200} />
+                </div>
+
+                <div style={{ textAlign: 'left', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, fontSize: 13 }}>
+                  <div><small style={{ color: '#888' }}>MATO:</small><div><b style={{ fontSize: 16 }}>{f.qrRoll.fabric_name}</b></div></div>
+                  <div><small style={{ color: '#888' }}>RANGI:</small><div><b style={{ fontSize: 16 }}>{f.qrRoll.color}</b></div></div>
+                  <div style={{ gridColumn: '1 / 3' }}><small style={{ color: '#888' }}>SOFT (NETO):</small><div style={{ fontSize: 24, color: f.qrRoll.neto ? '#00c853' : '#ff9800' }}><b>{f.qrRoll.neto ? `${f.qrRoll.neto.toFixed(2)} KG` : 'TAROZI KUTILMOQDA...'}</b></div></div>
+
+                  <div style={{ padding: '8px', background: '#f5f5f5', borderRadius: 8 }}>
+                    <small style={{ color: '#888' }}>EN / GRAMAJ:</small>
+                    <div><b style={{ fontSize: 16 }}>{f.qrRoll.en}sm / {f.qrRoll.gramaj}</b></div>
+                  </div>
+
+                  <div style={{ padding: '8px', background: '#f5f5f5', borderRadius: 8 }}>
+                    <small style={{ color: '#888' }}>TOPILGAN NUQSONLAR:</small>
+                    <div style={{ fontSize: 12, color: '#d32f2f', fontWeight: 'bold' }}>
+                      {f.qrRoll.defects ? Object.keys(f.qrRoll.defects).filter(k => f.qrRoll.defects[k] > 0).map(k => `${k.toUpperCase()}: ${f.qrRoll.defects[k]}`).join(', ') || 'TOPILMADI' : 'TOPILMADI'}
+                    </div>
+                  </div>
+                </div>
+
+                <button className="no-print" onClick={() => window.print()} style={{ ...S.btnG, width: '100%', marginTop: 25, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                  <Printer size={18} /> PRINTERGA YUBORISH
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {f.scannedRoll && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+              <motion.div initial={{ scale: 0.8, y: 50 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.8, y: 50 }} style={{ ...S.card, width: '100%', maxWidth: 350, background: '#fff', color: '#000', padding: 25, borderRadius: 24 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: 13, color: '#666' }}>SKANER QILINDI ✅</div>
+                    <div style={{ fontSize: 22, fontWeight: '900' }}>{f.scannedRoll.batch_number}</div>
+                  </div>
+                  <button onClick={() => setF({ ...f, scannedRoll: null })} style={{ background: '#f5f5f5', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={18} /></button>
+                </div>
+
+                <div style={{ background: '#f5f5f5', borderRadius: 16, padding: 15, marginBottom: 20 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, fontSize: 13, textAlign: 'left' }}>
+                    <div><small style={{ color: '#888' }}>MATO:</small><div><b>{f.scannedRoll.fabric_name}</b></div></div>
+                    <div><small style={{ color: '#888' }}>RANGI:</small><div><b>{f.scannedRoll.color}</b></div></div>
+                    <div><small style={{ color: '#888' }}>BRUTO / TARA:</small><div><b style={{ color: '#666' }}>{f.scannedRoll.bruto} / {f.scannedRoll.tara} kg</b></div></div>
+                    <div><small style={{ color: '#888' }}>EN / GRAMAJ:</small><div><b>{f.scannedRoll.en}sm / {f.scannedRoll.gramaj}</b></div></div>
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'center', background: '#00e676', color: '#000', padding: '15px', borderRadius: 16, marginBottom: 20 }}>
+                  <div style={{ fontSize: 12, fontWeight: 'bold', opacity: 0.8 }}>TAYYOR SOF (NETO) VAZNI</div>
+                  <div style={{ fontSize: 36, fontWeight: '900' }}>{f.scannedRoll.neto.toFixed(2)} <span style={{ fontSize: 16 }}>kg</span></div>
+                </div>
+
+                <div style={{ padding: '12px', background: 'rgba(255,0,0,0.05)', borderRadius: 12, marginBottom: 25, textAlign: 'left' }}>
+                  <small style={{ color: '#d32f2f', fontWeight: 'bold' }}>TOPILGAN NUQSONLAR:</small>
+                  <div style={{ fontSize: 12, color: '#333', marginTop: 5 }}>
+                    {f.scannedRoll.defects ? Object.keys(f.scannedRoll.defects).filter(k => f.scannedRoll.defects[k] > 0).map(k => `${k.toUpperCase()}: ${f.scannedRoll.defects[k]}`).join(' | ') || 'Topilmadi' : 'Topilmadi'}
+                  </div>
+                </div>
+
+                <button
+                  onClick={async () => {
+                    const now = new Date().toISOString();
+                    try {
+                      await supabase.from('warehouse_rolls').update({ status: 'Neto', neto_date: now }).eq('id', f.scannedRoll.id);
+                      showMsg(`${f.scannedRoll.batch_number} Neto Omboriga tushdi!`);
+                      setF({ ...f, scannedRoll: null });
+                      load(true);
+                    } catch (e) {
+                      showMsg(e.message, 'err');
+                    }
+                  }}
+                  style={{ ...S.btnG, width: '100%', background: '#000', color: '#00e676', padding: '15px', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 16 }}
+                >
+                  TASDIQLASH VA NETOGA OLISH <CheckCircle2 size={18} />
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
