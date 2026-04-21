@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "12.0 WAREHOUSE-NETO-PRO";
+const APP_VERSION = "12.1 WAREHOUSE-NETO-PRO";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -807,7 +807,7 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
 
         {m === 'kontrol' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {data.whRolls.filter(r => r.status === 'KO\'RIKDA' || f.activeRollId === r.id).filter(r => r.batch_number?.toLowerCase().includes(q.toLowerCase())).map((r, idx) => {
+            {data.whRolls.filter(r => r.status === 'KO\'RIKDA' || r.status === 'KONTROLDAN_OTDI' || f.activeRollId === r.id).filter(r => r.batch_number?.toLowerCase().includes(q.toLowerCase())).map((r, idx) => {
               const isControlling = f.activeRollId === r.id;
               return (
                 <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: '6px solid #ff9800' }}>
