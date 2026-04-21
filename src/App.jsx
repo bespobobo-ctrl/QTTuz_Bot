@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "11.4 WAREHOUSE-ULTRA";
+const APP_VERSION = "11.5 WAREHOUSE-ULTRA";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -575,59 +575,81 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                 const isInProgress = b.status === 'IN_PROGRESS';
 
                 return (
-                  <div key={b.id} style={{ ...S.card, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 10, borderLeft: `6px solid ${isInProgress ? '#ff9800' : '#40c4ff'}`, background: isInProgress ? 'rgba(255,152,0,0.05)' : '#12121e' }}>
+                  <div key={b.id} onClick={() => setF({ ...f, selectedBrutoBatch: b })} style={{ ...S.card, textAlign: 'left', borderLeft: `6px solid ${isInProgress ? '#ff9800' : '#40c4ff'}`, cursor: 'pointer' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div onClick={() => setF({ ...f, selectedBrutoBatch: b })} style={{ cursor: 'pointer', flex: 1 }}>
-                        <div style={{ fontWeight: 'bold', fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {b.batch_number} {isInProgress && <span style={{ fontSize: 8, background: '#ff9800', color: '#000', padding: '2px 6px', borderRadius: 4 }}>JARAYONDA ⏳</span>}
-                        </div>
-                        <div style={{ fontSize: 10, color: '#666' }}>{b.supplier_name || 'Taminotchi'} | {b.color || 'Rangsiz'}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 'bold', fontSize: 16 }}>{b.batch_number} {isInProgress && '⏳'}</div>
+                        <div style={{ fontSize: 10, color: '#666' }}>{b.supplier_name} | {b.color}</div>
                         <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>
-                          Progress: <b style={{ color: '#0091ea' }}>{bRolls.length} / {b.expected_count || 0}</b> rulon
-                          <span style={{ marginLeft: 8 }}>|</span>
-                          <b style={{ color: '#00e676', marginLeft: 8 }}>{bRolls.reduce((s, r) => s + r.bruto, 0).toFixed(1)} / {b.expected_weight || 0}</b> kg
+                          {bRolls.length} / {b.expected_count} rulon | {bRolls.reduce((s, r) => s + r.bruto, 0).toFixed(1)} kg
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          onClick={() => {
-                            if (confirm('Ushbu partiya va uning barcha rulonlari o\'chirilsinmi?')) {
-                              supabase.from('warehouse_batches').delete().eq('id', b.id).then(() => {
-                                supabase.from('warehouse_rolls').delete().eq('batch_id', b.id).then(() => load(true));
-                              });
-                            }
-                          }}
-                          style={{ ...S.ib, color: '#ff4444' }}
-                        ><Trash2 size={18} /></button>
-                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm('O\'chirilsinmi?')) {
+                            supabase.from('warehouse_batches').delete().eq('id', b.id).then(() => {
+                              supabase.from('warehouse_rolls').delete().eq('batch_id', b.id).then(() => load(true));
+                            });
+                          }
+                        }}
+                        style={{ ...S.ib, color: '#ff4444' }}
+                      ><Trash2 size={18} /></button>
                     </div>
                   </div>
                 );
               })
             ) : (
               <div>
-                <button onClick={() => setF({ ...f, selectedBrutoBatch: null })} style={{ ...S.ib, color: '#40c4ff', marginBottom: 15, display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <ArrowDown size={14} style={{ transform: 'rotate(90deg)' }} /> Orqaga
-                </button>
-                <div style={{ marginBottom: 15, padding: 10, background: 'rgba(64,196,255,0.1)', borderRadius: 12 }}>
-                  <b>#{f.selectedBrutoBatch.batch_number}</b> rulonlari
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                  <button onClick={() => setF({ ...f, selectedBrutoBatch: null })} style={{ ...S.ib, color: '#00e676', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <ArrowDown size={14} style={{ transform: 'rotate(90deg)' }} /> Orqaga
+                  </button>
+                  <div style={{ textAlign: 'right' }}>
+                    <b style={{ fontSize: 16 }}>{f.selectedBrutoBatch.batch_number}</b>
+                    <div style={{ fontSize: 10, color: '#666' }}>{f.selectedBrutoBatch.supplier_name}</div>
+                  </div>
                 </div>
-                {data.whRolls.filter(r => r.batch_id === f.selectedBrutoBatch.id && (r.status === 'BRUTO' || r.status === 'Kirim')).map((r, idx) => (
-                  <div key={r.id} style={{ ...S.card, textAlign: 'left', marginBottom: 10, borderLeft: '4px solid #40c4ff' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: 10, color: '#666' }}>Rulon #{idx + 1}</div>
-                        <div style={{ fontSize: 16, fontWeight: 'bold' }}>{r.bruto} kg</div>
-                      </div>
+
+                {f.selectedBrutoBatch.status === 'IN_PROGRESS' && (
+                  <div style={{ ...S.card, borderColor: '#ff9800', marginBottom: 20 }}>
+                    <div style={{ fontSize: 12, marginBottom: 10, color: '#ff9800', fontWeight: 'bold' }}>YANGI RULON TAROZISI ⚖️</div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <input
+                        type="number"
+                        style={{ ...S.input, flex: 1, fontSize: 18, fontWeight: 'bold' }}
+                        placeholder="Vazn (kg)"
+                        value={f.rT}
+                        onChange={e => setF({ ...f, rT: e.target.value })}
+                      />
                       <button
-                        onClick={async () => { if (confirm('Nazoratga o\'tkazilsinmi?')) { await supabase.from('warehouse_rolls').update({ status: 'KO\'RIKDA' }).eq('id', r.id); load(true); showMsg('Mato nazorat xonasiga o\'tkazildi!'); setM('kontrol'); } }}
-                        style={{ ...S.btnG, padding: '10px 15px', fontSize: 11, background: '#40c4ff', color: '#000' }}
-                      >
-                        NAZORATGA 🔍
-                      </button>
+                        onClick={async () => {
+                          if (!f.rT) return showMsg('Vaznni yozing!', 'err');
+                          await supabase.from('warehouse_rolls').insert([{
+                            batch_id: f.selectedBrutoBatch.id,
+                            batch_number: f.selectedBrutoBatch.batch_number,
+                            fabric_name: f.selectedBrutoBatch.color,
+                            bruto: Number(f.rT),
+                            status: 'BRUTO',
+                            color: f.selectedBrutoBatch.color,
+                            color_code: f.selectedBrutoBatch.color
+                          }]);
+                          setF({ ...f, rT: '' }); load(true); showMsg('Rulon saqlandi! ✅');
+                        }}
+                        style={{ ...S.btnG, padding: '0 25px' }}
+                      >SAQLASH</button>
                     </div>
                   </div>
-                ))}
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {data.whRolls.filter(r => r.batch_id === f.selectedBrutoBatch.id).sort((a, b) => b.id - a.id).map((r, idx, arr) => (
+                    <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: '4px solid #40c4ff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px' }}>
+                      <div><small style={{ color: '#888' }}>Rulon #{arr.length - idx}</small><div style={{ fontSize: 16, fontWeight: 'bold' }}>{r.bruto} kg</div></div>
+                      <button onClick={async () => { if (confirm('Nazoratga o\'tkazilsinmi?')) { await supabase.from('warehouse_rolls').update({ status: 'KO\'RIKDA' }).eq('id', r.id); load(true); showMsg('O\'tkazildi!'); } }} style={{ ...S.btnG, padding: '8px 15px', fontSize: 10, background: '#40c4ff', color: '#000' }}>NAZORATGA 🔍</button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
