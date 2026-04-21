@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255xwygwwnhnghqihuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "10.0 WAREHOUSE-ULTRA";
+const APP_VERSION = "10.2 WAREHOUSE-ULTRA";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -44,13 +44,25 @@ export default function App() {
         supabase.from('system_config').select('*').eq('key', 'app_version').single()
       ]);
 
-      if (ver.data && ver.data.value !== APP_VERSION) setNeedsUpdate(true);
-      else setNeedsUpdate(false);
+      if (ver.data && ver.data.value !== APP_VERSION) {
+        setNeedsUpdate(true);
+      } else {
+        setNeedsUpdate(false);
+      }
 
       setData({ heads: h.data || [], history: hi.data || [], whItems: wi.data || [], whLog: wl.data || [], whBatches: wb.data || [], whRolls: wr.data || [] });
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      // Silently fail if version config is missing
+    }
     finally { setLoading(false); }
   }, []);
+
+  const handleHardUpdate = () => {
+    const url = new URL(window.location.origin);
+    url.searchParams.set('v', Date.now());
+    window.location.href = url.toString();
+  };
 
   useEffect(() => {
     load();
@@ -61,8 +73,9 @@ export default function App() {
   if (needsUpdate) return (
     <div style={{ ...S.root, justifyContent: 'center', alignItems: 'center', padding: 40, textAlign: 'center' }}>
       <Zap size={60} color="#00e676" style={{ marginBottom: 20 }} />
-      <h1 style={{ fontSize: 22, fontWeight: 'bold' }}>YANGI VERSIYA: 10.0</h1>
-      <button onClick={() => window.location.reload(true)} style={{ ...S.btnG, width: '100%', marginTop: 30 }}> YANGILASH 🚀</button>
+      <h1 style={{ fontSize: 22, fontWeight: 'bold' }}>YANGI VERSIYA MAVJUD!</h1>
+      <p style={{ color: '#888', marginBottom: 20 }}>Tizimning barqaror ishlashi uchun yangilash tugmasini bosing.</p>
+      <button onClick={handleHardUpdate} style={{ ...S.btnG, width: '100%', marginTop: 10 }}> YANGILASH VA TOZALASH 🚀</button>
     </div>
   );
 
@@ -139,7 +152,7 @@ function Login({ data, setUser, setTab, showMsg }) {
 
 function OmborUltra({ tab, user, data, showMsg, load }) {
   const [m, setM] = useState('fabric');
-  const [f, setF] = useState({ bn: '', n: '', c: '', b: '', en: '', gr: '', rS: 1 });
+  const [f, setF] = useState({ bn: '', n: '', c: '', b: '', en: '', gr: '', rS: 1, activeRollId: null, rT: '', rE: '', rG: '', qrRoll: null });
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [q, setQ] = useState('');
 
@@ -149,12 +162,23 @@ function OmborUltra({ tab, user, data, showMsg, load }) {
         <div style={S.card}><ScrollText color="#ff9800" /><div style={{ fontSize: 24, fontWeight: 'bold' }}>{data.whBatches.length}</div><small style={{ color: '#666' }}>Partiyalar</small></div>
         <div style={S.card}><Package color="#00e676" /><div style={{ fontSize: 24, fontWeight: 'bold' }}>{data.whRolls.length}</div><small style={{ color: '#666' }}>Rulonlar</small></div>
       </div>
+
+      <button
+        onClick={() => { const id = prompt('Rulon ID sini skanerlang (yoki qo\'lda kiriting):'); if (id) { const r = data.whRolls.find(x => x.id === id || x.batch_number === id); if (r) { setF({ ...f, qrRoll: r }); } else { showMsg('Topilmadi!', 'err'); } } }}
+        style={{ ...S.btnG, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20, fontSize: 18 }}
+      >
+        <Scan size={24} /> SKANERLASH (RADAR)
+      </button>
+
       <div style={S.card}>
-        <div style={{ textAlign: 'left', fontWeight: 'bold', fontSize: 11, color: '#00e676', marginBottom: 12 }}>O'ZGARISHLAR</div>
+        <div style={{ textAlign: 'left', fontWeight: 'bold', fontSize: 11, color: '#00e676', marginBottom: 12 }}>OXIRGI AMALLAR</div>
         {data.whLog.slice(0, 5).map(l => (
-          <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #1a1a2e', fontSize: 11 }}>
-            <span style={{ textAlign: 'left' }}>{l.item_name}<br /><small style={{ color: '#444' }}>{l.type}</small></span>
-            <b>{l.quantity}</b>
+          <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #1a1a2e', fontSize: 12 }}>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontWeight: '600' }}>{l.item_name}</div>
+              <div style={{ fontSize: 10, color: '#666' }}>{l.type} • {new Date(l.timestamp).toLocaleTimeString()}</div>
+            </div>
+            <b style={{ color: l.type.includes('Kirim') ? '#00e676' : '#ff4444' }}>{l.quantity} kg</b>
           </div>
         ))}
       </div>
@@ -185,8 +209,11 @@ function OmborUltra({ tab, user, data, showMsg, load }) {
       return (
         <div style={{ paddingBottom: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15, alignItems: 'center' }}>
-            <button onClick={() => setSelectedBatch(null)} style={{ ...S.ib, color: '#00e676' }}><ArrowDown style={{ rotate: '90deg' }} /> Orqaga</button>
-            <div style={{ fontWeight: 'bold' }}>PARTIYA: {selectedBatch.batch_number}</div>
+            <button onClick={() => setSelectedBatch(null)} style={{ ...S.ib, color: '#00e676', display: 'flex', alignItems: 'center', gap: 4 }}><ArrowDown style={{ transform: 'rotate(90deg)' }} size={18} /> Orqaga</button>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontWeight: 'bold', fontSize: 16 }}>{selectedBatch.batch_number}</div>
+              <div style={{ fontSize: 10, color: '#00e676' }}>{rolls.length} Rulon | {rolls.reduce((sum, r) => sum + (r.neto || 0), 0).toFixed(2)} kg</div>
+            </div>
           </div>
 
           <div style={{ ...S.card, marginBottom: 15 }}>
@@ -202,20 +229,130 @@ function OmborUltra({ tab, user, data, showMsg, load }) {
             </form>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {rolls.map((r, idx) => (
-              <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: `4px solid ${r.status === 'Tayyor' ? '#00e676' : r.status === 'Ko\'rikda' ? '#ff9800' : '#40c4ff'}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div><small style={{ color: '#444' }}>Rulon #{idx + 1}</small><div>{r.fabric_name} <small style={{ color: '#666' }}>({r.color})</small></div></div>
-                  <div style={{ textAlign: 'right' }}><b>{r.status === 'Kirim' ? r.bruto : r.neto.toFixed(2)}</b> <small>kg</small><div><small style={{ fontSize: 9, color: r.status === 'Tayyor' ? '#00e676' : '#ff9800' }}>{r.status.toUpperCase()}</small></div></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {rolls.map((r, idx) => {
+              const isControlling = f.activeRollId === r.id;
+              return (
+                <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: `6px solid ${r.status === 'Tayyor' ? '#00e676' : r.status === 'Ko\'rikda' ? '#ff9800' : '#40c4ff'}`, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: '#666', marginBottom: 2 }}>RULON #{idx + 1}</div>
+                      <div style={{ fontSize: 16, fontWeight: '600' }}>{r.fabric_name}</div>
+                      <div style={{ fontSize: 12, color: '#aaa' }}>{r.color}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 18, fontWeight: 'bold', color: r.status === 'Tayyor' ? '#00e676' : '#fff' }}>
+                        {r.status === 'Tayyor' ? r.neto.toFixed(2) : r.bruto.toFixed(2)} <small style={{ fontSize: 10 }}>kg</small>
+                      </div>
+                      <div style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: r.status === 'Tayyor' ? 'rgba(0,230,118,0.1)' : 'rgba(64,196,255,0.1)', color: r.status === 'Tayyor' ? '#00e676' : '#40c4ff', display: 'inline-block', marginTop: 4 }}>
+                        {r.status.toUpperCase()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {r.status !== 'Tayyor' && !isControlling && (
+                    <button
+                      onClick={() => setF({ ...f, activeRollId: r.id, rT: '', rE: '', rG: '' })}
+                      style={{ ...S.btnG, padding: '10px', fontSize: 12, width: '100%', marginTop: 12, background: '#40c4ff', color: '#000' }}
+                    >
+                      KONTROL QILISH (KO'RIK) <Maximize size={14} style={{ marginLeft: 6, verticalAlign: 'middle' }} />
+                    </button>
+                  )}
+
+                  {isControlling && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} style={{ marginTop: 15, paddingTop: 15, borderTop: '1px solid #1a1a2e' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 10 }}>
+                        <div>
+                          <label style={{ fontSize: 10, color: '#666', display: 'block', marginBottom: 4 }}>FTULKA (KG)</label>
+                          <input style={S.input} type="number" step="0.01" value={f.rT} onChange={e => setF({ ...f, rT: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 10, color: '#666', display: 'block', marginBottom: 4 }}>ENI (SM)</label>
+                          <input style={S.input} type="number" value={f.rE} onChange={e => setF({ ...f, rE: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 10, color: '#666', display: 'block', marginBottom: 4 }}>GRAMAJ</label>
+                          <input style={S.input} value={f.rG} onChange={e => setF({ ...f, rG: e.target.value })} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => setF({ ...f, activeRollId: null })} style={{ ...S.btnG, background: '#333', color: '#fff', flex: 1 }}>BEKOR</button>
+                        <button
+                          onClick={async () => {
+                            if (!f.rT || !f.rE || !f.rG) return showMsg('Barcha maydonlarni to\'ldiring!', 'err');
+                            const n = r.bruto - Number(f.rT);
+                            await supabase.from('warehouse_rolls').update({ tara: Number(f.rT), neto: n, en: Number(f.rE), gramaj: f.rG, status: 'Tayyor' }).eq('id', r.id);
+                            setF({ ...f, activeRollId: null });
+                            showMsg('Rulon tayyor holatga keltirildi!');
+                            load(true);
+                          }}
+                          style={{ ...S.btnG, flex: 2 }}
+                        >
+                          SAQLASH ✓
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {r.status === 'Tayyor' && (
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #1a1a2e' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
+                        <div><div style={{ fontSize: 9, color: '#666' }}>TARA</div><div style={{ fontSize: 13, fontWeight: 'bold' }}>{r.tara} kg</div></div>
+                        <div><div style={{ fontSize: 9, color: '#666' }}>ENI</div><div style={{ fontSize: 13, fontWeight: 'bold' }}>{r.en} sm</div></div>
+                        <div><div style={{ fontSize: 9, color: '#666' }}>GR</div><div style={{ fontSize: 13, fontWeight: 'bold' }}>{r.gramaj}</div></div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          onClick={() => setF({ ...f, qrRoll: r })}
+                          style={{ ...S.btnG, background: '#1a1a2e', color: '#00e676', border: '1px solid #00e676', padding: '10px', fontSize: 12, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                        >
+                          <QrCode size={16} /> QR YORLIQ
+                        </button>
+                        <button
+                          onClick={() => { if (confirm('O\'chirish?')) { supabase.from('warehouse_rolls').delete().eq('id', r.id).then(() => load(true)); } }}
+                          style={{ ...S.btnG, background: '#1a1a2e', color: '#ff4444', border: '1px solid #ff4444', padding: '10px', width: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {r.status !== 'Tayyor' && (
-                  <button onClick={() => { const t = prompt('Ftulka (kg)?'); const en = prompt('Eni (sm)?'); const gr = prompt('Gramaj?'); if (t && en && gr) { const n = r.bruto - Number(t); supabase.from('warehouse_rolls').update({ tara: Number(t), neto: n, en: Number(en), gramaj: gr, status: 'Tayyor' }).eq('id', r.id).then(() => load(true)); } }} style={{ ...S.btnG, padding: 6, fontSize: 10, width: '100%', marginTop: 8, background: '#40c4ff' }}>KONTROL (KO'RIK)</button>
-                )}
-                {r.status === 'Tayyor' && <div style={{ fontSize: 10, color: '#888', marginTop: 5 }}>Eni: {r.en}sm | Gr: {r.gramaj}</div>}
-              </div>
-            ))}
+              );
+            })}
           </div>
+
+          {/* QR MODAL (PREMIUM VIEW) */}
+          <AnimatePresence>
+            {f.qrRoll && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} exit={{ scale: 0.8 }} style={{ ...S.card, width: '100%', maxWidth: 320, background: '#fff', color: '#000', textAlign: 'center', padding: 25 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: 20, fontWeight: 'bold' }}>QTTuz PRO</div>
+                      <div style={{ fontSize: 10, color: '#666' }}>Rulon Yorlig'i | {f.qrRoll.batch_number}</div>
+                    </div>
+                    <button onClick={() => setF({ ...f, qrRoll: null })} style={{ background: '#f5f5f5', border: 'none', borderRadius: '50%', width: 30, height: 30 }}><X size={18} /></button>
+                  </div>
+
+                  <div style={{ background: '#fff', padding: 15, borderRadius: 15, border: '1px solid #eee', display: 'inline-block', marginBottom: 20 }}>
+                    <QRCodeCanvas value={JSON.stringify({ id: f.qrRoll.id, b: f.qrRoll.batch_number })} size={180} />
+                  </div>
+
+                  <div style={{ textAlign: 'left', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, fontSize: 13 }}>
+                    <div><small style={{ color: '#888' }}>MATO:</small><div><b>{f.qrRoll.fabric_name}</b></div></div>
+                    <div><small style={{ color: '#888' }}>RANGI:</small><div><b>{f.qrRoll.color}</b></div></div>
+                    <div><small style={{ color: '#888' }}>SOFT (NETO):</small><div style={{ fontSize: 18, color: '#00c853' }}><b>{f.qrRoll.neto.toFixed(2)} KG</b></div></div>
+                    <div><small style={{ color: '#888' }}>EN/GR:</small><div><b>{f.qrRoll.en}sm / {f.qrRoll.gramaj}</b></div></div>
+                  </div>
+
+                  <button onClick={() => window.print()} style={{ ...S.btnG, width: '100%', marginTop: 25, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                    <Printer size={18} /> PRINTERGA YUBORISH
+                  </button>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       );
     }
