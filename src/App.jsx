@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "11.3 WAREHOUSE-ULTRA";
+const APP_VERSION = "11.4 WAREHOUSE-ULTRA";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -577,7 +577,7 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                 return (
                   <div key={b.id} style={{ ...S.card, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 10, borderLeft: `6px solid ${isInProgress ? '#ff9800' : '#40c4ff'}`, background: isInProgress ? 'rgba(255,152,0,0.05)' : '#12121e' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div onClick={() => setSelectedBatch(b)} style={{ cursor: 'pointer', flex: 1 }}>
+                      <div onClick={() => setF({ ...f, selectedBrutoBatch: b })} style={{ cursor: 'pointer', flex: 1 }}>
                         <div style={{ fontWeight: 'bold', fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
                           {b.batch_number} {isInProgress && <span style={{ fontSize: 8, background: '#ff9800', color: '#000', padding: '2px 6px', borderRadius: 4 }}>JARAYONDA ⏳</span>}
                         </div>
