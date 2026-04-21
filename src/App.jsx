@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "11.0 WAREHOUSE-ULTRA";
+const APP_VERSION = "11.1 WAREHOUSE-ULTRA";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -568,17 +568,49 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
 
         {m === 'bruto' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {data.whRolls.filter(r => r.status === 'BRUTO' || r.status === 'Kirim').filter(r => r.batch_number?.toLowerCase().includes(q.toLowerCase())).map((r, idx) => (
-              <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: '6px solid #40c4ff' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: 10, color: '#666' }}>{r.batch_number} | Rulon #{idx + 1}</div>
-                    <div style={{ fontSize: 16, fontWeight: 'bold' }}>{r.bruto} kg (Bruto)</div>
+            {!f.selectedBrutoBatch ? (
+              data.whBatches.filter(b => b.status === 'ACCEPTED').filter(b => b.batch_number.toLowerCase().includes(q.toLowerCase())).map(b => {
+                const bRolls = data.whRolls.filter(r => r.batch_id === b.id && (r.status === 'BRUTO' || r.status === 'Kirim'));
+                if (bRolls.length === 0) return null;
+                return (
+                  <div key={b.id} onClick={() => setF({ ...f, selectedBrutoBatch: b })} style={{ ...S.card, textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '6px solid #40c4ff' }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold', fontSize: 16 }}>{b.batch_number}</div>
+                      <div style={{ fontSize: 10, color: '#666' }}>{b.supplier_name} | {b.color}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 16, color: '#40c4ff' }}>{bRolls.length} rulon</div>
+                      <div style={{ fontSize: 10, color: '#00e676' }}>{bRolls.reduce((s, r) => s + r.bruto, 0).toFixed(2)} kg</div>
+                    </div>
                   </div>
-                  <button onClick={async () => { if (confirm('Nazoratga o\'tkazilsinmi?')) { await supabase.from('warehouse_rolls').update({ status: 'KO\'RIKDA' }).eq('id', r.id); load(true); showMsg('Mato nazorat xonasiga o\'tkazildi!'); setM('kontrol'); } }} style={{ ...S.btnG, padding: '10px 15px', fontSize: 11, background: '#40c4ff', color: '#000' }}>NAZORATGA 🔍</button>
+                );
+              })
+            ) : (
+              <div>
+                <button onClick={() => setF({ ...f, selectedBrutoBatch: null })} style={{ ...S.ib, color: '#40c4ff', marginBottom: 15, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <ArrowDown size={14} style={{ transform: 'rotate(90deg)' }} /> Orqaga
+                </button>
+                <div style={{ marginBottom: 15, padding: 10, background: 'rgba(64,196,255,0.1)', borderRadius: 12 }}>
+                  <b>#{f.selectedBrutoBatch.batch_number}</b> rulonlari
                 </div>
+                {data.whRolls.filter(r => r.batch_id === f.selectedBrutoBatch.id && (r.status === 'BRUTO' || r.status === 'Kirim')).map((r, idx) => (
+                  <div key={r.id} style={{ ...S.card, textAlign: 'left', marginBottom: 10, borderLeft: '4px solid #40c4ff' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: 10, color: '#666' }}>Rulon #{idx + 1}</div>
+                        <div style={{ fontSize: 16, fontWeight: 'bold' }}>{r.bruto} kg</div>
+                      </div>
+                      <button
+                        onClick={async () => { if (confirm('Nazoratga o\'tkazilsinmi?')) { await supabase.from('warehouse_rolls').update({ status: 'KO\'RIKDA' }).eq('id', r.id); load(true); showMsg('Mato nazorat xonasiga o\'tkazildi!'); setM('kontrol'); } }}
+                        style={{ ...S.btnG, padding: '10px 15px', fontSize: 11, background: '#40c4ff', color: '#000' }}
+                      >
+                        NAZORATGA 🔍
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         )}
 
