@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "10.6 WAREHOUSE-ULTRA";
+const APP_VERSION = "10.7 WAREHOUSE-ULTRA";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -122,7 +122,29 @@ export default function App() {
           </button>
         ))}
       </nav>
-      <style>{` @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } .spin { animation: spin 1s linear infinite; } `}</style>
+      <style>{` 
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } .spin { animation: spin 1s linear infinite; } 
+        @media print {
+          body * { display: none !important; }
+          .print-area, .print-area * { display: block !important; }
+          .print-area { position: absolute; left: 0; top: 0; width: 100%; }
+          .page-break { page-break-after: always; }
+          .label { border: 1px solid #000; padding: 20px; text-align: center; margin-bottom: 20px; }
+        }
+      `}</style>
+
+      {/* HIDDEN PRINT AREA */}
+      <div className="print-area" style={{ display: 'none' }}>
+        {selectedBatch && data.whRolls.filter(r => r.batch_id === selectedBatch.id).map(r => (
+          <div key={r.id} className="label page-break">
+            <h2>QTTuz PRO</h2>
+            <p>Batch: {r.batch_number} | Roll ID: {r.id}</p>
+            <p>Mato: {r.fabric_name} | Rang: {r.color}</p>
+            <QRCodeCanvas value={JSON.stringify({ id: r.id, b: r.batch_number })} size={200} />
+            <h3>Vazn: {r.bruto} kg</h3>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -196,21 +218,22 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab }) {
       <h3 style={{ marginBottom: 20, color: '#00e676', textAlign: 'center' }}>📦 YANGI PARTIYA QABULI</h3>
       <form onSubmit={async (e) => {
         e.preventDefault();
-        if (!f.bn || !f.eC || !f.eW || !f.sup) return showMsg('Barcha ma\'lumotlarni kiriting!', 'err');
+        if (!f.bn || !f.eC || !f.eW || !f.sup || !f.c) return showMsg('Barcha ma\'lumotlarni kiriting!', 'err');
         try {
           const { data: bData, error: bErr } = await supabase.from('warehouse_batches').insert([{
             batch_number: f.bn,
             user_name: user.name,
             supplier_name: f.sup,
+            color: f.c,
             expected_count: Number(f.eC),
             expected_weight: Number(f.eW),
             status: 'IN_PROGRESS'
           }]).select().single();
           if (bErr) throw bErr;
-          showMsg('Partiya ochildi. Taminotchi: ' + f.sup);
+          showMsg('Partiya ochildi. Rulonlarni tortishni boshlang!');
           setSelectedBatch(bData);
           setTab('ombor');
-          setF({ ...f, bn: '', eC: '', eW: '', sup: '' });
+          setF({ ...f, bn: '', eC: '', eW: '', sup: '', c: '' });
           load(true);
         } catch (err) { showMsg(err.message, 'err'); }
       }} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
@@ -231,9 +254,14 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab }) {
             <input style={S.input} type="number" placeholder="0" required value={f.eC} onChange={e => setF({ ...f, eC: e.target.value })} />
           </div>
           <div>
-            <label style={{ fontSize: 11, color: '#666', display: 'block', marginBottom: 5 }}>JAMI VAZN (KG)</label>
-            <input style={S.input} type="number" step="0.01" placeholder="0.00" required value={f.eW} onChange={e => setF({ ...f, eW: e.target.value })} />
+            <label style={{ fontSize: 11, color: '#666', display: 'block', marginBottom: 5 }}>MATO RANGI</label>
+            <input style={S.input} placeholder="Qora, Ko'k..." required value={f.c} onChange={e => setF({ ...f, c: e.target.value })} />
           </div>
+        </div>
+
+        <div>
+          <label style={{ fontSize: 11, color: '#666', display: 'block', marginBottom: 5 }}>JAMI KUTILGAN VAZN (KG)</label>
+          <input style={S.input} type="number" step="0.01" placeholder="0.00" required value={f.eW} onChange={e => setF({ ...f, eW: e.target.value })} />
         </div>
 
         <button type="submit" style={{ ...S.btnG, marginTop: 10 }}>PARTIYA OCHISH VA QABULNI BOSHLASH 🚀</button>
@@ -251,6 +279,11 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab }) {
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontWeight: 'bold', fontSize: 16 }}>{selectedBatch.batch_number}</div>
               <div style={{ fontSize: 10, color: '#00e676' }}>{rolls.length} Rulon | {rolls.reduce((sum, r) => sum + (r.bruto || 0), 0).toFixed(2)} kg (Bruto)</div>
+              {rolls.length > 0 && (
+                <button onClick={() => window.print()} style={{ fontSize: 9, background: '#1a1a2e', border: '1px solid #00e676', color: '#00e676', padding: '2px 8px', borderRadius: 4, marginTop: 5 }}>
+                  PECHAT UCHUN 🖨️
+                </button>
+              )}
             </div>
           </div>
 
