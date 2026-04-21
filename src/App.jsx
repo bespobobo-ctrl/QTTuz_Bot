@@ -127,7 +127,8 @@ export default function App() {
         @media print {
           body * { display: none !important; }
           .print-area, .print-area * { display: block !important; }
-          .print-area { position: absolute; left: 0; top: 0; width: 100%; }
+          .print-area { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex !important; justify-content: center; align-items: flex-start; }
+          .no-print, .no-print * { display: none !important; }
           .page-break { page-break-after: always; }
           .label { border: 1px solid #000; padding: 20px; text-align: center; margin-bottom: 20px; }
         }
@@ -583,8 +584,8 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
           <AnimatePresence>
             {f.qrRoll && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-                <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} exit={{ scale: 0.8 }} style={{ ...S.card, width: '100%', maxWidth: 320, background: '#fff', color: '#000', textAlign: 'center', padding: 25 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+                <motion.div className="print-area" initial={{ scale: 0.8 }} animate={{ scale: 1 }} exit={{ scale: 0.8 }} style={{ ...S.card, width: '100%', maxWidth: 320, background: '#fff', color: '#000', textAlign: 'center', padding: 25 }}>
+                  <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
                     <div style={{ textAlign: 'left' }}>
                       <div style={{ fontSize: 20, fontWeight: 'bold' }}>QTTuz PRO</div>
                       <div style={{ fontSize: 10, color: '#666' }}>Rulon Yorlig'i | {f.qrRoll.batch_number}</div>
@@ -593,28 +594,28 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                   </div>
 
                   <div style={{ background: '#fff', padding: 15, borderRadius: 15, border: '1px solid #eee', display: 'inline-block', marginBottom: 20 }}>
-                    <QRCodeCanvas value={JSON.stringify({ id: f.qrRoll.id, b: f.qrRoll.batch_number })} size={180} />
+                    <QRCodeCanvas value={JSON.stringify({ id: f.qrRoll.id, b: f.qrRoll.batch_number })} size={200} />
                   </div>
 
                   <div style={{ textAlign: 'left', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, fontSize: 13 }}>
-                    <div><small style={{ color: '#888' }}>MATO:</small><div><b>{f.qrRoll.fabric_name}</b></div></div>
-                    <div><small style={{ color: '#888' }}>RANGI:</small><div><b>{f.qrRoll.color}</b></div></div>
-                    <div style={{ gridColumn: '1 / 3' }}><small style={{ color: '#888' }}>SOFT (NETO):</small><div style={{ fontSize: 18, color: f.qrRoll.neto ? '#00c853' : '#ff9800' }}><b>{f.qrRoll.neto ? `${f.qrRoll.neto.toFixed(2)} KG` : 'TAROZI KUTILMOQDA...'}</b></div></div>
+                    <div><small style={{ color: '#888' }}>MATO:</small><div><b style={{ fontSize: 16 }}>{f.qrRoll.fabric_name}</b></div></div>
+                    <div><small style={{ color: '#888' }}>RANGI:</small><div><b style={{ fontSize: 16 }}>{f.qrRoll.color}</b></div></div>
+                    <div style={{ gridColumn: '1 / 3' }}><small style={{ color: '#888' }}>SOFT (NETO):</small><div style={{ fontSize: 24, color: f.qrRoll.neto ? '#00c853' : '#ff9800' }}><b>{f.qrRoll.neto ? `${f.qrRoll.neto.toFixed(2)} KG` : 'TAROZI KUTILMOQDA...'}</b></div></div>
 
                     <div style={{ padding: '8px', background: '#f5f5f5', borderRadius: 8 }}>
                       <small style={{ color: '#888' }}>EN / GRAMAJ:</small>
-                      <div><b>{f.qrRoll.en}sm / {f.qrRoll.gramaj}</b></div>
+                      <div><b style={{ fontSize: 16 }}>{f.qrRoll.en}sm / {f.qrRoll.gramaj}</b></div>
                     </div>
 
                     <div style={{ padding: '8px', background: '#f5f5f5', borderRadius: 8 }}>
                       <small style={{ color: '#888' }}>TOPILGAN NUQSONLAR:</small>
-                      <div style={{ fontSize: 11, color: '#d32f2f', fontWeight: 'bold' }}>
+                      <div style={{ fontSize: 12, color: '#d32f2f', fontWeight: 'bold' }}>
                         {f.qrRoll.defects ? Object.keys(f.qrRoll.defects).filter(k => f.qrRoll.defects[k] > 0).map(k => `${k.toUpperCase()}: ${f.qrRoll.defects[k]}`).join(', ') || 'TOPILMADI' : 'TOPILMADI'}
                       </div>
                     </div>
                   </div>
 
-                  <button onClick={() => window.print()} style={{ ...S.btnG, width: '100%', marginTop: 25, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                  <button className="no-print" onClick={() => window.print()} style={{ ...S.btnG, width: '100%', marginTop: 25, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
                     <Printer size={18} /> PRINTERGA YUBORISH
                   </button>
                 </motion.div>
