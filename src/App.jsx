@@ -972,14 +972,59 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
 
         {m === 'neto' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {data.whRolls.filter(r => r.status === 'Neto').filter(r => r.batch_number?.toLowerCase().includes(q.toLowerCase())).map((r, idx) => (
-              <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: `6px solid ${isResting(r.neto_date) ? '#fbc02d' : '#00e676'}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <div><b>{r.batch_number}</b><br /><small>{r.neto} kg Neto</small></div>
-                  <div style={{ fontSize: 9 }}>{isResting(r.neto_date) ? '⌛ DAM OLMOQDA' : '✅ TAYYOR'}</div>
+            {data.whRolls.filter(r => r.status === 'Neto').filter(r => r.batch_number?.toLowerCase().includes(q.toLowerCase())).map((r, idx) => {
+              const defCount = (r.defects?.teshik || 0) + (r.defects?.sirtiq || 0) + (r.defects?.poliester || 0) + (r.defects?.chiziq || 0) + (r.defects?.uloq || 0);
+              return (
+                <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: `6px solid ${isResting(r.neto_date) ? '#fbc02d' : '#00e676'}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, borderBottom: '1px solid #1a1a2e', paddingBottom: 10 }}>
+                    <div>
+                      <b style={{ fontSize: 16 }}>{r.batch_number}</b><br />
+                      <small style={{ color: '#aaa' }}>{r.fabric_name} | {r.color}</small>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 9 }}>{isResting(r.neto_date) ? '⌛ DAM OLMOQDA' : '✅ TAYYOR'}</div>
+                      <div style={{ fontSize: 16, fontWeight: 'bold', color: '#00e676' }}>{r.neto?.toFixed(2)} kg</div>
+                      <small style={{ color: '#888', fontSize: 10 }}>NETO VAZN</small>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 11, marginBottom: 10 }}>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 8 }}>
+                      <span style={{ color: '#666', fontSize: 9, display: 'block' }}>QABUL (BRUTO)</span>
+                      <b>{r.bruto?.toFixed(2)} kg</b>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 8 }}>
+                      <span style={{ color: '#666', fontSize: 9, display: 'block' }}>TARA (FTULKA)</span>
+                      <b style={{ color: '#ff9800' }}>{r.tara?.toFixed(2)} kg</b>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 8 }}>
+                      <span style={{ color: '#666', fontSize: 9, display: 'block' }}>ENI / GRAMAJ</span>
+                      <b>{r.en} sm / {r.gramaj}</b>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 8 }}>
+                      <span style={{ color: '#666', fontSize: 9, display: 'block' }}>KICHIK NUQSONLAR</span>
+                      <b style={{ color: defCount > 0 ? '#ff9800' : '#00e676' }}>{defCount} ta <small style={{ fontWeight: 'normal', color: '#888' }}>({
+                        Object.keys(r.defects || {}).filter(k => r.defects[k] > 0).map(k => `${k.substring(0, 3)}:${r.defects[k]}`).join(', ')
+                      })</small></b>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#666', borderTop: '1px dashed #2a2a3e', paddingTop: 10 }}>
+                    <div>
+                      <span style={{ display: 'block', color: '#888' }}>KELGAN VAQTI:</span>
+                      {new Date(r.created_at).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ display: 'block', color: '#888' }}>KONTROLDAN O'TDI:</span>
+                      {new Date(r.neto_date).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+            {data.whRolls.filter(r => r.status === 'Neto').length === 0 && (
+              <div style={{ textAlign: 'center', padding: 20, color: '#00e676', opacity: 0.5, fontSize: 12 }}>Hali nazoratdan o'tgan rulonlar yo'q.</div>
+            )}
           </div>
         )}
 
