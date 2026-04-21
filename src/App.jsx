@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "11.2 WAREHOUSE-ULTRA";
+const APP_VERSION = "11.3 WAREHOUSE-ULTRA";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -575,16 +575,31 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                 const isInProgress = b.status === 'IN_PROGRESS';
 
                 return (
-                  <div key={b.id} onClick={() => setSelectedBatch(b)} style={{ ...S.card, textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: `6px solid ${isInProgress ? '#ff9800' : '#40c4ff'}`, background: isInProgress ? 'rgba(255,152,0,0.05)' : '#12121e' }}>
-                    <div>
-                      <div style={{ fontWeight: 'bold', fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {b.batch_number} {isInProgress && <span style={{ fontSize: 8, background: '#ff9800', color: '#000', padding: '2px 6px', borderRadius: 4 }}>JARAYONDA ⏳</span>}
+                  <div key={b.id} style={{ ...S.card, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 10, borderLeft: `6px solid ${isInProgress ? '#ff9800' : '#40c4ff'}`, background: isInProgress ? 'rgba(255,152,0,0.05)' : '#12121e' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div onClick={() => setSelectedBatch(b)} style={{ cursor: 'pointer', flex: 1 }}>
+                        <div style={{ fontWeight: 'bold', fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {b.batch_number} {isInProgress && <span style={{ fontSize: 8, background: '#ff9800', color: '#000', padding: '2px 6px', borderRadius: 4 }}>JARAYONDA ⏳</span>}
+                        </div>
+                        <div style={{ fontSize: 10, color: '#666' }}>{b.supplier_name || 'Taminotchi'} | {b.color || 'Rangsiz'}</div>
+                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>
+                          Progress: <b style={{ color: '#0091ea' }}>{bRolls.length} / {b.expected_count || 0}</b> rulon
+                          <span style={{ marginLeft: 8 }}>|</span>
+                          <b style={{ color: '#00e676', marginLeft: 8 }}>{bRolls.reduce((s, r) => s + r.bruto, 0).toFixed(1)} / {b.expected_weight || 0}</b> kg
+                        </div>
                       </div>
-                      <div style={{ fontSize: 10, color: '#666' }}>{b.supplier_name || 'Taminotchi'} | {b.color || 'Rangsiz'}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 16, color: isInProgress ? '#ff9800' : '#40c4ff' }}>{bRolls.length} rulon</div>
-                      <div style={{ fontSize: 10, color: '#00e676' }}>{bRolls.reduce((s, r) => s + r.bruto, 0).toFixed(2)} kg</div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          onClick={() => {
+                            if (confirm('Ushbu partiya va uning barcha rulonlari o\'chirilsinmi?')) {
+                              supabase.from('warehouse_batches').delete().eq('id', b.id).then(() => {
+                                supabase.from('warehouse_rolls').delete().eq('batch_id', b.id).then(() => load(true));
+                              });
+                            }
+                          }}
+                          style={{ ...S.ib, color: '#ff4444' }}
+                        ><Trash2 size={18} /></button>
+                      </div>
                     </div>
                   </div>
                 );
