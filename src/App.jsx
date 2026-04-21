@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "11.9 WAREHOUSE-RADAR";
+const APP_VERSION = "12.0 WAREHOUSE-NETO-PRO";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -817,6 +817,14 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
 
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 15 }}>
                         <div>
+                          <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>FTULKA (TARA) KG</label>
+                          <input style={S.input} type="number" step="0.01" value={f.rT} onChange={e => setF({ ...f, rT: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>NETO (SOF VAZN)</label>
+                          <div style={{ ...S.input, background: '#2a2a3e', color: '#00e676', fontWeight: 'bold' }}>{(r.bruto - (Number(f.rT) || 0)).toFixed(2)} kg</div>
+                        </div>
+                        <div>
                           <label style={{ fontSize: 9, color: '#666', display: 'block', marginBottom: 4 }}>ENI (SM)</label>
                           <input style={S.input} type="number" value={f.rE} onChange={e => setF({ ...f, rE: e.target.value })} />
                         </div>
@@ -935,7 +943,7 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                         <button onClick={() => setF({ ...f, activeRollId: null, bImgs: [] })} style={{ ...S.btnG, background: '#333', color: '#fff', flex: 1 }}>BEKOR</button>
                         <button
                           onClick={async () => {
-                            if (!f.rE || !f.rG) return showMsg('Minimal maydonlarni to\'ldiring!', 'err');
+                            if (!f.rT || !f.rE || !f.rG) return showMsg('Minimal maydonlarni (Ftulkagacha) to\'ldiring!', 'err');
 
                             const defs = [{ id: 'teshik' }, { id: 'sirtiq' }, { id: 'poliester' }, { id: 'chiziq' }, { id: 'uloq' }];
                             const totalDefects = defs.reduce((sum, d) => sum + (f.rD[d.id] || 0), 0);
@@ -945,9 +953,10 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                               return showMsg('Brakni isbotlash uchun rasmlarni yuklang!', 'err');
                             }
 
+                            const n = r.bruto - Number(f.rT);
                             const now = new Date().toISOString();
                             await supabase.from('warehouse_rolls').update({
-                              en: Number(f.rE), gramaj: f.rG,
+                              tara: Number(f.rT), neto: n, en: Number(f.rE), gramaj: f.rG,
                               defects: f.rD,
                               defect_images: finalStatus === 'BRAK' ? f.bImgs : null,
                               status: finalStatus,
@@ -955,8 +964,8 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                             }).eq('id', r.id);
 
                             if (finalStatus !== 'BRAK') {
-                              setF({ ...f, activeRollId: null, bImgs: [], qrRoll: { ...r, status: finalStatus, en: Number(f.rE), gramaj: f.rG, defects: f.rD } });
-                              showMsg(`Nazoratdan o'tdi! Pasport chop eting.`);
+                              setF({ ...f, activeRollId: null, bImgs: [], qrRoll: { ...r, status: finalStatus, tara: Number(f.rT), neto: n, en: Number(f.rE), gramaj: f.rG, defects: f.rD } });
+                              showMsg(`Nazoratdan o'tdi! Pasport tayyor...`);
                             } else {
                               setF({ ...f, activeRollId: null, bImgs: [] });
                               showMsg(`Rulon BRAK deb topildi.`);
@@ -995,20 +1004,16 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                   if (!roll) return showMsg("Bunday o'lchamli Muloqot topilmadi!", "err");
                   if (roll.status !== 'KONTROLDAN_OTDI') return showMsg("Bu rulon hali Kontroldan o'tmagan yoki allaqachon Neto bo'lgan!", "err");
 
-                  const val = prompt(`${roll.batch_number} ruloni aniqlandi!\n\nTarozida ko'rinib turgan NETO (tayyor) vaznni kiriting (kg):`);
-                  if (val && !isNaN(val)) {
-                    const numNeto = Number(val.replace(',', '.'));
-                    const taraAmount = roll.bruto - numNeto;
+                  const val = confirm(`${roll.batch_number} ruloni (${roll.neto} kg) aniqlandi!\n\nTarozida shu Neto turibdimi? Tasdiqlaysizmi?`);
+                  if (val) {
                     const now = new Date().toISOString();
 
                     try {
                       await supabase.from('warehouse_rolls').update({
-                        neto: numNeto,
-                        tara: taraAmount,
                         status: 'Neto',
                         neto_date: now
                       }).eq('id', roll.id);
-                      showMsg(`${roll.batch_number} uchun Neto saqlandi!`);
+                      showMsg(`${roll.batch_number} Neto qabul qilindi! (${roll.neto} kg)`);
                       load(true);
                     } catch (e) {
                       showMsg(e.message, 'err');
