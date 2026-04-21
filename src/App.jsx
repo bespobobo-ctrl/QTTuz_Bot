@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "10.8 WAREHOUSE-ULTRA";
+const APP_VERSION = "10.9 WAREHOUSE-ULTRA";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -174,7 +174,7 @@ function Login({ data, setUser, setTab, showMsg }) {
 }
 
 function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, setSelectedBatch }) {
-  const [m, setM] = useState('fabric');
+  const [m, setM] = useState('bruto');
   const [f, setF] = useState({ bn: '', n: '', c: '', b: '', en: '', gr: '', rS: 1, activeRollId: null, rT: '', rE: '', rG: '', qrRoll: null, eC: '', eW: '', sup: '', rCC: '', rComp: '', rD: { s: 0, t: 0, d: 0 } });
   const [q, setQ] = useState('');
 
@@ -535,16 +535,72 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
     }
 
     return (
-      <div>
-        <div style={{ position: 'relative', marginBottom: 20 }}><Search size={16} style={{ position: 'absolute', left: 12, top: 13, color: '#444' }} /><input style={{ ...S.input, paddingLeft: 40 }} placeholder="Partiya raqamini yozing..." onChange={e => setQ(e.target.value)} /></div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {data.whBatches.filter(b => b.batch_number.toLowerCase().includes(q.toLowerCase())).map(b => (
-            <div key={b.id} onClick={() => setSelectedBatch(b)} style={{ ...S.card, textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div><div style={{ fontWeight: 'bold', fontSize: 16 }}>{b.batch_number}</div><small style={{ color: '#555' }}>{new Date(b.arrival_date).toLocaleDateString()}</small></div>
-              <div style={{ textAlign: 'right' }}><div style={{ fontSize: 16, color: '#40c4ff' }}>{data.whRolls.filter(r => r.batch_id === b.id).length} rulon</div><ChevronRight size={18} color="#444" /></div>
-            </div>
+      <div style={{ paddingBottom: 20 }}>
+        {/* FILTRLAR / HUDUDLAR */}
+        <div style={{ display: 'flex', gap: 5, marginBottom: 15, background: '#1a1a2e', padding: 4, borderRadius: 10 }}>
+          {[
+            { id: 'bruto', l: 'BRUTO', icon: Scale },
+            { id: 'kontrol', l: 'KONTROL', icon: Search },
+            { id: 'neto', l: 'NETO', icon: CheckCircle2 },
+            { id: 'acc', l: 'AKSESUAR', icon: Layers }
+          ].map(x => (
+            <button key={x.id} onClick={() => setM(x.id)} style={{ ...S.btn, flex: 1, fontSize: 8, padding: '8px 2px', background: m === x.id ? '#00e676' : 'transparent', color: m === x.id ? '#000' : '#fff', borderRadius: 8, border: 'none', cursor: 'pointer' }}>
+              <x.icon size={14} style={{ marginBottom: 4 }} /><br />{x.l}
+            </button>
           ))}
         </div>
+
+        <div style={{ position: 'relative', marginBottom: 20 }}><Search size={16} style={{ position: 'absolute', left: 12, top: 13, color: '#444' }} /><input style={{ ...S.input, paddingLeft: 40 }} placeholder="Partiya raqamini yozing..." onChange={e => setQ(e.target.value)} /></div>
+
+        {m === 'bruto' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {data.whRolls.filter(r => r.status === 'BRUTO' || r.status === 'Kirim').filter(r => r.batch_number?.toLowerCase().includes(q.toLowerCase())).map((r, idx) => (
+              <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: '6px solid #40c4ff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: '#666' }}>{r.batch_number} | Rulon #{idx + 1}</div>
+                    <div style={{ fontSize: 16, fontWeight: 'bold' }}>{r.bruto} kg (Bruto)</div>
+                  </div>
+                  <button onClick={async () => { if (confirm('Nazoratga o\'tkazilsinmi?')) { await supabase.from('warehouse_rolls').update({ status: 'KO\'RIKDA' }).eq('id', r.id); load(true); showMsg('Mato nazorat xonasiga o\'tkazildi!'); setM('kontrol'); } }} style={{ ...S.btnG, padding: '10px 15px', fontSize: 11, background: '#40c4ff', color: '#000' }}>NAZORATGA 🔍</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {m === 'kontrol' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {data.whRolls.filter(r => r.status === 'KO\'RIKDA' || f.activeRollId === r.id).filter(r => r.batch_number?.toLowerCase().includes(q.toLowerCase())).map((r, idx) => {
+              const isControlling = f.activeRollId === r.id;
+              return (
+                <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: '6px solid #ff9800' }}>
+                  {isControlling ? (
+                    /* Standard Control Logic here - similar to previous but focused */
+                    <div style={{ padding: 10 }}>Nazorat qilinmoqda... (Avvalgi interfeys)</div>
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div><b>{r.batch_number}</b><br /><small>{r.bruto} kg</small></div>
+                      <button onClick={() => setF({ ...f, activeRollId: r.id })} style={{ ...S.btnG, padding: '10px', fontSize: 11 }}>O'LCHASH 📏</button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {m === 'neto' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {data.whRolls.filter(r => r.status === 'Neto').filter(r => r.batch_number?.toLowerCase().includes(q.toLowerCase())).map((r, idx) => (
+              <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: `6px solid ${isResting(r.neto_date) ? '#fbc02d' : '#00e676'}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div><b>{r.batch_number}</b><br /><small>{r.neto} kg Neto</small></div>
+                  <div style={{ fontSize: 9 }}>{isResting(r.neto_date) ? '⌛ DAM OLMOQDA' : '✅ TAYYOR'}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
