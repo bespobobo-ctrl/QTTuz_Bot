@@ -653,11 +653,40 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                         </div>
                       )}
 
+                      {f.selectedBrutoBatch.status === 'ACCEPTED' && (
+                        <div style={{ ...S.card, borderColor: '#40c4ff', background: 'rgba(64,196,255,0.05)', marginBottom: 20 }}>
+                          <div style={{ fontSize: 13, fontWeight: 'bold', color: '#40c4ff', textAlign: 'center', marginBottom: 15 }}>PARTIYA QABUL QILINGAN ✅</div>
+                          <button onClick={() => window.print()} style={{ ...S.btnG, width: '100%', background: '#40c4ff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                            <Printer size={18} /> BARCODELARNI CHOP ETISH 🖨️
+                          </button>
+                        </div>
+                      )}
+
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {data.whRolls.filter(r => r.batch_id === f.selectedBrutoBatch.id).sort((a, b) => b.id - a.id).map((r, idx, arr) => (
+                        {bRolls.sort((a, b) => b.id - a.id).map((r, idx, arr) => (
                           <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: '4px solid #40c4ff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px' }}>
                             <div><small style={{ color: '#888' }}>Rulon #{arr.length - idx}</small><div style={{ fontSize: 16, fontWeight: 'bold' }}>{r.bruto} kg</div></div>
-                            <button onClick={async () => { if (confirm('Nazoratga?')) { await supabase.from('warehouse_rolls').update({ status: 'KO\'RIKDA' }).eq('id', r.id); load(true); showMsg('O\'tkazildi!'); } }} style={{ ...S.btnG, padding: '8px 15px', fontSize: 10, background: '#40c4ff', color: '#000' }}>NAZORATGA 🔍</button>
+                            {f.selectedBrutoBatch.status === 'ACCEPTED' && r.status === 'BRUTO' && (
+                              <button onClick={async () => { if (confirm('Nazoratga o\'tkazilsinmi?')) { await supabase.from('warehouse_rolls').update({ status: 'KO\'RIKDA' }).eq('id', r.id); load(true); showMsg('O\'tkazildi!'); } }} style={{ ...S.btnG, padding: '8px 15px', fontSize: 10, background: '#40c4ff', color: '#000' }}>NAZORATGA 🔍</button>
+                            )}
+                            {r.status !== 'BRUTO' && <span style={{ fontSize: 10, color: '#ff9800' }}>{r.status.toUpperCase()}</span>}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* YASHIRIN PECHAT (PRINT) MAYDONI */}
+                      <div className="print-area" style={{ display: 'none' }}>
+                        {bRolls.map((r, i) => (
+                          <div key={r.id} className="label page-break" style={{ padding: '40px 20px', textAlign: 'center', border: '2px solid #000', margin: '20px auto', maxWidth: 400, background: '#fff', color: '#000' }}>
+                            <h2 style={{ fontSize: 26, margin: '0 0 5px 0', borderBottom: '2px solid #000', paddingBottom: 10 }}>QTTuz WAREHOUSE</h2>
+                            <p style={{ fontSize: 22, fontWeight: 'bold', margin: '15px 0' }}>{f.selectedBrutoBatch.batch_number}</p>
+                            <p style={{ fontSize: 16, margin: '5px 0' }}>Mato: {f.selectedBrutoBatch.color} | Supplier: {f.selectedBrutoBatch.supplier_name}</p>
+                            <p style={{ fontSize: 18, color: '#444', fontWeight: 'bold', margin: '15px 0' }}>RULON #{bRolls.length - i}</p>
+                            <div style={{ margin: '30px auto', display: 'block' }}>
+                              <QRCodeCanvas value={JSON.stringify({ id: r.id, b: r.batch_number, w: r.bruto })} size={220} />
+                            </div>
+                            <h1 style={{ fontSize: 40, margin: '10px 0', fontWeight: '900' }}>{r.bruto} KG <small style={{ fontSize: 20 }}>BRUTO</small></h1>
+                            <p style={{ fontSize: 12, color: '#666' }}>ID: {r.id}</p>
                           </div>
                         ))}
                       </div>
