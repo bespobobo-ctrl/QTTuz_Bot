@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "12.1 WAREHOUSE-NETO-PRO";
+const APP_VERSION = "12.2 WAREHOUSE-NETO-PRO";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -620,6 +620,59 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                 </motion.div>
               </motion.div>
             )}
+
+            {/* SCANNED ROLL DETAILS MODAL */}
+            {f.scannedRoll && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                <motion.div initial={{ scale: 0.8, y: 50 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.8, y: 50 }} style={{ ...S.card, width: '100%', maxWidth: 350, background: '#fff', color: '#000', padding: 25, borderRadius: 24 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: 13, color: '#666' }}>SKANER QILINDI ✅</div>
+                      <div style={{ fontSize: 22, fontWeight: '900' }}>{f.scannedRoll.batch_number}</div>
+                    </div>
+                    <button onClick={() => setF({ ...f, scannedRoll: null })} style={{ background: '#f5f5f5', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={18} /></button>
+                  </div>
+
+                  <div style={{ background: '#f5f5f5', borderRadius: 16, padding: 15, marginBottom: 20 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, fontSize: 13, textAlign: 'left' }}>
+                      <div><small style={{ color: '#888' }}>MATO:</small><div><b>{f.scannedRoll.fabric_name}</b></div></div>
+                      <div><small style={{ color: '#888' }}>RANGI:</small><div><b>{f.scannedRoll.color}</b></div></div>
+                      <div><small style={{ color: '#888' }}>BRUTO / TARA:</small><div><b style={{ color: '#666' }}>{f.scannedRoll.bruto} / {f.scannedRoll.tara} kg</b></div></div>
+                      <div><small style={{ color: '#888' }}>EN / GRAMAJ:</small><div><b>{f.scannedRoll.en}sm / {f.scannedRoll.gramaj}</b></div></div>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'center', background: '#00e676', color: '#000', padding: '15px', borderRadius: 16, marginBottom: 20 }}>
+                    <div style={{ fontSize: 12, fontWeight: 'bold', opacity: 0.8 }}>TAYYOR SOF (NETO) VAZNI</div>
+                    <div style={{ fontSize: 36, fontWeight: '900' }}>{f.scannedRoll.neto.toFixed(2)} <span style={{ fontSize: 16 }}>kg</span></div>
+                  </div>
+
+                  <div style={{ padding: '12px', background: 'rgba(255,0,0,0.05)', borderRadius: 12, marginBottom: 25, textAlign: 'left' }}>
+                    <small style={{ color: '#d32f2f', fontWeight: 'bold' }}>TOPILGAN NUQSONLAR:</small>
+                    <div style={{ fontSize: 12, color: '#333', marginTop: 5 }}>
+                      {f.scannedRoll.defects ? Object.keys(f.scannedRoll.defects).filter(k => f.scannedRoll.defects[k] > 0).map(k => `${k.toUpperCase()}: ${f.scannedRoll.defects[k]}`).join(' | ') || 'Topilmadi' : 'Topilmadi'}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={async () => {
+                      const now = new Date().toISOString();
+                      try {
+                        await supabase.from('warehouse_rolls').update({ status: 'Neto', neto_date: now }).eq('id', f.scannedRoll.id);
+                        showMsg(`${f.scannedRoll.batch_number} Neto Omboriga tushdi!`);
+                        setF({ ...f, scannedRoll: null });
+                        load(true);
+                      } catch (e) {
+                        showMsg(e.message, 'err');
+                      }
+                    }}
+                    style={{ ...S.btnG, width: '100%', background: '#000', color: '#00e676', padding: '15px', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 16 }}
+                  >
+                    TASDIQLASH VA NETOGA OLISH <CheckCircle2 size={18} />
+                  </button>
+                </motion.div>
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
       );
@@ -1004,21 +1057,7 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                   if (!roll) return showMsg("Bunday o'lchamli Muloqot topilmadi!", "err");
                   if (roll.status !== 'KONTROLDAN_OTDI') return showMsg("Bu rulon hali Kontroldan o'tmagan yoki allaqachon Neto bo'lgan!", "err");
 
-                  const val = confirm(`${roll.batch_number} ruloni (${roll.neto} kg) aniqlandi!\n\nTarozida shu Neto turibdimi? Tasdiqlaysizmi?`);
-                  if (val) {
-                    const now = new Date().toISOString();
-
-                    try {
-                      await supabase.from('warehouse_rolls').update({
-                        status: 'Neto',
-                        neto_date: now
-                      }).eq('id', roll.id);
-                      showMsg(`${roll.batch_number} Neto qabul qilindi! (${roll.neto} kg)`);
-                      load(true);
-                    } catch (e) {
-                      showMsg(e.message, 'err');
-                    }
-                  }
+                  setF({ ...f, scannedRoll: roll });
                 };
 
                 if (window.Telegram?.WebApp?.showScanQrPopup) {
