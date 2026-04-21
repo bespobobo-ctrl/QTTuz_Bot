@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "11.5 WAREHOUSE-ULTRA";
+const APP_VERSION = "11.7 WAREHOUSE-ULTRA PRO";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -51,7 +51,7 @@ export default function App() {
         setNeedsUpdate(false);
       }
 
-      setData({ heads: h.data || [], history: hi.data || [], whItems: wi.data || [], whLog: wl.data || [], whBatches: wb.data || [], whRolls: wr.data || [] });
+      setData({ sysConfig: ver.data, heads: h.data || [], history: hi.data || [], whItems: wi.data || [], whLog: wl.data || [], whBatches: wb.data || [], whRolls: wr.data || [] });
     } catch (e) {
       console.error(e);
       // Silently fail if version config is missing
@@ -71,14 +71,6 @@ export default function App() {
     return () => sub.unsubscribe();
   }, [load]);
 
-  if (needsUpdate) return (
-    <div style={{ ...S.root, justifyContent: 'center', alignItems: 'center', padding: 40, textAlign: 'center' }}>
-      <Zap size={60} color="#00e676" style={{ marginBottom: 20 }} />
-      <h1 style={{ fontSize: 22, fontWeight: 'bold' }}>YANGI VERSIYA MAVJUD!</h1>
-      <p style={{ color: '#888', marginBottom: 20 }}>Tizimning barqaror ishlashi uchun yangilash tugmasini bosing.</p>
-      <button onClick={handleHardUpdate} style={{ ...S.btnG, width: '100%', marginTop: 10 }}> YANGILASH VA TOZALASH 🚀</button>
-    </div>
-  );
 
   if (!user) return <Login data={data} setUser={setUser} setTab={setTab} showMsg={showMsg} />;
 
@@ -91,8 +83,15 @@ export default function App() {
         {loading && <div style={S.loadingBar} />}
       </AnimatePresence>
 
+      {needsUpdate && (
+        <div style={{ background: '#ff9800', color: '#000', padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, fontWeight: 'bold' }}>
+          <span>YANGI VERSIYA MAVJUD (v{data.sysConfig?.value || '?'})</span>
+          <button onClick={handleHardUpdate} style={{ background: '#000', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: 6, fontSize: 10 }}>YANGILASH 🚀</button>
+        </div>
+      )}
+
       <header style={S.header}>
-        <div><div style={{ fontSize: 16, fontWeight: 'bold' }}>{user.name}</div><div style={{ fontSize: 9, color: '#00e676' }}>{APP_VERSION} PRO</div></div>
+        <div><div style={{ fontSize: 16, fontWeight: 'bold' }}>{user.name}</div><div style={{ fontSize: 9, color: '#00e676' }}>{APP_VERSION}</div></div>
         <div style={{ display: 'flex', gap: 12 }}>
           <button onClick={() => load()} style={S.ib}><RefreshCcw size={18} className={loading ? 'spin' : ''} /></button>
           <button onClick={() => setUser(null)} style={{ ...S.ib, color: '#ff3b30' }}><LogOut size={18} /></button>
@@ -611,45 +610,60 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                   </div>
                 </div>
 
-                {f.selectedBrutoBatch.status === 'IN_PROGRESS' && (
-                  <div style={{ ...S.card, borderColor: '#ff9800', marginBottom: 20 }}>
-                    <div style={{ fontSize: 12, marginBottom: 10, color: '#ff9800', fontWeight: 'bold' }}>YANGI RULON TAROZISI ⚖️</div>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <input
-                        type="number"
-                        style={{ ...S.input, flex: 1, fontSize: 18, fontWeight: 'bold' }}
-                        placeholder="Vazn (kg)"
-                        value={f.rT}
-                        onChange={e => setF({ ...f, rT: e.target.value })}
-                      />
-                      <button
-                        onClick={async () => {
-                          if (!f.rT) return showMsg('Vaznni yozing!', 'err');
-                          await supabase.from('warehouse_rolls').insert([{
-                            batch_id: f.selectedBrutoBatch.id,
-                            batch_number: f.selectedBrutoBatch.batch_number,
-                            fabric_name: f.selectedBrutoBatch.color,
-                            bruto: Number(f.rT),
-                            status: 'BRUTO',
-                            color: f.selectedBrutoBatch.color,
-                            color_code: f.selectedBrutoBatch.color
-                          }]);
-                          setF({ ...f, rT: '' }); load(true); showMsg('Rulon saqlandi! ✅');
-                        }}
-                        style={{ ...S.btnG, padding: '0 25px' }}
-                      >SAQLASH</button>
-                    </div>
-                  </div>
-                )}
+                {(() => {
+                  const bRolls = data.whRolls.filter(r => r.batch_id === f.selectedBrutoBatch.id);
+                  const curWeight = bRolls.reduce((s, r) => s + (r.bruto || 0), 0);
+                  const diff = curWeight - (f.selectedBrutoBatch.expected_weight || 0);
+                  const isDone = bRolls.length >= (f.selectedBrutoBatch.expected_count || 0);
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {data.whRolls.filter(r => r.batch_id === f.selectedBrutoBatch.id).sort((a, b) => b.id - a.id).map((r, idx, arr) => (
-                    <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: '4px solid #40c4ff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px' }}>
-                      <div><small style={{ color: '#888' }}>Rulon #{arr.length - idx}</small><div style={{ fontSize: 16, fontWeight: 'bold' }}>{r.bruto} kg</div></div>
-                      <button onClick={async () => { if (confirm('Nazoratga o\'tkazilsinmi?')) { await supabase.from('warehouse_rolls').update({ status: 'KO\'RIKDA' }).eq('id', r.id); load(true); showMsg('O\'tkazildi!'); } }} style={{ ...S.btnG, padding: '8px 15px', fontSize: 10, background: '#40c4ff', color: '#000' }}>NAZORATGA 🔍</button>
-                    </div>
-                  ))}
-                </div>
+                  return (
+                    <>
+                      <div style={{ ...S.card, background: 'rgba(64,196,255,0.05)', marginBottom: 20, padding: 15 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, textAlign: 'center' }}>
+                          <div><small style={{ color: '#888', fontSize: 9 }}>Kutilgan</small><div style={{ fontWeight: 'bold' }}>{f.selectedBrutoBatch.expected_weight} <small>kg</small></div></div>
+                          <div><small style={{ color: '#888', fontSize: 9 }}>O'lchangan</small><div style={{ fontWeight: 'bold' }}>{curWeight.toFixed(1)} <small>kg</small></div></div>
+                          <div><small style={{ color: '#888', fontSize: 9 }}>Farq</small><div style={{ fontWeight: 'bold', color: diff === 0 ? '#00e676' : '#ff4444' }}>{diff.toFixed(1)} <small>kg</small></div></div>
+                        </div>
+                        <div style={{ fontSize: 10, textAlign: 'center', marginTop: 10, color: isDone ? '#00e676' : '#ff9800' }}>
+                          {bRolls.length} / {f.selectedBrutoBatch.expected_count} Rulon tortildi
+                        </div>
+                      </div>
+
+                      {f.selectedBrutoBatch.status === 'IN_PROGRESS' && !isDone && (
+                        <div style={{ ...S.card, borderColor: '#ff9800', marginBottom: 20 }}>
+                          <div style={{ fontSize: 12, marginBottom: 10, color: '#ff9800', fontWeight: 'bold' }}>#{bRolls.length + 1} RULON TAROZISI ⚖️</div>
+                          <div style={{ display: 'flex', gap: 10 }}>
+                            <input type="number" style={{ ...S.input, flex: 1, fontSize: 18, fontWeight: 'bold' }} placeholder="0.00" value={f.rT} onChange={e => setF({ ...f, rT: e.target.value })} />
+                            <button onClick={async () => {
+                              if (!f.rT) return showMsg('Vaznni yozing!', 'err');
+                              await supabase.from('warehouse_rolls').insert([{ batch_id: f.selectedBrutoBatch.id, batch_number: f.selectedBrutoBatch.batch_number, fabric_name: f.selectedBrutoBatch.color, bruto: Number(f.rT), status: 'BRUTO', color: f.selectedBrutoBatch.color }]);
+                              setF({ ...f, rT: '' }); load(true); showMsg('Rulon saqlandi!');
+                            }} style={{ ...S.btnG, padding: '0 25px' }}>SAQLASH</button>
+                          </div>
+                        </div>
+                      )}
+
+                      {isDone && f.selectedBrutoBatch.status === 'IN_PROGRESS' && (
+                        <div style={{ ...S.card, borderColor: '#00e676', background: 'rgba(0,230,118,0.05)', marginBottom: 20 }}>
+                          <div style={{ fontSize: 11, fontWeight: 'bold', color: '#00e676', textAlign: 'center', marginBottom: 15 }}>HAMMA RULONLAR TORTILDI. VAZNNI TANLANG:</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                            <button onClick={async () => { if (confirm('Zavod vazni bilan?')) { await supabase.from('warehouse_batches').update({ status: 'ACCEPTED', actual_weight: f.selectedBrutoBatch.expected_weight }).eq('id', f.selectedBrutoBatch.id); showMsg('Qabul qilindi!'); setF({ ...f, selectedBrutoBatch: null }); load(true); } }} style={{ ...S.btnG, fontSize: 10, padding: '15px 5px' }}>FABRIKA: {f.selectedBrutoBatch.expected_weight}kg</button>
+                            <button onClick={async () => { if (confirm('Tarozi vazni bilan?')) { await supabase.from('warehouse_batches').update({ status: 'ACCEPTED', actual_weight: curWeight }).eq('id', f.selectedBrutoBatch.id); showMsg('Qabul qilindi!'); setF({ ...f, selectedBrutoBatch: null }); load(true); } }} style={{ ...S.btnG, fontSize: 10, padding: '15px 5px', background: '#40c4ff' }}>TAROZI: {curWeight.toFixed(1)}kg</button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {data.whRolls.filter(r => r.batch_id === f.selectedBrutoBatch.id).sort((a, b) => b.id - a.id).map((r, idx, arr) => (
+                          <div key={r.id} style={{ ...S.card, textAlign: 'left', borderLeft: '4px solid #40c4ff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px' }}>
+                            <div><small style={{ color: '#888' }}>Rulon #{arr.length - idx}</small><div style={{ fontSize: 16, fontWeight: 'bold' }}>{r.bruto} kg</div></div>
+                            <button onClick={async () => { if (confirm('Nazoratga?')) { await supabase.from('warehouse_rolls').update({ status: 'KO\'RIKDA' }).eq('id', r.id); load(true); showMsg('O\'tkazildi!'); } }} style={{ ...S.btnG, padding: '8px 15px', fontSize: 10, background: '#40c4ff', color: '#000' }}>NAZORATGA 🔍</button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             )}
           </div>
