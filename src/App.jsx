@@ -101,7 +101,7 @@ export default function App() {
       <main style={S.content}>
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            {isOmbor ? <OmborUltra tab={tab} user={user} data={data} showMsg={showMsg} load={load} /> : <div style={S.card}>Admin bo'limi...</div>}
+            {isOmbor ? <OmborUltra tab={tab} user={user} data={data} showMsg={showMsg} load={load} setTab={setTab} /> : <div style={S.card}>Admin bo'limi...</div>}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -150,7 +150,7 @@ function Login({ data, setUser, setTab, showMsg }) {
   );
 }
 
-function OmborUltra({ tab, user, data, showMsg, load }) {
+function OmborUltra({ tab, user, data, showMsg, load, setTab }) {
   const [m, setM] = useState('fabric');
   const [f, setF] = useState({ bn: '', n: '', c: '', b: '', en: '', gr: '', rS: 1, activeRollId: null, rT: '', rE: '', rG: '', qrRoll: null, eC: '', eW: '' });
   const [selectedBatch, setSelectedBatch] = useState(null);
