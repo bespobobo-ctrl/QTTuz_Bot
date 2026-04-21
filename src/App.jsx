@@ -14,7 +14,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_VERSION = "10.9 WAREHOUSE-ULTRA";
+const APP_VERSION = "11.0 WAREHOUSE-ULTRA";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -306,20 +306,34 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
             </div>
 
             {rolls.length >= (selectedBatch.expected_count || 0) && (
-              <button
-                onClick={async () => {
-                  const actual = rolls.reduce((s, x) => s + Number(x.bruto), 0);
-                  const choice = confirm(`Qabulni yakunlaymizmi?\nKutilgan: ${selectedBatch.expected_weight} kg\nO'lchangan: ${actual.toFixed(2)} kg\n\nOk - O'lchangan vaznni qabul qilish\nCancel - Bekor qilish`);
-                  if (choice) {
-                    await supabase.from('warehouse_batches').update({ status: 'ACCEPTED', actual_weight: actual }).eq('id', selectedBatch.id);
-                    showMsg('Partiya muvaffaqiyatli qabul qilindi!');
-                    setSelectedBatch(null); load(true);
-                  }
-                }}
-                style={{ ...S.btnG, width: '100%', marginTop: 15, background: '#0091ea', color: '#fff' }}
-              >
-                QABULNI YAKUNLASH ✅
-              </button>
+              <div style={{ marginTop: 20, padding: 15, background: 'rgba(0,230,118,0.05)', borderRadius: 16, border: '1px solid #00e676' }}>
+                <div style={{ fontSize: 13, fontWeight: 'bold', color: '#00e676', textAlign: 'center', marginBottom: 15 }}>QABULNI YAKUNLASH: VAZNNI TANLANG</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <button
+                    onClick={async () => {
+                      if (confirm(`Zavod vazni (${selectedBatch.expected_weight} kg) bo'yicha qabul qilinsinmi?`)) {
+                        await supabase.from('warehouse_batches').update({ status: 'ACCEPTED', actual_weight: selectedBatch.expected_weight }).eq('id', selectedBatch.id);
+                        showMsg('Partiya zavod vazni bilan qabul qilindi!'); setSelectedBatch(null); load(true);
+                      }
+                    }}
+                    style={{ ...S.btnG, fontSize: 10, height: 'auto', padding: '15px 5px' }}
+                  >
+                    FABRIKA VAZNI<br /><b style={{ fontSize: 14 }}>{selectedBatch.expected_weight} kg</b>
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const actual = rolls.reduce((s, x) => s + Number(x.bruto), 0);
+                      if (confirm(`Tarozi vazni (${actual.toFixed(2)} kg) bo'yicha qabul qilinsinmi?`)) {
+                        await supabase.from('warehouse_batches').update({ status: 'ACCEPTED', actual_weight: actual }).eq('id', selectedBatch.id);
+                        showMsg('Partiya tarozi vazni bilan qabul qilindi!'); setSelectedBatch(null); load(true);
+                      }
+                    }}
+                    style={{ ...S.btnG, fontSize: 10, height: 'auto', padding: '15px 5px', background: '#40c4ff' }}
+                  >
+                    TAROZI VAZNI<br /><b style={{ fontSize: 14 }}>{rolls.reduce((s, x) => s + Number(x.bruto), 0).toFixed(2)} kg</b>
+                  </button>
+                </div>
+              </div>
             )}
           </div>
 
