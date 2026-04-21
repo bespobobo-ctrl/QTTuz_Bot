@@ -1009,7 +1009,7 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#666', borderTop: '1px dashed #2a2a3e', paddingTop: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#666', borderTop: '1px dashed #2a2a3e', paddingTop: 10, paddingBottom: 10 }}>
                     <div>
                       <span style={{ display: 'block', color: '#888' }}>KELGAN VAQTI:</span>
                       {new Date(r.created_at).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -1019,6 +1019,13 @@ function OmborUltra({ tab, user, data, showMsg, load, setTab, selectedBatch, set
                       {new Date(r.neto_date).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
+
+                  <button
+                    onClick={() => setF({ ...f, qrRoll: r })}
+                    style={{ ...S.btnG, width: '100%', background: '#1a1a2e', color: '#00e676', border: '1px solid #00e676', padding: '10px', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  >
+                    <QrCode size={16} /> QR YORLIQ / PASPORT NUXSASI 🖨️
+                  </button>
                 </div>
               );
             })}
