@@ -37,9 +37,9 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
     );
 
     const handleInspect = async () => {
-        if (!inspectForm.neto || !inspectForm.en || !inspectForm.gramaj) {
-            return showMsg('Barcha maydonlarni to\'ldiring!', 'err');
-        }
+        if (!inspectForm.neto) return showMsg('Neto vaznni kiriting!', 'err');
+        if (!inspectForm.en) return showMsg('Mato enini kiriting!', 'err');
+        if (!inspectForm.gramaj) return showMsg('Gramajni kiriting!', 'err');
 
         const totalDefects = Object.values(inspectForm.defects).reduce((a, b) => a + b, 0);
         const finalStatus = totalDefects >= 12 ? 'BRAK' : 'KONTROLDAN_OTDI';
@@ -60,7 +60,14 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                 images: images
             };
 
-            const { error } = await supabase.from('warehouse_rolls').update(updData).eq('id', activeRoll.id);
+            let { error } = await supabase.from('warehouse_rolls').update(updData).eq('id', activeRoll.id);
+
+            // Fallback: if 'images' column doesn't exist yet
+            if (error && error.message.includes('images')) {
+                delete updData.images;
+                const secondAttempt = await supabase.from('warehouse_rolls').update(updData).eq('id', activeRoll.id);
+                error = secondAttempt.error;
+            }
 
             if (error) throw error;
 
