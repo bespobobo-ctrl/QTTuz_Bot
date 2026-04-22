@@ -4,7 +4,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { supabase } from '../lib/supabase';
 import {
     Package, Calendar, ChevronRight,
-    Printer, AlertCircle, PlusCircle, Download
+    Printer, AlertCircle, PlusCircle, Download, CheckCircle2
 } from 'lucide-react';
 
 export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
