@@ -126,9 +126,9 @@ export default function App() {
       {user.role !== 'rahbar' && (
         <nav style={S.nav}>
           {[
-            { id: 'dashboard', icon: LayoutDashboard, l: user.role === 'omborchi' ? 'Ko\'rik' : 'Asosiy' },
+            { id: 'dashboard', icon: LayoutDashboard, l: user.role === 'omborchi' ? 'Bruto Partiyalar' : 'Asosiy' },
             ...(user.role !== 'omborchi' ? [{ id: 'kirim', icon: Download, l: 'Kirim' }] : []),
-            { id: 'ombor', icon: Package, l: user.role === 'omborchi' ? 'Resting' : 'Stock' },
+            { id: 'ombor', icon: Package, l: user.role === 'omborchi' ? 'Tayyor (Dam)' : 'Stock' },
             ...(user.role === 'mato_ombori' ? [{ id: 'neto', icon: CheckCircle2, l: 'Neto' }] : [])
           ].map(x => (
             <button key={x.id} onClick={() => setTab(x.id)} style={{ ...S.nb, color: tab === x.id ? '#00e676' : '#555' }}>

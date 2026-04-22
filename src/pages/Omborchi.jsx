@@ -86,41 +86,30 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
 
     const renderRestingMatos = () => {
         const restingRolls = rolls.filter(r => r.status === 'KONTROLDAN_OTDI');
-
         return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <h2 style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, color: '#BA68C8' }}>
-                    <Clock size={24} /> Dam olishdagi matolar (48 soat)
-                </h2>
+                <h2 style={{ marginBottom: 20 }}>Tayyor (Dam olishdagi) matolar</h2>
                 {restingRolls.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: 40, color: '#555' }}>Hozircha dam olishga kirgan matolar yo'q</div>
+                    <div style={{ ...S.card, textAlign: 'center', opacity: 0.5 }}>Hali dam olgan matolar yo'q</div>
                 ) : (
                     restingRolls.map(r => {
                         const insDate = new Date(r.inspection_date);
-                        const now = new Date();
-                        const diffMs = now - insDate;
+                        const diffMs = new Date() - insDate;
                         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
                         const remainingHours = 48 - diffHours;
                         const isReady = remainingHours <= 0;
 
                         return (
-                            <div key={r.id} style={{ ...S.card, borderLeft: `5px solid ${isReady ? '#81C784' : '#E57373'}` }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div>
-                                        <div style={{ fontWeight: 'bold' }}>{r.batch_number} • {r.bruto} kg</div>
-                                        <div style={{ fontSize: 11, color: '#888' }}>{r.fabric_name}</div>
-                                    </div>
-                                    {isReady ? (
-                                        <span style={S.badge('#81C784')}>BICHUVGA TAYYOR ✅</span>
-                                    ) : (
-                                        <span style={S.badge('#E57373')}>DAM OLMOQDA ({remainingHours}s qoldi)</span>
-                                    )}
+                            <div key={r.id} style={{ ...S.card, borderLeft: `6px solid ${isReady ? '#00e676' : '#ff3b30'}` }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <b>{r.batch_number}</b>
+                                    <span style={{ fontSize: 13, fontWeight: 'bold', color: isReady ? '#00e676' : '#ff3b30' }}>
+                                        {isReady ? 'BICHUVGA TAYYOR ✅' : `${remainingHours} soat dam olishi kerak ⏳`}
+                                    </span>
                                 </div>
-                                {!isReady && (
-                                    <div style={{ marginTop: 10, fontSize: 11, color: '#E57373', display: 'flex', alignItems: 'center', gap: 5 }}>
-                                        <AlertTriangle size={14} /> 48 soat o'tmagan, ishlatish mumkin emas!
-                                    </div>
-                                )}
+                                <div style={{ fontSize: 13, marginTop: 10, opacity: 0.8 }}>
+                                    {r.fabric_name} • {r.neto} kg / {r.bruto} kg (Neto/Bruto)
+                                </div>
                             </div>
                         );
                     })
@@ -129,111 +118,124 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
         );
     };
 
-    const renderBatches = () => (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <h2 style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, color: '#FFD700' }}>
-                <AlertCircle size={24} /> Kantrolga tayyor partiyalar
-            </h2>
-            {readyBatches.map(b => (
-                <div key={b.id} style={S.card} onClick={() => setActiveBatch(b)}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                            <div style={{ fontWeight: 'bold', fontSize: 18 }}>{b.batch_number}</div>
-                            <div style={{ fontSize: 12, color: '#888' }}>{b.supplier_name} • {b.color}</div>
-                        </div>
-                        <ChevronRight color="#555" />
-                    </div>
-                    <div style={{ marginTop: 10 }}>
-                        <span style={S.badge('#FFD700')}>{rolls.filter(r => r.batch_id === b.id && r.status === 'BRUTO').length} ta rulon kutilmoqda</span>
-                    </div>
-                </div>
-            ))}
-            {readyBatches.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#555' }}>Tekshiruvga partiyalar yo'q</div>}
-        </motion.div>
-    );
-
-    const renderInspection = () => {
-        const batchRolls = rolls.filter(r => r.batch_id === activeBatch.id && r.status === 'BRUTO');
-
-        return (
-            <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
-                <button onClick={() => setActiveBatch(null)} style={{ background: 'none', border: 'none', color: '#00e676', marginBottom: 20, fontWeight: 'bold' }}>← ORQAGA</button>
-                <h2 style={{ marginBottom: 15 }}>{activeBatch.batch_number} - Rulonlarni tekshirish</h2>
-
-                {batchRolls.map((r, i) => (
-                    <div key={r.id} style={S.card}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div style={{ width: 30, height: 30, borderRadius: 15, background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{i + 1}</div>
-                                <b>{r.bruto} kg</b>
-                            </div>
-                            <button
-                                onClick={() => setActiveRoll(r)}
-                                style={{ ...S.btn, width: 'auto', padding: '8px 15px', background: '#00e676', color: '#000', fontSize: 12 }}
-                            >
-                                TEKSHIRUVNI BOSHLASH
-                            </button>
-                        </div>
-                    </div>
-                ))}
-            </motion.div>
-        );
-    };
+    if (tab === 'ombor') return renderRestingMatos();
 
     return (
         <div style={{ position: 'relative' }}>
-            {tab === 'dashboard' && renderBatches()}
-            {tab === 'ombor' && renderRestingMatos()}
+            {activeBatch ? (
+                <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
+                    <button onClick={() => setActiveBatch(null)} style={{ background: 'none', border: 'none', color: '#00e676', fontWeight: 'bold', marginBottom: 15, cursor: 'pointer' }}>← PARTIYALAR RO'YXATI</button>
+                    <div style={S.card}>
+                        <h2 style={{ color: '#00e676', margin: 0 }}>{activeBatch.batch_number} Partiyasi</h2>
+                        <p style={{ fontSize: 13, color: '#888', marginTop: 5 }}>Barcha rulonlarni tekshiruvdan o'tkazish majburiy!</p>
+                        <div style={{ padding: '10px 0', borderTop: '1px solid #2a2a40', marginTop: 15 }}>
+                            {rolls.filter(r => r.batch_id === activeBatch.id).map((r, i) => (
+                                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #1a1a2e' }}>
+                                    <div>
+                                        <span style={{ color: '#555', marginRight: 10 }}>{i + 1}.</span>
+                                        <b>{r.bruto} kg</b> (Bruto)
+                                        {r.status === 'KONTROLDAN_OTDI' && <span style={{ marginLeft: 10, color: '#00e676', fontSize: 10 }}>✅ Tekshirilgan</span>}
+                                        {r.status === 'BRAK' && <span style={{ marginLeft: 10, color: '#E57373', fontSize: 10 }}>❌ BRAK</span>}
+                                    </div>
+                                    {r.status === 'BRUTO' ? (
+                                        <button onClick={() => setActiveRoll(r)} style={{ ...S.btn, width: 'auto', padding: '6px 15px', background: '#00e676', color: '#000', fontSize: 11 }}>TAROZIGA QO'YISH</button>
+                                    ) : (
+                                        <CheckCircle2 size={18} color={r.status === 'BRAK' ? '#E57373' : '#00e676'} />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </motion.div>
+            ) : (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 25 }}>
+                        <AlertCircle color="#FFD700" size={32} />
+                        <h2 style={{ lineHeight: 1.2, margin: 0 }}>Bruto Partiyalar <br /><span style={{ color: '#FFD700', fontSize: 14 }}>(Nazorat kutilmoqda)</span></h2>
+                    </div>
 
-            {activeBatch && !activeRoll && renderInspection()}
+                    {readyBatches.length === 0 ? (
+                        <div style={{ ...S.card, textAlign: 'center', opacity: 0.5, padding: 50 }}>Partiyalar mavjud emas</div>
+                    ) : (
+                        readyBatches.map(b => {
+                            const batchRolls = rolls.filter(r => r.batch_id === b.id);
+                            const inspectedCount = batchRolls.filter(r => r.status !== 'BRUTO').length;
+                            return (
+                                <div key={b.id} style={{ ...S.card, cursor: 'pointer' }} onClick={() => setActiveBatch(b)}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div>
+                                            <h3 style={{ fontSize: 22, margin: 0 }}>{b.batch_number}</h3>
+                                            <div style={{ color: '#888', fontSize: 12, marginTop: 4 }}>{b.supplier_name} • {b.color}</div>
+                                        </div>
+                                        <ChevronRight color="#555" />
+                                    </div>
+                                    <div style={{ marginTop: 15, background: 'rgba(255,215,0,0.1)', padding: '8px 12px', borderRadius: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: 12, color: '#FFD700', fontWeight: 'bold' }}>PROGRES: {inspectedCount} / {batchRolls.length} rulon</span>
+                                        <div style={{ width: 80, height: 6, background: '#1a1a2e', borderRadius: 3, overflow: 'hidden' }}>
+                                            <div style={{ width: `${(inspectedCount / batchRolls.length) * 100}%`, height: '100%', background: '#FFD700' }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </motion.div>
+            )}
 
             {activeRoll && (
                 <div style={{ position: 'fixed', inset: 0, background: '#0a0a14', zIndex: 10000, padding: 20, overflowY: 'auto' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                         <h2 style={{ margin: 0 }}>Rulon Tekshiruvi</h2>
-                        <button onClick={() => setActiveRoll(null)} style={{ background: 'none', border: 'none', color: '#fff' }}>YOPISH</button>
+                        <button onClick={() => setActiveRoll(null)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: 16 }}>YOPISH</button>
                     </div>
 
                     <div style={S.card}>
-                        <div style={{ marginBottom: 20, fontSize: 18 }}>Partiya: <b>{activeRoll.batch_number}</b> | Bruto: <b>{activeRoll.bruto} kg</b></div>
+                        <h2 style={{ marginTop: 0, color: '#00e676' }}>Rulonni Taroziga Qo'ying ⚖️</h2>
+                        <p style={{ fontSize: 14, color: '#888' }}>Partiya: <b>{activeBatch?.batch_number}</b> | Bruto: <b style={{ color: '#fff' }}>{activeRoll.bruto} kg</b></p>
 
-                        <p style={{ color: '#888', fontSize: 13 }}>TARA VA O'LCHAMLAR</p>
+                        <p style={{ color: '#888', fontSize: 11, fontWeight: 'bold', marginTop: 20, textTransform: 'uppercase' }}>TARA VA O'LCHAMLAR</p>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                             <div>
-                                <label style={{ fontSize: 11, color: '#555' }}>Tara (kg)</label>
+                                <span style={{ fontSize: 11, color: '#555' }}>Tara (kg)</span>
                                 <input style={S.input} type="number" placeholder="0.40" value={inspectForm.tara} onChange={e => setInspectForm({ ...inspectForm, tara: e.target.value })} />
                             </div>
                             <div>
-                                <label style={{ fontSize: 11, color: '#555' }}>Eni (sm)</label>
+                                <span style={{ fontSize: 11, color: '#555' }}>Eni (sm)</span>
                                 <input style={S.input} type="number" placeholder="180" value={inspectForm.en} onChange={e => setInspectForm({ ...inspectForm, en: e.target.value })} />
                             </div>
                         </div>
+
                         <div>
-                            <label style={{ fontSize: 11, color: '#555' }}>Gramaj</label>
+                            <span style={{ fontSize: 11, color: '#555' }}>Gramaj</span>
                             <input style={S.input} placeholder="160-170" value={inspectForm.gramaj} onChange={e => setInspectForm({ ...inspectForm, gramaj: e.target.value })} />
                         </div>
 
-                        <p style={{ color: '#888', fontSize: 13, marginTop: 20 }}>NUQSONLARNI SANASH (THRESHOLD: 12)</p>
-                        <div style={{ display: 'grid', gap: 10 }}>
+                        <div style={{ background: 'rgba(0,230,118,0.1)', padding: 15, borderRadius: 12, border: '1px dashed #00e676', textAlign: 'center', marginBottom: 20 }}>
+                            <span style={{ fontSize: 12, color: '#00e676' }}>HISOBANGAN NETO:</span>
+                            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{(activeRoll.bruto - Number(inspectForm.tara)).toFixed(2)} kg</div>
+                        </div>
+
+                        <p style={{ color: '#888', fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' }}>NUQSONLARNI SANASH (Limit: 12)</p>
+                        <div style={{ display: 'grid', gap: 8 }}>
                             {Object.entries(inspectForm.defects).map(([d, count]) => (
-                                <div key={d} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: 10, borderRadius: 12 }}>
+                                <div key={d} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: 12 }}>
                                     <span style={{ fontSize: 14 }}>{d}</span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
-                                        <button onClick={() => updateDefect(d, -1)} style={S.counterBtn}><Minus size={16} /></button>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                        <button onClick={() => updateDefect(d, -1)} style={S.counterBtn}><Minus size={14} /></button>
                                         <b style={{ minWidth: 20, textAlign: 'center', color: count > 0 ? '#E57373' : '#fff' }}>{count}</b>
-                                        <button onClick={() => updateDefect(d, 1)} style={S.counterBtn}><Plus size={16} /></button>
+                                        <button onClick={() => updateDefect(d, 1)} style={S.counterBtn}><Plus size={14} /></button>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-                        <div style={{ marginTop: 20, padding: 15, background: 'rgba(229, 115, 115, 0.1)', borderRadius: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: 13, fontWeight: 'bold' }}>JAMI AYBLAR SONI:</span>
-                            <b style={{ fontSize: 20, color: '#E57373' }}>{Object.values(inspectForm.defects).reduce((a, b) => a + b, 0)} / 12</b>
+                        <div style={{ marginTop: 20, padding: 12, background: 'rgba(229, 115, 115, 0.1)', borderRadius: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: 12, fontWeight: 'bold' }}>JAMI AYBLAR:</span>
+                            <b style={{ fontSize: 18, color: '#E57373' }}>{Object.values(inspectForm.defects).reduce((a, b) => a + b, 0)} / 12</b>
                         </div>
 
-                        <p style={{ color: '#888', fontSize: 13, marginTop: 20 }}>FOTO TASDIQ (Faqat Brak bo'lsa ham bo'ladi)</p>
-                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 15 }}>
+                        <p style={{ color: '#888', fontSize: 11, fontWeight: 'bold', marginTop: 20, textTransform: 'uppercase' }}>FOTO TASDIQ</p>
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
                             {images.map((img, i) => (
                                 <img key={i} src={img} style={{ width: 60, height: 60, borderRadius: 10, objectFit: 'cover' }} alt="Defect" />
                             ))}
@@ -248,8 +250,7 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                             style={{
                                 ...S.btn,
                                 background: Object.values(inspectForm.defects).reduce((a, b) => a + b, 0) >= 12 ? '#E57373' : '#00e676',
-                                color: '#000',
-                                marginTop: 20
+                                color: '#000'
                             }}
                         >
                             {Object.values(inspectForm.defects).reduce((a, b) => a + b, 0) >= 12 ? 'BRAK SIFATIDA SAQLASH ❌' : 'TEKSHIRUVDAN O\'TKAZISH ✅'}
