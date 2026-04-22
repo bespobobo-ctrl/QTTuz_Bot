@@ -8,6 +8,7 @@ import {
 import { createClient } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeCanvas } from 'qrcode.react';
+import MatoOmboriPanel from './pages/MatoOmbori';
 
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
@@ -90,7 +91,7 @@ export default function App() {
   const renderContent = () => {
     switch (user.role) {
       case 'rahbar': return <RahbarPanel data={data} load={load} showMsg={showMsg} />;
-      case 'mato_ombori':
+      case 'mato_ombori': return <MatoOmboriPanel data={data} load={load} showMsg={showMsg} />;
       case 'omborchi': return <OmborPanel tab={tab} data={data} load={load} showMsg={showMsg} />;
       default: return <DepartmentPlaceholder name={user.deptName} />;
     }
