@@ -1,9 +1,9 @@
-const https = require('https');
+import https from 'https';
 
-const TOKEN = '8715883040:AAE6BRzEXirmKHvZYpGvb31lXVdAh9sXVmU';
-const APP_URL = 'https://qtt-uz-bot.vercel.app';
+export default async function handler(req, res) {
+    const TOKEN = '8715883040:AAE6BRzEXirmKHvZYpGvb31lXVdAh9sXVmU';
+    const APP_URL = 'https://qtt-uz-bot.vercel.app';
 
-module.exports = async (req, res) => {
     if (req.method !== 'POST') {
         return res.status(200).send('Bot is running...');
     }
@@ -20,7 +20,9 @@ module.exports = async (req, res) => {
         const welcomeText = `🏭 *OmborUZ — Bo'limlar boshqaruvi*\n\n` +
             `Xush kelibsiz! Har bir bo'limga kirish uchun maxsus tugmani bosing:`;
 
-        await sendMessage(chatId, welcomeText, {
+        const data = JSON.stringify({
+            chat_id: chatId,
+            text: welcomeText,
             parse_mode: 'Markdown',
             reply_markup: {
                 inline_keyboard: [
@@ -53,27 +55,24 @@ module.exports = async (req, res) => {
                 ]
             }
         });
+
+        const url = `https://api.telegram.org/bot${TOKEN}/sendMessage`;
+
+        await new Promise((resolve) => {
+            const req = https.request(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(data)
+                }
+            }, (res) => {
+                res.on('data', () => { });
+                res.on('end', resolve);
+            });
+            req.write(data);
+            req.end();
+        });
     }
 
     res.status(200).json({ ok: true });
-};
-
-async function sendMessage(chatId, text, options) {
-    const data = JSON.stringify({ chat_id: chatId, text, ...options });
-    const url = `https://api.telegram.org/bot${TOKEN}/sendMessage`;
-
-    return new Promise((resolve) => {
-        const req = https.request(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Content-Length': data.length
-            }
-        }, (res) => {
-            res.on('data', () => { });
-            res.on('end', resolve);
-        });
-        req.write(data);
-        req.end();
-    });
 }
