@@ -6,19 +6,14 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function check() {
     try {
-        const { data: batches, error: bErr } = await supabase.from('warehouse_batches').select('*');
-        const { data: rolls, error: rErr } = await supabase.from('warehouse_rolls').select('*');
-        const { data: configs, error: vErr } = await supabase.from('system_config').select('*');
-
-        console.log('Batches count:', batches ? batches.length : 'null');
-        console.log('Rolls count:', rolls ? rolls.length : 'null');
-        console.log('Configs:', configs);
-        if (bErr || rErr || vErr) {
-            console.log('Errors:', { bErr, rErr, vErr });
+        const { data: rolls, error: rErr } = await supabase.from('warehouse_rolls').select('*').limit(1);
+        if (rolls && rolls.length > 0) {
+            console.log('Columns in warehouse_rolls:', Object.keys(rolls[0]));
+        } else {
+            console.log('No rolls found to check columns.');
         }
     } catch (e) {
         console.error('Fatal:', e);
     }
 }
-
 check();

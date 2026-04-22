@@ -56,7 +56,7 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                 gramaj: inspectForm.gramaj,
                 defects: JSON.stringify(inspectForm.defects),
                 status: finalStatus,
-                inspection_date: now
+                neto_date: now
             };
 
             const { error } = await supabase.from('warehouse_rolls').update(updData).eq('id', activeRoll.id);
@@ -104,7 +104,7 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                     <div style={{ ...S.card, textAlign: 'center', opacity: 0.5 }}>Hali dam olgan matolar yo'q</div>
                 ) : (
                     restingRolls.map(r => {
-                        const insDate = new Date(r.inspection_date);
+                        const insDate = new Date(r.neto_date);
                         const diffMs = new Date() - insDate;
                         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
                         const remainingHours = 48 - diffHours;
@@ -292,7 +292,7 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                             <div style={P.row}><span>Bruto:</span> <b>{qrRoll.bruto} kg</b></div>
                             <div style={P.row}><span>Neto:</span> <b style={{ color: '#2e7d32' }}>{qrRoll.neto} kg</b></div>
                             <div style={P.row}><span>En / Gramaj:</span> <b>{qrRoll.en} sm / {qrRoll.gramaj}</b></div>
-                            <div style={P.row}><span>Tekshiruv:</span> <b>{new Date(qrRoll.inspection_date).toLocaleString()}</b></div>
+                            <div style={P.row}><span>Tekshiruv:</span> <b>{new Date(qrRoll.neto_date).toLocaleString()}</b></div>
 
                             <div style={{ marginTop: 10, borderTop: '1px solid #ddd', paddingTop: 10 }}>
                                 <span style={{ fontSize: 11, color: '#666' }}>ANIQLANGAN NUQSONLAR:</span>
