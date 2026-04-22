@@ -279,6 +279,43 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
         );
     };
 
+    const renderNeto = () => {
+        const netoRolls = rolls.filter(r => r.status === 'KONTROLDAN_OTDI' || r.neto);
+
+        return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <h2 style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, color: '#4FC3F7' }}>
+                    <CheckCircle2 size={24} /> Neto Matolar Ro'yxati
+                </h2>
+                {netoRolls.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 40, color: '#555' }}>Hozircha Neto (Tayyor) matolar yo'q</div>
+                ) : (
+                    <div style={{ display: 'grid', gap: 10 }}>
+                        {netoRolls.map(r => (
+                            <div key={r.id} style={{ ...S.card, marginBottom: 0, padding: '15px 20px', borderLeft: '4px solid #4FC3F7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <div style={{ fontSize: 12, color: '#888' }}>Partiya: {r.batch_number} • Rangi: {r.fabric_name}</div>
+                                    <div style={{ fontSize: 18, fontWeight: 'bold' }}>{r.neto ? r.neto.toFixed(2) : '---'} kg</div>
+                                    <div style={{ fontSize: 12, marginTop: 5 }}>
+                                        Eni: <b style={{ color: '#fff' }}>{r.en || '--'} sm</b> | Gramaj: <b style={{ color: '#fff' }}>{r.gramaj || '--'}</b>
+                                    </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <span style={{ padding: '6px 12px', background: 'rgba(79, 195, 247, 0.15)', color: '#4FC3F7', borderRadius: 8, fontSize: 11, fontWeight: 'bold' }}>
+                                        NETO OLINDI
+                                    </span>
+                                    <div style={{ fontSize: 11, color: '#555', marginTop: 10 }}>
+                                        Bruto: {r.bruto} kg | Tara: {r.tara || 0} kg
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </motion.div>
+        );
+    };
+
     return (
         <div style={{ position: 'relative' }}>
             {renderPrintOverlay()}
@@ -288,6 +325,8 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
             {tab === 'ombor' && (
                 activeBatch ? renderActiveBatch() : renderDashboard()
             )}
+
+            {tab === 'neto' && !activeBatch && renderNeto()}
         </div>
     );
 }

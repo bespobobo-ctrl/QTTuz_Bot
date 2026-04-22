@@ -127,7 +127,8 @@ export default function App() {
           {[
             ...(user.role !== 'mato_ombori' ? [{ id: 'dashboard', icon: LayoutDashboard, l: 'Radar' }] : []),
             { id: 'kirim', icon: Download, l: 'Kirim' },
-            { id: 'ombor', icon: Package, l: 'Stock' }
+            { id: 'ombor', icon: Package, l: 'Stock' },
+            ...(user.role === 'mato_ombori' ? [{ id: 'neto', icon: CheckCircle2, l: 'Neto' }] : [])
           ].map(x => (
             <button key={x.id} onClick={() => setTab(x.id)} style={{ ...S.nb, color: tab === x.id ? '#00e676' : '#555' }}>
               <x.icon size={22} /><span style={{ fontSize: 9 }}>{x.l}</span>
