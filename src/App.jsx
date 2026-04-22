@@ -37,7 +37,7 @@ export default function App() {
     try { const s = localStorage.getItem('qu'); return s ? JSON.parse(s) : null; } catch { return null; }
   });
   const [selectedDept, setSelectedDept] = useState(null);
-  const [tab, setTab] = useState('dashboard');
+  const [tab, setTab] = useState('ombor');
   const [data, setData] = useState({ whBatches: [], whRolls: [], whLog: [], deptLogins: [] });
   const [msg, setMsg] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -125,7 +125,7 @@ export default function App() {
       {user.role !== 'rahbar' && (
         <nav style={S.nav}>
           {[
-            { id: 'dashboard', icon: LayoutDashboard, l: 'Radar' },
+            ...(user.role !== 'mato_ombori' ? [{ id: 'dashboard', icon: LayoutDashboard, l: 'Radar' }] : []),
             { id: 'kirim', icon: Download, l: 'Kirim' },
             { id: 'ombor', icon: Package, l: 'Stock' }
           ].map(x => (
