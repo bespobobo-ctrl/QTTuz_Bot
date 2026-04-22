@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeCanvas } from 'qrcode.react';
 import MatoOmboriPanel from './pages/MatoOmbori';
+import OmborchiPanel from './pages/Omborchi';
 
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
@@ -92,7 +93,7 @@ export default function App() {
     switch (user.role) {
       case 'rahbar': return <RahbarPanel data={data} load={load} showMsg={showMsg} />;
       case 'mato_ombori': return <MatoOmboriPanel tab={tab} data={data} load={load} showMsg={showMsg} />;
-      case 'omborchi': return <OmborPanel tab={tab} data={data} load={load} showMsg={showMsg} />;
+      case 'omborchi': return <OmborchiPanel tab={tab} data={data} load={load} showMsg={showMsg} />;
       default: return <DepartmentPlaceholder name={user.deptName} />;
     }
   };
@@ -125,9 +126,9 @@ export default function App() {
       {user.role !== 'rahbar' && (
         <nav style={S.nav}>
           {[
-            { id: 'dashboard', icon: LayoutDashboard, l: 'Asosiy' },
-            { id: 'kirim', icon: Download, l: 'Kirim' },
-            { id: 'ombor', icon: Package, l: 'Stock' },
+            { id: 'dashboard', icon: LayoutDashboard, l: user.role === 'omborchi' ? 'Ko\'rik' : 'Asosiy' },
+            { id: 'kirim', icon: Download, l: user.role === 'omborchi' ? '---' : 'Kirim' },
+            { id: 'ombor', icon: Package, l: user.role === 'omborchi' ? 'Resting' : 'Stock' },
             ...(user.role === 'mato_ombori' ? [{ id: 'neto', icon: CheckCircle2, l: 'Neto' }] : [])
           ].map(x => (
             <button key={x.id} onClick={() => setTab(x.id)} style={{ ...S.nb, color: tab === x.id ? '#00e676' : '#555' }}>
