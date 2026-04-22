@@ -12,7 +12,7 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
     const [activeRoll, setActiveRoll] = useState(null);
     const [images, setImages] = useState([]);
     const [inspectForm, setInspectForm] = useState({
-        tara: '0.40',
+        neto: '',
         en: '180',
         gramaj: '160-170',
         defects: { 'Dog\'': 0, 'Teshik': 0, 'Uloq': 0, 'Sirtiq': 0, 'Polyester xatosi': 0 }
@@ -34,20 +34,21 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
     );
 
     const handleInspect = async () => {
-        if (!inspectForm.tara || !inspectForm.en || !inspectForm.gramaj) {
+        if (!inspectForm.neto || !inspectForm.en || !inspectForm.gramaj) {
             return showMsg('Barcha maydonlarni to\'ldiring!', 'err');
         }
 
         const totalDefects = Object.values(inspectForm.defects).reduce((a, b) => a + b, 0);
         const finalStatus = totalDefects >= 12 ? 'BRAK' : 'KONTROLDAN_OTDI';
 
-        const neto = activeRoll.bruto - Number(inspectForm.tara);
+        const netoValue = Number(inspectForm.neto);
+        const taraValue = activeRoll.bruto - netoValue;
         const now = new Date().toISOString();
 
         try {
             const { error } = await supabase.from('warehouse_rolls').update({
-                tara: Number(inspectForm.tara),
-                neto: neto,
+                tara: taraValue,
+                neto: netoValue,
                 en: Number(inspectForm.en),
                 gramaj: inspectForm.gramaj,
                 defects: JSON.stringify(inspectForm.defects),
@@ -61,7 +62,7 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
             showMsg(finalStatus === 'BRAK' ? 'Mato BRAK deb topildi!' : 'Tekshiruv yakunlandi!');
             setActiveRoll(null);
             setImages([]);
-            setInspectForm({ tara: '0.40', en: '180', gramaj: '160-170', defects: { 'Dog\'': 0, 'Teshik': 0, 'Uloq': 0, 'Sirtiq': 0, 'Polyester xatosi': 0 } });
+            setInspectForm({ neto: '', en: '180', gramaj: '160-170', defects: { 'Dog\'': 0, 'Teshik': 0, 'Uloq': 0, 'Sirtiq': 0, 'Polyester xatosi': 0 } });
             load(true);
         } catch (e) {
             showMsg('Xatolik yuz berdi!', 'err');
@@ -193,11 +194,11 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                         <h2 style={{ marginTop: 0, color: '#00e676' }}>Rulonni Taroziga Qo'ying ⚖️</h2>
                         <p style={{ fontSize: 14, color: '#888' }}>Partiya: <b>{activeBatch?.batch_number}</b> | Bruto: <b style={{ color: '#fff' }}>{activeRoll.bruto} kg</b></p>
 
-                        <p style={{ color: '#888', fontSize: 11, fontWeight: 'bold', marginTop: 20, textTransform: 'uppercase' }}>TARA VA O'LCHAMLAR</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        <p style={{ color: '#888', fontSize: 11, fontWeight: 'bold', marginTop: 20, textTransform: 'uppercase' }}>O'LCHAMLAR VA NETO VAZN</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 10 }}>
                             <div>
-                                <span style={{ fontSize: 11, color: '#555' }}>Tara (kg)</span>
-                                <input style={S.input} type="number" placeholder="0.40" value={inspectForm.tara} onChange={e => setInspectForm({ ...inspectForm, tara: e.target.value })} />
+                                <span style={{ fontSize: 11, color: '#00e676', fontWeight: 'bold' }}>Neto vazn (KG)</span>
+                                <input style={{ ...S.input, borderColor: '#00e676' }} type="number" placeholder="Neto kg" value={inspectForm.neto} onChange={e => setInspectForm({ ...inspectForm, neto: e.target.value })} />
                             </div>
                             <div>
                                 <span style={{ fontSize: 11, color: '#555' }}>Eni (sm)</span>
@@ -210,9 +211,9 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                             <input style={S.input} placeholder="160-170" value={inspectForm.gramaj} onChange={e => setInspectForm({ ...inspectForm, gramaj: e.target.value })} />
                         </div>
 
-                        <div style={{ background: 'rgba(0,230,118,0.1)', padding: 15, borderRadius: 12, border: '1px dashed #00e676', textAlign: 'center', marginBottom: 20 }}>
-                            <span style={{ fontSize: 12, color: '#00e676' }}>HISOBANGAN NETO:</span>
-                            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{(activeRoll.bruto - Number(inspectForm.tara)).toFixed(2)} kg</div>
+                        <div style={{ background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <span style={{ fontSize: 11, color: '#888' }}>AVTOMATIK TARA:</span>
+                            <b style={{ color: '#ff9800' }}>{(activeRoll.bruto - Number(inspectForm.neto)).toFixed(2)} kg</b>
                         </div>
 
                         <p style={{ color: '#888', fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' }}>NUQSONLARNI SANASH (Limit: 12)</p>
