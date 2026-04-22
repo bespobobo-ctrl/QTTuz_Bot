@@ -204,10 +204,13 @@ function RahbarPanel({ data, load, showMsg }) {
   );
 }
 
-function OmborPanel({ tab, data, load, showMsg }) {
+const OmborPanel = ({ tab, data, load, showMsg }) => {
   const [m, setM] = useState('bruto');
   const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '', rT: '', rE: '', rG: '' });
   const [q, setQ] = useState('');
+  const [activeBatch, setActiveBatch] = useState(null);
+  const [activeRollId, setActiveRollId] = useState(null);
+  const [qrRoll, setQrRoll] = useState(null);
 
   if (tab === 'dashboard') return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
@@ -349,3 +352,69 @@ const S = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 5000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(5px)' },
   mCard: { background: '#fff', color: '#000', width: '100%', maxWidth: 350, padding: 30, borderRadius: 30, textAlign: 'center' }
 };
+
+function DepartmentSelection({ onSelect }) {
+  return (
+    <div style={{ padding: 20 }}>
+      <h2 style={{ textAlign: 'center', marginBottom: 20 }}>Tizim bo'limlari</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+        {DEPARTMENTS.map(d => (
+          <button key={d.id} onClick={() => onSelect(d)} style={{ ...S.card, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, background: '#12121e', border: '1px solid #1a1a2e', cursor: 'pointer' }}>
+            <div style={{ background: d.color, padding: 15, borderRadius: 20, color: '#000' }}><d.icon size={32} /></div>
+            <div style={{ fontWeight: 'bold', fontSize: 12, textAlign: 'center', color: '#fff' }}>{d.name}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Login({ selectedDept, setUser, onBack, deptLogins }) {
+  const [u, setU] = useState('');
+  const [p, setP] = useState('');
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (selectedDept.id === 'rahbar' && u === 'admin' && p === '0068') {
+      const user = { role: 'rahbar', name: 'Rahbar', deptName: 'Rahbar' };
+      localStorage.setItem('qu', JSON.stringify(user));
+      setUser(user);
+      return;
+    }
+    const config = deptLogins.find(l => l.dept_id === selectedDept.id);
+    if (config && config.login_name === u && config.password === p) {
+      const user = { role: selectedDept.id, name: u, deptName: selectedDept.name, deptColor: selectedDept.color };
+      localStorage.setItem('qu', JSON.stringify(user));
+      setUser(user);
+    } else {
+      alert("Xato login yoki parol kiritildi!");
+    }
+  }
+
+  return (
+    <div style={{ padding: 20, paddingTop: 50 }}>
+      <button onClick={onBack} style={{ color: '#00e676', marginBottom: 20, background: 'none', border: 'none', fontWeight: 'bold' }}>← ORQAGA</button>
+      <div style={{ ...S.card, textAlign: 'center' }}>
+        <div style={{ background: selectedDept.color, width: 60, height: 60, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto', color: '#000' }}>
+          <selectedDept.icon size={32} />
+        </div>
+        <h2 style={{ marginBottom: 20, color: '#fff' }}>{selectedDept.name} tizimiga kirish</h2>
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+          <input style={S.input} placeholder="Login" value={u} onChange={e => setU(e.target.value)} required />
+          <input style={S.input} type="password" placeholder="Parol" value={p} onChange={e => setP(e.target.value)} required />
+          <button style={S.btnG}>KIRISH</button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function DepartmentPlaceholder({ name }) {
+  return (
+    <div style={{ textAlign: 'center', padding: 50, color: '#555' }}>
+      <h3>{name}</h3>
+      <p>Bu bo'lim hozirda ishlab chiqilmoqda...</p>
+    </div>
+  )
+}
+
