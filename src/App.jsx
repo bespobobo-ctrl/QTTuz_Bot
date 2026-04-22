@@ -91,7 +91,7 @@ export default function App() {
   const renderContent = () => {
     switch (user.role) {
       case 'rahbar': return <RahbarPanel data={data} load={load} showMsg={showMsg} />;
-      case 'mato_ombori': return <MatoOmboriPanel data={data} load={load} showMsg={showMsg} />;
+      case 'mato_ombori': return <MatoOmboriPanel tab={tab} data={data} load={load} showMsg={showMsg} />;
       case 'omborchi': return <OmborPanel tab={tab} data={data} load={load} showMsg={showMsg} />;
       default: return <DepartmentPlaceholder name={user.deptName} />;
     }
