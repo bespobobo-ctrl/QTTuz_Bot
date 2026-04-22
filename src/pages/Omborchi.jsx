@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
+import { QRCodeCanvas } from 'qrcode.react';
 import {
     CheckCircle2, AlertTriangle, Scale, Ruler,
     Clock, Scissors, ChevronRight, AlertCircle,
-    ClipboardCheck, Thermometer, Plus, Minus, Camera, Image as ImageIcon
+    ClipboardCheck, Thermometer, Plus, Minus, Camera, Image as ImageIcon,
+    Printer, X, Search
 } from 'lucide-react';
 
 export default function OmborchiPanel({ tab, data, load, showMsg }) {
     const [activeBatch, setActiveBatch] = useState(null);
     const [activeRoll, setActiveRoll] = useState(null);
+    const [qrRoll, setQrRoll] = useState(null);
     const [images, setImages] = useState([]);
     const [inspectForm, setInspectForm] = useState({
         neto: '',
@@ -46,7 +49,7 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
         const now = new Date().toISOString();
 
         try {
-            const { error } = await supabase.from('warehouse_rolls').update({
+            const updData = {
                 tara: taraValue,
                 neto: netoValue,
                 en: Number(inspectForm.en),
@@ -55,11 +58,14 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                 status: finalStatus,
                 inspection_date: now,
                 images: images
-            }).eq('id', activeRoll.id);
+            };
+
+            const { error } = await supabase.from('warehouse_rolls').update(updData).eq('id', activeRoll.id);
 
             if (error) throw error;
 
             showMsg(finalStatus === 'BRAK' ? 'Mato BRAK deb topildi!' : 'Tekshiruv yakunlandi!');
+            setQrRoll({ ...activeRoll, ...updData });
             setActiveRoll(null);
             setImages([]);
             setInspectForm({ neto: '', en: '180', gramaj: '160-170', defects: { 'Dog\'': 0, 'Teshik': 0, 'Uloq': 0, 'Sirtiq': 0, 'Polyester xatosi': 0 } });
@@ -259,6 +265,49 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                     </div>
                 </div>
             )}
+
+            {qrRoll && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 11000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                    <div style={{ ...S.card, width: '100%', maxWidth: 400, background: '#fff', color: '#000', textAlign: 'center', padding: 30 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+                            <b style={{ fontSize: 18 }}>MATO PASPORTI</b>
+                            <button onClick={() => setQrRoll(null)} style={{ background: 'none', border: 'none' }}><X color="#000" /></button>
+                        </div>
+
+                        <div style={{ background: '#f5f5f5', padding: 20, borderRadius: 15, marginBottom: 20 }}>
+                            <QRCodeCanvas value={`ROLL-${qrRoll.id}`} size={150} />
+                            <div style={{ marginTop: 10, fontWeight: 'bold', fontSize: 13 }}>ID: ROLL-{qrRoll.id}</div>
+                        </div>
+
+                        <div style={{ textAlign: 'left', display: 'grid', gap: 10, fontSize: 13 }}>
+                            <div style={P.row}><span>Partiya:</span> <b>{qrRoll.batch_number}</b></div>
+                            <div style={P.row}><span>Rang:</span> <b>{qrRoll.color}</b></div>
+                            <div style={P.row}><span>Bruto:</span> <b>{qrRoll.bruto} kg</b></div>
+                            <div style={P.row}><span>Neto:</span> <b style={{ color: '#2e7d32' }}>{qrRoll.neto} kg</b></div>
+                            <div style={P.row}><span>En / Gramaj:</span> <b>{qrRoll.en} sm / {qrRoll.gramaj}</b></div>
+                            <div style={P.row}><span>Tekshiruv:</span> <b>{new Date(qrRoll.inspection_date).toLocaleString()}</b></div>
+
+                            <div style={{ marginTop: 10, borderTop: '1px solid #ddd', paddingTop: 10 }}>
+                                <span style={{ fontSize: 11, color: '#666' }}>ANIQLANGAN NUQSONLAR:</span>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 5 }}>
+                                    {Object.entries(JSON.parse(qrRoll.defects || '{}')).map(([d, c]) => c > 0 && (
+                                        <span key={d} style={{ background: '#ffebee', color: '#c62828', padding: '2px 8px', borderRadius: 5, fontSize: 10 }}>{d}: {c}</span>
+                                    ))}
+                                    {Object.values(JSON.parse(qrRoll.defects || '{}')).every(c => c === 0) && <span style={{ color: '#2e7d32', fontSize: 11 }}>Nuqsonlar yo'q ✅</span>}
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onClick={() => window.print()} style={{ ...S.btn, background: '#000', color: '#fff', marginTop: 30 }}>
+                            <Printer size={18} /> PASPORTNI CHIQARISH
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
+const P = {
+    row: { display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee', paddingBottom: 5 }
+};
