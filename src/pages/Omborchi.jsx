@@ -268,7 +268,7 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                         >
                             {isSaving ? 'SAQLANMOQDA...' : (Object.values(inspectForm.defects).reduce((a, b) => a + b, 0) >= 12 ? 'BRAK SIFATIDA SAQLASH ❌' : 'TEKSHIRUVDAN O\'TKAZISH ✅')}
                         </button>
-                        <div style={{ textAlign: 'center', marginTop: 10, fontSize: 10, color: '#333' }}>v1.0.4 - Inspection Fixed</div>
+                        <div style={{ textAlign: 'center', marginTop: 10, fontSize: 10, color: '#333' }}>v1.0.5 - Database Fixed</div>
                     </div>
                 </div>
             )}
