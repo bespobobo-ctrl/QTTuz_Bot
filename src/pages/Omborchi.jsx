@@ -12,6 +12,7 @@ import {
 export default function OmborchiPanel({ tab, data, load, showMsg }) {
     const [activeBatch, setActiveBatch] = useState(null);
     const [activeRoll, setActiveRoll] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
     const [qrRoll, setQrRoll] = useState(null);
     const [images, setImages] = useState([]);
     const [inspectForm, setInspectForm] = useState({
@@ -37,10 +38,9 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
     );
 
     const handleInspect = async () => {
-        if (!inspectForm.neto) return showMsg('Neto vaznni kiriting!', 'err');
-        if (!inspectForm.en) return showMsg('Mato enini kiriting!', 'err');
-        if (!inspectForm.gramaj) return showMsg('Gramajni kiriting!', 'err');
+        if (!inspectForm.neto) return alert('Neto vaznni kiriting!');
 
+        setIsSaving(true);
         const totalDefects = Object.values(inspectForm.defects).reduce((a, b) => a + b, 0);
         const finalStatus = totalDefects >= 12 ? 'BRAK' : 'KONTROLDAN_OTDI';
 
@@ -62,19 +62,20 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
             const { error } = await supabase.from('warehouse_rolls').update(updData).eq('id', activeRoll.id);
 
             if (error) {
-                alert("Baza xatosi: " + error.message);
+                alert("Baza bilan ulanib bo'lmadi: " + error.message);
                 throw error;
             }
 
-            showMsg('Tekshiruv saqlandi! ✅');
+            alert('Muvaffaqiyatli saqlandi! ✅');
             setQrRoll({ ...activeRoll, ...updData });
             setActiveRoll(null);
             setImages([]);
             setInspectForm({ neto: '', en: '180', gramaj: '160-170', defects: { 'Dog\'': 0, 'Teshik': 0, 'Uloq': 0, 'Sirtiq': 0, 'Polyester xatosi': 0 } });
             load(true);
         } catch (e) {
-            console.error(e);
-            showMsg('Saqlashda xato: ' + (e.message || 'Noma\'lum xato'), 'err');
+            alert('Tizim xatosi: ' + e.message);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -256,15 +257,18 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                         </div>
 
                         <button
+                            disabled={isSaving}
                             onClick={handleInspect}
                             style={{
                                 ...S.btn,
-                                background: Object.values(inspectForm.defects).reduce((a, b) => a + b, 0) >= 12 ? '#E57373' : '#00e676',
-                                color: '#000'
+                                background: isSaving ? '#555' : (Object.values(inspectForm.defects).reduce((a, b) => a + b, 0) >= 12 ? '#E57373' : '#00e676'),
+                                color: '#000',
+                                opacity: isSaving ? 0.7 : 1
                             }}
                         >
-                            {Object.values(inspectForm.defects).reduce((a, b) => a + b, 0) >= 12 ? 'BRAK SIFATIDA SAQLASH ❌' : 'TEKSHIRUVDAN O\'TKAZISH ✅'}
+                            {isSaving ? 'SAQLANMOQDA...' : (Object.values(inspectForm.defects).reduce((a, b) => a + b, 0) >= 12 ? 'BRAK SIFATIDA SAQLASH ❌' : 'TEKSHIRUVDAN O\'TKAZISH ✅')}
                         </button>
+                        <div style={{ textAlign: 'center', marginTop: 10, fontSize: 10, color: '#333' }}>v1.0.4 - Inspection Fixed</div>
                     </div>
                 </div>
             )}
