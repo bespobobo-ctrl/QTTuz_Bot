@@ -125,7 +125,7 @@ export default function App() {
       {user.role !== 'rahbar' && (
         <nav style={S.nav}>
           {[
-            ...(user.role !== 'mato_ombori' ? [{ id: 'dashboard', icon: LayoutDashboard, l: 'Radar' }] : []),
+            { id: 'dashboard', icon: LayoutDashboard, l: 'Asosiy' },
             { id: 'kirim', icon: Download, l: 'Kirim' },
             { id: 'ombor', icon: Package, l: 'Stock' },
             ...(user.role === 'mato_ombori' ? [{ id: 'neto', icon: CheckCircle2, l: 'Neto' }] : [])

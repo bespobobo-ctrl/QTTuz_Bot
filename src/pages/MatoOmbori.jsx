@@ -4,7 +4,8 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { supabase } from '../lib/supabase';
 import {
     Package, Calendar, ChevronRight,
-    Printer, AlertCircle, PlusCircle, Download, CheckCircle2
+    Printer, AlertCircle, PlusCircle, Download, CheckCircle2,
+    Users, Palette, AlertTriangle, TrendingUp, Info
 } from 'lucide-react';
 
 export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
@@ -86,7 +87,92 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
         </motion.div>
     );
 
-    const renderDashboard = () => (
+    const renderSummaryDashboard = () => {
+        // Group data by Supplier + Color
+        const summary = {};
+        batches.forEach(b => {
+            const key = `${b.supplier_name}_${b.color}`;
+            if (!summary[key]) {
+                summary[key] = { sup: b.supplier_name, col: b.color, bruto: 0, neto: 0, brak: 0, batches: 0 };
+            }
+            summary[key].batches += 1;
+
+            const batchRolls = rolls.filter(r => r.batch_id === b.id);
+            batchRolls.forEach(r => {
+                summary[key].bruto += (Number(r.bruto) || 0);
+                summary[key].neto += (Number(r.neto) || 0);
+                if (r.status === 'BRAK') summary[key].brak += 1;
+            });
+        });
+
+        const stats = Object.values(summary);
+
+        return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <h2 style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <TrendingUp color="#81C784" /> Umumiy Analitika
+                </h2>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+                    <div style={{ ...S.card, marginBottom: 0, padding: 15, textAlign: 'center' }}>
+                        <div style={{ color: '#81C784', fontSize: 11, fontWeight: 'bold' }}>JAMI BRUTO</div>
+                        <div style={{ fontSize: 20, fontWeight: 'bold' }}>{stats.reduce((a, b) => a + b.bruto, 0).toFixed(1)} <small>kg</small></div>
+                    </div>
+                    <div style={{ ...S.card, marginBottom: 0, padding: 15, textAlign: 'center' }}>
+                        <div style={{ color: '#4FC3F7', fontSize: 11, fontWeight: 'bold' }}>JAMI NETO</div>
+                        <div style={{ fontSize: 20, fontWeight: 'bold' }}>{stats.reduce((a, b) => a + b.neto, 0).toFixed(1)} <small>kg</small></div>
+                    </div>
+                </div>
+
+                {stats.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 40, color: '#555' }}>Analitika uchun ma'lumot yetarli emas</div>
+                ) : (
+                    stats.map((s, idx) => (
+                        <div key={idx} style={S.card}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <div style={{ background: 'rgba(129,199,132,0.1)', padding: 8, borderRadius: 10 }}>
+                                        <Users size={18} color="#81C784" />
+                                    </div>
+                                    <div>
+                                        <div style={{ fontWeight: 'bold', fontSize: 16 }}>{s.sup}</div>
+                                        <div style={{ fontSize: 11, color: '#888' }}>Ta'minotchi</div>
+                                    </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#fff', fontWeight: 'bold' }}>
+                                        <Palette size={14} color={s.col} /> {s.col}
+                                    </div>
+                                    <div style={{ fontSize: 10, color: '#555' }}>MATO RANGI</div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, background: 'rgba(0,0,0,0.2)', padding: 12, borderRadius: 12 }}>
+                                <div style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: 9, color: '#81C784', marginBottom: 4 }}>BRUTO KG</div>
+                                    <div style={{ fontWeight: 'bold' }}>{s.bruto.toFixed(1)}</div>
+                                </div>
+                                <div style={{ textAlign: 'center', borderLeft: '1px solid #2a2a40' }}>
+                                    <div style={{ fontSize: 9, color: '#4FC3F7', marginBottom: 4 }}>NETO KG</div>
+                                    <div style={{ fontWeight: 'bold' }}>{s.neto.toFixed(1)}</div>
+                                </div>
+                                <div style={{ textAlign: 'center', borderLeft: '1px solid #2a2a40' }}>
+                                    <div style={{ fontSize: 9, color: '#ff5252', marginBottom: 4 }}>BRAK</div>
+                                    <div style={{ fontWeight: 'bold', color: s.brak > 0 ? '#ff5252' : '#fff' }}>{s.brak} <small> dona</small></div>
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: 10, fontSize: 10, color: '#555', textAlign: 'center' }}>
+                                Umumiy {s.batches} ta partiya birlashtirildi
+                            </div>
+                        </div>
+                    ))
+                )}
+            </motion.div>
+        );
+    }
+
+    const renderStock = () => (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <h2 style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <Package color="#81C784" /> Ombor Stok
@@ -320,10 +406,12 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
         <div style={{ position: 'relative' }}>
             {renderPrintOverlay()}
 
+            {tab === 'dashboard' && !activeBatch && renderSummaryDashboard()}
+
             {tab === 'kirim' && !activeBatch && renderKirim()}
 
             {tab === 'ombor' && (
-                activeBatch ? renderActiveBatch() : renderDashboard()
+                activeBatch ? renderActiveBatch() : renderStock()
             )}
 
             {tab === 'neto' && !activeBatch && renderNeto()}
