@@ -8,11 +8,11 @@ async function check() {
     try {
         const { data: batches, error: bErr } = await supabase.from('warehouse_batches').select('*');
         const { data: rolls, error: rErr } = await supabase.from('warehouse_rolls').select('*');
-        const { data: ver, error: vErr } = await supabase.from('system_config').select('*').eq('key', 'app_version').single();
+        const { data: configs, error: vErr } = await supabase.from('system_config').select('*');
 
         console.log('Batches count:', batches ? batches.length : 'null');
         console.log('Rolls count:', rolls ? rolls.length : 'null');
-        console.log('DB Version:', ver ? ver.value : 'null');
+        console.log('Configs:', configs);
         if (bErr || rErr || vErr) {
             console.log('Errors:', { bErr, rErr, vErr });
         }
