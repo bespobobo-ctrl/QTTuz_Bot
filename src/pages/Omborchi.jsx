@@ -4,32 +4,31 @@ import { supabase } from '../lib/supabase';
 import {
     CheckCircle2, AlertTriangle, Scale, Ruler,
     Clock, Scissors, ChevronRight, AlertCircle,
-    ClipboardCheck, Thermometer
+    ClipboardCheck, Thermometer, Plus, Minus, Camera, Image as ImageIcon
 } from 'lucide-react';
 
 export default function OmborchiPanel({ tab, data, load, showMsg }) {
     const [activeBatch, setActiveBatch] = useState(null);
     const [activeRoll, setActiveRoll] = useState(null);
+    const [images, setImages] = useState([]);
     const [inspectForm, setInspectForm] = useState({
-        tara: '',
-        en: '',
-        gramaj: '',
-        defects: []
+        tara: '0.40',
+        en: '180',
+        gramaj: '160-170',
+        defects: { 'Dog\'': 0, 'Teshik': 0, 'Uloq': 0, 'Sirtiq': 0, 'Polyester xatosi': 0 }
     });
 
     const S = {
         card: { background: '#12121e', padding: 18, borderRadius: 20, border: '1px solid #2a2a40', marginBottom: 15 },
         input: { width: '100%', padding: 15, background: '#1a1a2e', border: '1px solid #2a2a40', borderRadius: 12, color: '#fff', marginBottom: 10, outline: 'none' },
         badge: (c) => ({ padding: '4px 10px', background: `${c}1A`, color: c, borderRadius: 8, fontSize: 11, fontWeight: 'bold' }),
-        btn: { width: '100%', padding: 14, borderRadius: 12, border: 'none', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }
+        btn: { width: '100%', padding: 14, borderRadius: 12, border: 'none', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 },
+        counterBtn: { background: '#1a1a2e', border: '1px solid #2a2a40', color: '#fff', width: 35, height: 35, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }
     };
-
-    const DEFECT_TYPES = ['Dog\'', 'Teshik', 'Uloq', 'Sirtiq', 'Polyester xatosi'];
 
     const rolls = data.whRolls || [];
     const batches = data.whBatches || [];
 
-    // Filter batches that have rolls in 'BRUTO' status (ready for inspection)
     const readyBatches = batches.filter(b =>
         rolls.some(r => r.batch_id === b.id && r.status === 'BRUTO')
     );
@@ -38,6 +37,9 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
         if (!inspectForm.tara || !inspectForm.en || !inspectForm.gramaj) {
             return showMsg('Barcha maydonlarni to\'ldiring!', 'err');
         }
+
+        const totalDefects = Object.values(inspectForm.defects).reduce((a, b) => a + b, 0);
+        const finalStatus = totalDefects >= 12 ? 'BRAK' : 'KONTROLDAN_OTDI';
 
         const neto = activeRoll.bruto - Number(inspectForm.tara);
         const now = new Date().toISOString();
@@ -48,27 +50,38 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                 neto: neto,
                 en: Number(inspectForm.en),
                 gramaj: inspectForm.gramaj,
-                defects: inspectForm.defects.join(', '),
-                status: 'KONTROLDAN_OTDI',
-                inspection_date: now
+                defects: JSON.stringify(inspectForm.defects),
+                status: finalStatus,
+                inspection_date: now,
+                images: images
             }).eq('id', activeRoll.id);
 
             if (error) throw error;
 
-            showMsg('Tekshiruv yakunlandi, mato dam olishga yuborildi!');
+            showMsg(finalStatus === 'BRAK' ? 'Mato BRAK deb topildi!' : 'Tekshiruv yakunlandi!');
             setActiveRoll(null);
-            setInspectForm({ tara: '', en: '', gramaj: '', defects: [] });
+            setImages([]);
+            setInspectForm({ tara: '0.40', en: '180', gramaj: '160-170', defects: { 'Dog\'': 0, 'Teshik': 0, 'Uloq': 0, 'Sirtiq': 0, 'Polyester xatosi': 0 } });
             load(true);
         } catch (e) {
             showMsg('Xatolik yuz berdi!', 'err');
         }
     };
 
-    const toggleDefect = (d) => {
+    const updateDefect = (d, val) => {
         setInspectForm(prev => ({
             ...prev,
-            defects: prev.defects.includes(d) ? prev.defects.filter(x => x !== d) : [...prev.defects, d]
+            defects: { ...prev.defects, [d]: Math.max(0, prev.defects[d] + val) }
         }));
+    };
+
+    const handleImage = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => setImages(prev => [...prev, reader.result]);
+            reader.readAsDataURL(file);
+        }
     };
 
     const renderRestingMatos = () => {
@@ -200,21 +213,46 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                             <input style={S.input} placeholder="160-170" value={inspectForm.gramaj} onChange={e => setInspectForm({ ...inspectForm, gramaj: e.target.value })} />
                         </div>
 
-                        <p style={{ color: '#888', fontSize: 13, marginTop: 20 }}>NUQSONLAR (BRAK)</p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-                            {DEFECT_TYPES.map(d => (
-                                <button
-                                    key={d}
-                                    onClick={() => toggleDefect(d)}
-                                    style={{ ...S.badge(inspectForm.defects.includes(d) ? '#E57373' : '#555'), cursor: 'pointer', padding: '8px 12px', border: 'none' }}
-                                >
-                                    {d}
-                                </button>
+                        <p style={{ color: '#888', fontSize: 13, marginTop: 20 }}>NUQSONLARNI SANASH (THRESHOLD: 12)</p>
+                        <div style={{ display: 'grid', gap: 10 }}>
+                            {Object.entries(inspectForm.defects).map(([d, count]) => (
+                                <div key={d} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: 10, borderRadius: 12 }}>
+                                    <span style={{ fontSize: 14 }}>{d}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
+                                        <button onClick={() => updateDefect(d, -1)} style={S.counterBtn}><Minus size={16} /></button>
+                                        <b style={{ minWidth: 20, textAlign: 'center', color: count > 0 ? '#E57373' : '#fff' }}>{count}</b>
+                                        <button onClick={() => updateDefect(d, 1)} style={S.counterBtn}><Plus size={16} /></button>
+                                    </div>
+                                </div>
                             ))}
                         </div>
 
-                        <button onClick={handleInspect} style={{ ...S.btn, background: '#00e676', color: '#000', marginTop: 20 }}>
-                            TEKSHIRUVDAN O'TKAZISH ✅
+                        <div style={{ marginTop: 20, padding: 15, background: 'rgba(229, 115, 115, 0.1)', borderRadius: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: 13, fontWeight: 'bold' }}>JAMI AYBLAR SONI:</span>
+                            <b style={{ fontSize: 20, color: '#E57373' }}>{Object.values(inspectForm.defects).reduce((a, b) => a + b, 0)} / 12</b>
+                        </div>
+
+                        <p style={{ color: '#888', fontSize: 13, marginTop: 20 }}>FOTO TASDIQ (Faqat Brak bo'lsa ham bo'ladi)</p>
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 15 }}>
+                            {images.map((img, i) => (
+                                <img key={i} src={img} style={{ width: 60, height: 60, borderRadius: 10, objectFit: 'cover' }} alt="Defect" />
+                            ))}
+                            <label style={{ width: 60, height: 60, background: '#1a1a2e', border: '1px dashed #2a2a40', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                <Camera size={20} color="#555" />
+                                <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleImage} />
+                            </label>
+                        </div>
+
+                        <button
+                            onClick={handleInspect}
+                            style={{
+                                ...S.btn,
+                                background: Object.values(inspectForm.defects).reduce((a, b) => a + b, 0) >= 12 ? '#E57373' : '#00e676',
+                                color: '#000',
+                                marginTop: 20
+                            }}
+                        >
+                            {Object.values(inspectForm.defects).reduce((a, b) => a + b, 0) >= 12 ? 'BRAK SIFATIDA SAQLASH ❌' : 'TEKSHIRUVDAN O\'TKAZISH ✅'}
                         </button>
                     </div>
                 </div>
