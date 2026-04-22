@@ -45,40 +45,36 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
         const finalStatus = totalDefects >= 12 ? 'BRAK' : 'KONTROLDAN_OTDI';
 
         const netoValue = Number(inspectForm.neto);
-        const taraValue = activeRoll.bruto - netoValue;
+        const taraValue = (activeRoll.bruto - netoValue).toFixed(2);
         const now = new Date().toISOString();
 
         try {
             const updData = {
-                tara: taraValue,
+                tara: Number(taraValue),
                 neto: netoValue,
                 en: Number(inspectForm.en),
                 gramaj: inspectForm.gramaj,
                 defects: JSON.stringify(inspectForm.defects),
                 status: finalStatus,
-                inspection_date: now,
-                images: images
+                inspection_date: now
             };
 
-            let { error } = await supabase.from('warehouse_rolls').update(updData).eq('id', activeRoll.id);
+            const { error } = await supabase.from('warehouse_rolls').update(updData).eq('id', activeRoll.id);
 
-            // Fallback: if 'images' column doesn't exist yet
-            if (error && error.message.includes('images')) {
-                delete updData.images;
-                const secondAttempt = await supabase.from('warehouse_rolls').update(updData).eq('id', activeRoll.id);
-                error = secondAttempt.error;
+            if (error) {
+                alert("Baza xatosi: " + error.message);
+                throw error;
             }
 
-            if (error) throw error;
-
-            showMsg(finalStatus === 'BRAK' ? 'Mato BRAK deb topildi!' : 'Tekshiruv yakunlandi!');
+            showMsg('Tekshiruv saqlandi! ✅');
             setQrRoll({ ...activeRoll, ...updData });
             setActiveRoll(null);
             setImages([]);
             setInspectForm({ neto: '', en: '180', gramaj: '160-170', defects: { 'Dog\'': 0, 'Teshik': 0, 'Uloq': 0, 'Sirtiq': 0, 'Polyester xatosi': 0 } });
             load(true);
         } catch (e) {
-            showMsg('Xatolik yuz berdi!', 'err');
+            console.error(e);
+            showMsg('Saqlashda xato: ' + (e.message || 'Noma\'lum xato'), 'err');
         }
     };
 

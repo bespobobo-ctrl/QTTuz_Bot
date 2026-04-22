@@ -259,7 +259,7 @@ const S = {
   nav: { position: 'fixed', bottom: 20, left: 20, right: 20, background: 'rgba(18, 18, 30, 0.95)', border: '1px solid #2a2a40', borderRadius: 25, display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '12px 5px', backdropFilter: 'blur(15px)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', zIndex: 1000 },
   nb: { background: 'none', border: 'none', color: '#555', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', transition: 'all 0.3s' },
   ib: { background: 'rgba(255,255,255,0.05)', border: 'none', color: '#fff', padding: 10, borderRadius: 12, cursor: 'pointer' },
-  toast: { position: 'fixed', top: 20, left: 20, right: 20, padding: '15px 20px', borderRadius: 14, color: '#fff', fontSize: 13, fontWeight: 'bold', textAlign: 'center', zIndex: 10000, boxShadow: '0 10px 30px rgba(0,0,0,0.3)' },
+  toast: { position: 'fixed', top: 20, left: 20, right: 20, padding: '15px 20px', borderRadius: 14, color: '#fff', fontSize: 13, fontWeight: 'bold', textAlign: 'center', zIndex: 99999, boxShadow: '0 10px 30px rgba(0,0,0,0.3)' },
   loadingBar: { position: 'fixed', top: 0, left: 0, height: 3, background: '#00e676', zIndex: 10001, animation: 'loading 2s infinite linear' },
   card: { background: '#12121e', padding: 20, borderRadius: 20, border: '1px solid #2a2a40', marginBottom: 20 },
   input: { width: '100%', padding: '15px 20px', background: '#1a1a2e', border: '1px solid #2a2a40', borderRadius: 14, color: '#fff', outline: 'none', fontSize: 16, boxSizing: 'border-box' },
