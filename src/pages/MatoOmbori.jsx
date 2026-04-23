@@ -323,17 +323,26 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                             <button onClick={() => { setStatusView('neto'); setSelStatusType(null); setSelStatusColor(null); }} style={{ flex: 1, padding: 10, borderRadius: 10, border: 'none', background: statusView === 'neto' ? '#81C784' : 'none', color: statusView === 'neto' ? '#000' : '#888', fontWeight: 'bold', fontSize: 12 }}>NETO</button>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: rolls.some(r => parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === 'meter') ? '1fr 1fr 1fr' : '1fr 1fr', gap: 10 }}>
                             <div style={{ ...S.card, textAlign: 'center', marginBottom: 0, borderColor: statusView === 'bruto' ? '#FFAB40' : '#81C784' }}>
-                                <div style={{ color: statusView === 'bruto' ? '#FFAB40' : '#81C784', fontSize: 11, fontWeight: 'bold' }}>JAMI {statusView.toUpperCase()}</div>
-                                <div style={{ fontSize: 24, fontWeight: 'bold' }}>
-                                    {rolls.filter(r => statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI').reduce((a, b) => a + (Number(statusView === 'bruto' ? b.bruto : b.neto) || 0), 0).toFixed(1)}
-                                    <small style={{ fontSize: 12, opacity: 0.5 }}> {parseColor(batches[0]?.color).unit}</small>
+                                <div style={{ color: statusView === 'bruto' ? '#FFAB40' : '#81C784', fontSize: 11, fontWeight: 'bold' }}>JAMI (KG)</div>
+                                <div style={{ fontSize: 20, fontWeight: 'bold' }}>
+                                    {rolls.filter(r => (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === 'kg').reduce((a, b) => a + (Number(statusView === 'bruto' ? b.bruto : b.neto) || 0), 0).toFixed(1)}
+                                    <small style={{ fontSize: 10, opacity: 0.5 }}> kg</small>
                                 </div>
                             </div>
+                            {rolls.some(r => parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === 'meter') && (
+                                <div style={{ ...S.card, textAlign: 'center', marginBottom: 0, borderColor: '#4FC3F7' }}>
+                                    <div style={{ color: '#4FC3F7', fontSize: 11, fontWeight: 'bold' }}>JAMI (METIR)</div>
+                                    <div style={{ fontSize: 20, fontWeight: 'bold' }}>
+                                        {rolls.filter(r => (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === 'meter').reduce((a, b) => a + (Number(statusView === 'bruto' ? b.bruto : b.neto) || 0), 0).toFixed(1)}
+                                        <small style={{ fontSize: 10, opacity: 0.5 }}> m</small>
+                                    </div>
+                                </div>
+                            )}
                             <div style={{ ...S.card, textAlign: 'center', marginBottom: 0 }}>
-                                <div style={{ color: '#4FC3F7', fontSize: 11, fontWeight: 'bold' }}>RULONLAR</div>
-                                <div style={{ fontSize: 24, fontWeight: 'bold' }}>{rolls.filter(r => statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI').length} <small style={{ fontSize: 12, opacity: 0.5 }}>ta</small></div>
+                                <div style={{ color: '#aaa', fontSize: 11, fontWeight: 'bold' }}>RULONLAR</div>
+                                <div style={{ fontSize: 20, fontWeight: 'bold' }}>{rolls.filter(r => statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI').length} <small style={{ fontSize: 10, opacity: 0.5 }}>ta</small></div>
                             </div>
                         </div>
 
@@ -346,7 +355,9 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                         rolls.filter(r => statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI')
                                             .reduce((acc, r) => {
                                                 const type = r.fabric_name || 'Noma\'lum';
-                                                if (!acc[type]) acc[type] = { weight: 0, rolls: 0 };
+                                                const batch = batches.find(b => b.id === r.batch_id);
+                                                const unit = parseColor(batch?.color).unit;
+                                                if (!acc[type]) acc[type] = { weight: 0, rolls: 0, unit };
                                                 acc[type].weight += (Number(statusView === 'bruto' ? r.bruto : r.neto) || 0);
                                                 acc[type].rolls += 1;
                                                 return acc;
@@ -358,7 +369,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                                 <div style={{ fontSize: 11, color: '#888' }}>{s.rolls} ta rulon</div>
                                             </div>
                                             <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                <div style={{ fontSize: 16, fontWeight: 'bold', color: statusView === 'bruto' ? '#FFAB40' : '#81C784' }}>{s.weight.toFixed(0)} <small style={{ fontSize: 10 }}>kg</small></div>
+                                                <div style={{ fontSize: 16, fontWeight: 'bold', color: statusView === 'bruto' ? '#FFAB40' : '#81C784' }}>{s.weight.toFixed(0)} <small style={{ fontSize: 10 }}>{s.unit}</small></div>
                                                 <ChevronRight size={16} color="#444" />
                                             </div>
                                         </div>
@@ -374,7 +385,9 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                         rolls.filter(r => (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType))
                                             .reduce((acc, r) => {
                                                 const color = r.color || 'Noma\'lum';
-                                                if (!acc[color]) acc[color] = { weight: 0, rolls: 0 };
+                                                const batch = batches.find(b => b.id === r.batch_id);
+                                                const unit = parseColor(batch?.color).unit;
+                                                if (!acc[color]) acc[color] = { weight: 0, rolls: 0, unit };
                                                 acc[color].weight += (Number(statusView === 'bruto' ? r.bruto : r.neto) || 0);
                                                 acc[color].rolls += 1;
                                                 return acc;
@@ -389,7 +402,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                                 </div>
                                             </div>
                                             <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                <div style={{ fontSize: 14, fontWeight: 'bold' }}>{s.weight.toFixed(1)} <small style={{ fontSize: 10 }}>kg</small></div>
+                                                <div style={{ fontSize: 14, fontWeight: 'bold' }}>{s.weight.toFixed(1)} <small style={{ fontSize: 10 }}>{s.unit}</small></div>
                                                 <ChevronRight size={16} color="#444" />
                                             </div>
                                         </div>
@@ -405,7 +418,9 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                         rolls.filter(r => (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType) && (r.color === selStatusColor))
                                             .reduce((acc, r) => {
                                                 const bn = r.batch_number || 'Noma\'lum';
-                                                if (!acc[bn]) acc[bn] = { weight: 0, rolls: 0 };
+                                                const batch = batches.find(b => b.id === r.batch_id);
+                                                const unit = parseColor(batch?.color).unit;
+                                                if (!acc[bn]) acc[bn] = { weight: 0, rolls: 0, unit };
                                                 acc[bn].weight += (Number(statusView === 'bruto' ? r.bruto : r.neto) || 0);
                                                 acc[bn].rolls += 1;
                                                 return acc;
@@ -420,7 +435,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                                 </div>
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
-                                                <div style={{ fontSize: 14, fontWeight: 'bold' }}>{s.weight.toFixed(1)} <small style={{ fontSize: 10 }}>kg</small></div>
+                                                <div style={{ fontSize: 14, fontWeight: 'bold' }}>{s.weight.toFixed(1)} <small style={{ fontSize: 10 }}>{s.unit}</small></div>
                                             </div>
                                         </div>
                                     ))}
