@@ -327,22 +327,22 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                             <div style={{ ...S.card, textAlign: 'center', marginBottom: 0, borderColor: statusView === 'bruto' ? '#FFAB40' : '#81C784' }}>
                                 <div style={{ color: statusView === 'bruto' ? '#FFAB40' : '#81C784', fontSize: 11, fontWeight: 'bold' }}>JAMI (KG)</div>
                                 <div style={{ fontSize: 20, fontWeight: 'bold' }}>
-                                    {rolls.filter(r => (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === 'kg').reduce((a, b) => a + (Number(statusView === 'bruto' ? b.bruto : b.neto) || 0), 0).toFixed(1)}
+                                    {rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === 'kg').reduce((a, b) => a + (Number(statusView === 'bruto' ? b.bruto : b.neto) || 0), 0).toFixed(1)}
                                     <small style={{ fontSize: 10, opacity: 0.5 }}> kg</small>
                                 </div>
                             </div>
-                            {rolls.some(r => parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === 'meter') && (
+                            {rolls.some(r => r && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === 'meter') && (
                                 <div style={{ ...S.card, textAlign: 'center', marginBottom: 0, borderColor: '#4FC3F7' }}>
                                     <div style={{ color: '#4FC3F7', fontSize: 11, fontWeight: 'bold' }}>JAMI (METIR)</div>
                                     <div style={{ fontSize: 20, fontWeight: 'bold' }}>
-                                        {rolls.filter(r => (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === 'meter').reduce((a, b) => a + (Number(statusView === 'bruto' ? b.bruto : b.neto) || 0), 0).toFixed(1)}
+                                        {rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === 'meter').reduce((a, b) => a + (Number(statusView === 'bruto' ? b.bruto : b.neto) || 0), 0).toFixed(1)}
                                         <small style={{ fontSize: 10, opacity: 0.5 }}> m</small>
                                     </div>
                                 </div>
                             )}
                             <div style={{ ...S.card, textAlign: 'center', marginBottom: 0 }}>
                                 <div style={{ color: '#aaa', fontSize: 11, fontWeight: 'bold' }}>RULONLAR</div>
-                                <div style={{ fontSize: 20, fontWeight: 'bold' }}>{rolls.filter(r => statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI').length} <small style={{ fontSize: 10, opacity: 0.5 }}>ta</small></div>
+                                <div style={{ fontSize: 20, fontWeight: 'bold' }}>{rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI')).length} <small style={{ fontSize: 10, opacity: 0.5 }}>ta</small></div>
                             </div>
                         </div>
 
@@ -417,7 +417,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     </button>
                                     <h3 style={{ margin: '0 0 15px 0', fontSize: 14 }}>Partiyalar tafsiloti:</h3>
                                     {Object.entries(
-                                        rolls.filter(r => (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType) && (r.color === selStatusColor))
+                                        rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType))
                                             .reduce((acc, r) => {
                                                 const colorKey = `${r.color || 'Noma\'lum'} ${r.gramaj ? `${r.gramaj} gr` : ''}`.trim();
                                                 if (colorKey !== selStatusColor) return acc;
