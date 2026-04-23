@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import {
     Package, Calendar, ChevronRight,
     Printer, AlertCircle, PlusCircle, Download, CheckCircle2,
-    Users, Palette, AlertTriangle, TrendingUp, Info, Trash2, Edit3, History, Clock, Archive, ClipboardCheck
+    Users, Palette, AlertTriangle, TrendingUp, Info, Trash2, Edit3, History, Clock, Archive, ClipboardCheck, Scale
 } from 'lucide-react';
 
 export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
@@ -1309,27 +1309,86 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
 
             {tab === 'history' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <h2 style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, color: '#4FC3F7' }}>
-                        <History size={24} /> Amallar Tarixi (Log)
-                    </h2>
-                    <div style={{ display: 'grid', gap: 12 }}>
-                        {(data.whLog || []).map(l => (
-                            <div key={l.id} style={{ ...S.card, padding: '15px 20px', borderLeft: `4px solid ${l.action_type === 'KIRIM' ? '#4FC3F7' : l.action_type === 'DELETE' ? '#ff5252' : l.action_type === 'VERDICT_CONFIRMED' ? '#81C784' : '#FFAB40'}` }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: 'bold', fontSize: 15 }}>{l.item_name}</div>
-                                        <div style={{ fontSize: 11, color: '#555', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                            <Clock size={12} /> {new Date(l.timestamp).toLocaleString()}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 }}>
+                        <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 10, color: '#4FC3F7' }}>
+                            <History size={26} /> AMALLAR TARIXI
+                        </h2>
+                        <div style={{ fontSize: 11, background: 'rgba(79,195,247,0.1)', color: '#4FC3F7', padding: '5px 12px', borderRadius: 20, fontWeight: 'bold' }}>
+                            OXIRGI 100 TA AMAL
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gap: 15 }}>
+                        {(data.whLog || []).map((l, idx) => {
+                            const date = new Date(l.timestamp || l.created_at);
+                            const actionColor =
+                                l.action_type === 'KIRIM' ? '#4FC3F7' :
+                                    l.action_type === 'DELETE' ? '#ff5252' :
+                                        l.action_type === 'VERDICT_CONFIRMED' ? '#81C784' :
+                                            l.action_type === 'BRAK' ? '#ff5252' :
+                                                l.action_type === 'WEIGHT_BRUTO' ? '#FFAB40' :
+                                                    l.action_type === 'KONTROLDAN_OTDI' ? '#00e676' :
+                                                        '#FFAB40';
+
+                            return (
+                                <motion.div
+                                    key={l.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: idx * 0.03 }}
+                                    style={{
+                                        ...S.card,
+                                        padding: '18px 20px',
+                                        borderLeft: `5px solid ${actionColor}`,
+                                        background: 'linear-gradient(90deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0) 100%)',
+                                        marginBottom: 0
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div style={{ display: 'flex', gap: 15 }}>
+                                            <div style={{
+                                                width: 40, height: 40, borderRadius: 12,
+                                                background: `${actionColor}15`,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                color: actionColor
+                                            }}>
+                                                {l.action_type === 'KIRIM' ? <Download size={20} /> :
+                                                    l.action_type === 'DELETE' ? <Trash2 size={20} /> :
+                                                        l.action_type === 'VERDICT_CONFIRMED' ? <CheckCircle2 size={20} /> :
+                                                            l.action_type === 'BRAK' ? <AlertCircle size={20} /> :
+                                                                l.action_type === 'WEIGHT_BRUTO' ? <Scale size={20} /> :
+                                                                    l.action_type === 'KONTROLDAN_OTDI' ? <Package size={20} /> :
+                                                                        <Clock size={20} />}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>{l.item_name}</div>
+                                                <div style={{ fontSize: 12, color: '#888', display: 'flex', alignItems: 'center', gap: 15 }}>
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={12} /> {date.toLocaleTimeString()}</span>
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={12} /> {date.toLocaleDateString()}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            {l.quantity && (
+                                                <div style={{ fontWeight: '900', fontSize: 18, color: actionColor }}>
+                                                    {l.quantity} <small style={{ fontSize: 10, fontWeight: 'normal', opacity: 0.7 }}>kg/m</small>
+                                                </div>
+                                            )}
+                                            <div style={{ fontSize: 9, fontWeight: 'bold', textTransform: 'uppercase', color: actionColor, opacity: 0.8, marginTop: 4 }}>
+                                                {l.action_type?.replace(/_/g, ' ')}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        {l.quantity && <div style={{ fontWeight: 'bold', color: l.action_type === 'VERDICT_CONFIRMED' ? '#81C784' : '#fff' }}>{l.quantity} kg</div>}
-                                        <div style={{ fontSize: 9, textTransform: 'uppercase', opacity: 0.5 }}>{l.action_type}</div>
-                                    </div>
-                                </div>
+                                </motion.div>
+                            );
+                        })}
+                        {(data.whLog || []).length === 0 && (
+                            <div style={{ textAlign: 'center', padding: '60px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: 20 }}>
+                                <History size={48} color="#2a2a40" style={{ marginBottom: 15 }} />
+                                <div style={{ color: '#555', fontSize: 16 }}>Hali hech qanday amal bajarilmagan</div>
+                                <div style={{ color: '#333', fontSize: 12, marginTop: 5 }}>Tizimdagi barcha harakatlar shu yerda aks etadi</div>
                             </div>
-                        ))}
-                        {(data.whLog || []).length === 0 && <div style={{ textAlign: 'center', padding: 50, opacity: 0.5 }}>Hozircha tarix mavjud emas</div>}
+                        )}
                     </div>
                 </motion.div>
             )}
