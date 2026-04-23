@@ -50,13 +50,18 @@ export default function App() {
     if (!isSilent) setLoading(true);
     try {
       const [wb, wr, wl, dl, wo, settings] = await Promise.all([
-        supabase.from('warehouse_batches').select('*').order('arrival_date', { ascending: false }),
+        supabase.from('warehouse_batches').select('*').order('created_at', { ascending: false }),
         supabase.from('warehouse_rolls').select('*').order('created_at', { ascending: false }),
         supabase.from('warehouse_log').select('*').order('created_at', { ascending: false }).limit(100),
         supabase.from('department_logins').select('*'),
         supabase.from('warehouse_orders').select('*').order('created_at', { ascending: false }),
         supabase.from('system_config').select('value').eq('key', 'app_version').single()
       ]);
+
+      if (wb.error) console.error("Batches error:", wb.error);
+      if (wr.error) console.error("Rolls error:", wr.error);
+      if (wl.error) console.error("Logs error:", wl.error);
+
       setData({
         whBatches: wb.data || [],
         whRolls: wr.data || [],
@@ -65,7 +70,10 @@ export default function App() {
         whOrders: wo.data || []
       });
       if (settings.data) setDbVer(settings.data.value);
-    } catch (e) { console.error("Load error:", e); }
+    } catch (e) {
+      console.error("Load catch error:", e);
+      showMsg("Ma'lumot yuklashda xato!", "err");
+    }
     finally { setLoading(false); }
   }, []);
 

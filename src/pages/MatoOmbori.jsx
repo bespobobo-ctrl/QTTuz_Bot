@@ -107,12 +107,13 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                 }).select().single();
                 if (err2) throw err2;
 
-                await supabase.from('warehouse_log').insert({
+                const { error: logErr } = await supabase.from('warehouse_log').insert({
                     batch_id: newBatch.id,
                     item_name: `YANGI PARTIYA: ${f.bn}`,
                     quantity: Number(f.eW),
                     action_type: 'KIRIM'
                 });
+                if (logErr) console.error("Kirim log error:", logErr);
                 showMsg('Yangi partiya muvaffaqiyatli qo\'shildi!');
             }
             setF({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg', g: '' });
@@ -127,10 +128,11 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
         try {
             await supabase.from('warehouse_rolls').delete().eq('batch_id', id);
             const { error } = await supabase.from('warehouse_batches').delete().eq('id', id);
-            await supabase.from('warehouse_log').insert({
+            const { error: logErr } = await supabase.from('warehouse_log').insert({
                 item_name: `PARTIYA O'CHIRILDI: ${bn}`,
                 action_type: 'DELETE'
             });
+            if (logErr) console.error("Delete batch log error:", logErr);
             showMsg('Partiya o\'chirildi');
             load(true);
         } catch (e) { showMsg('Ochirishda xato', 'err'); }
@@ -140,10 +142,11 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
         if (!window.confirm(`Rulonni (Neto: ${roll.neto}) o'chirmoqchimisiz?`)) return;
         try {
             await supabase.from('warehouse_rolls').delete().eq('id', roll.id);
-            await supabase.from('warehouse_log').insert({
+            const { error: logErr } = await supabase.from('warehouse_log').insert({
                 item_name: `RULON O'CHIRILDI (ID: ${roll.id})`,
                 action_type: 'DELETE'
             });
+            if (logErr) console.error("Delete roll log error:", logErr);
             showMsg("Rulon o'chirildi");
             load(true);
         } catch (e) { showMsg("O'chirishda xato", "err"); }
