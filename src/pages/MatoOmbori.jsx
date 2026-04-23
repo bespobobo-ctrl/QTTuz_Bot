@@ -385,19 +385,21 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                         rolls.filter(r => (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType))
                                             .reduce((acc, r) => {
                                                 const color = r.color || 'Noma\'lum';
+                                                const gramaj = r.gramaj ? `${r.gramaj} gr` : '';
+                                                const key = `${color} ${gramaj}`.trim();
                                                 const batch = batches.find(b => b.id === r.batch_id);
                                                 const unit = parseColor(batch?.color).unit;
-                                                if (!acc[color]) acc[color] = { weight: 0, rolls: 0, unit };
-                                                acc[color].weight += (Number(statusView === 'bruto' ? r.bruto : r.neto) || 0);
-                                                acc[color].rolls += 1;
+                                                if (!acc[key]) acc[key] = { color, gramaj, weight: 0, rolls: 0, unit };
+                                                acc[key].weight += (Number(statusView === 'bruto' ? r.bruto : r.neto) || 0);
+                                                acc[key].rolls += 1;
                                                 return acc;
                                             }, {})
-                                    ).map(([color, s]) => (
-                                        <div key={color} onClick={() => setSelStatusColor(color)} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '12px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                                    ).map(([key, s]) => (
+                                        <div key={key} onClick={() => setSelStatusColor(key)} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '12px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                                 <Palette size={16} color="#888" />
                                                 <div>
-                                                    <div style={{ fontWeight: 'bold', fontSize: 14 }}>{color}</div>
+                                                    <div style={{ fontWeight: 'bold', fontSize: 14 }}>{s.color} {s.gramaj && <span style={{ color: '#aaa', fontWeight: 'normal', fontSize: 11 }}>[{s.gramaj}]</span>}</div>
                                                     <div style={{ fontSize: 11, color: '#888' }}>{s.rolls} ta rulon</div>
                                                 </div>
                                             </div>
@@ -417,6 +419,8 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     {Object.entries(
                                         rolls.filter(r => (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType) && (r.color === selStatusColor))
                                             .reduce((acc, r) => {
+                                                const colorKey = `${r.color || 'Noma\'lum'} ${r.gramaj ? `${r.gramaj} gr` : ''}`.trim();
+                                                if (colorKey !== selStatusColor) return acc;
                                                 const bn = r.batch_number || 'Noma\'lum';
                                                 const batch = batches.find(b => b.id === r.batch_id);
                                                 const unit = parseColor(batch?.color).unit;
