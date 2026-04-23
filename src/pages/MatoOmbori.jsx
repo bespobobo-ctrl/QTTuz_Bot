@@ -25,7 +25,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const [selSupplier, setSelSupplier] = useState(null);
 
     // Kirim (Yangi Partiya) Formasi uchun state
-    const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg' });
+    const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg', g: '' });
     const [fabricTypes, setFabricTypes] = useState(['2 IPPL', '3 IP Kashkors', 'Bingall', 'Rebana', 'Elastik', 'Salfetka', 'Suprem']);
     const [isAddingType, setIsAddingType] = useState(false);
     const [newType, setNewType] = useState('');
@@ -73,12 +73,12 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
 
     const parseColor = (str) => {
         const s = String(str || '');
-        if (!s) return { c: '', type: '', unit: 'kg' };
+        if (!s) return { c: '', type: '', unit: 'kg', g: '' };
         if (s.includes('|')) {
-            const [type, col, unit] = s.split('|').map(x => x.trim());
-            return { type, c: col, unit: unit || 'kg' };
+            const [type, col, unit, gramaj] = s.split('|').map(x => x.trim());
+            return { type, c: col, unit: unit || 'kg', g: gramaj || '' };
         }
-        return { type: '', c: s, unit: 'kg' };
+        return { type: '', c: s, unit: 'kg', g: '' };
     };
 
     const handleKirim = async () => {
@@ -90,7 +90,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                     supplier_name: f.sup,
                     expected_weight: Number(f.eW),
                     expected_count: Number(f.eC),
-                    color: `${f.type} | ${f.c} | ${f.unit}`
+                    color: `${f.type} | ${f.c} | ${f.unit} | ${f.g}`
                 }).eq('id', editID);
                 if (error) throw error;
                 showMsg('Partiya muvaffaqiyatli tahrirlandi!');
@@ -100,12 +100,12 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                     supplier_name: f.sup,
                     expected_weight: Number(f.eW),
                     expected_count: Number(f.eC),
-                    color: `${f.type} | ${f.c} | ${f.unit}`
+                    color: `${f.type} | ${f.c} | ${f.unit} | ${f.g}`
                 });
                 if (error) throw error;
                 showMsg('Yangi partiya muvaffaqiyatli qo\'shildi!');
             }
-            setF({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg' });
+            setF({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg', g: '' });
             setIsEdit(false);
             setEditID(null);
             load(true);
@@ -127,7 +127,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
         if (!newRollWeight || isNaN(newRollWeight) || Number(newRollWeight) <= 0) {
             return showMsg('Noto\'g\'ri qiymat kiritildi!', 'err');
         }
-        const { type, c, unit } = parseColor(activeBatch.color);
+        const { type, c, unit, g } = parseColor(activeBatch.color);
         try {
             const payload = {
                 batch_id: activeBatch.id,
@@ -136,7 +136,8 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                 status: 'BRUTO',
                 fabric_name: type,
                 color: c,
-                color_code: unit // Reuse color_code to store unit for the roll
+                gramaj: g,
+                color_code: unit
             };
             const { error } = await supabase.from('warehouse_rolls').insert([payload]);
             if (error) throw error;
@@ -190,7 +191,10 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                     </div>
                 )}
 
-                <input style={S.input} placeholder="Rangi (masalan: Qora, Oq)" value={f.c} onChange={e => setF({ ...f, c: e.target.value })} required />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <input style={S.input} placeholder="Rangi (masalan: Qora, Oq)" value={f.c} onChange={e => setF({ ...f, c: e.target.value })} required />
+                    <input style={S.input} type="number" placeholder="Gramaj (masalan: 240)" value={f.g} onChange={e => setF({ ...f, g: e.target.value })} required />
+                </div>
 
                 <div style={{ marginBottom: 15 }}>
                     <label style={{ fontSize: 12, color: '#81C784', display: 'block', marginBottom: 5 }}>O'lchov birligi:</label>
