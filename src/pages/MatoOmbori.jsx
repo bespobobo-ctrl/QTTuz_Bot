@@ -656,7 +656,12 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                 <Package color="#FFAB40" /> Bruto Matolar (Partiyalar)
             </h2>
 
-            {batches.map(batch => {
+            {batches.filter(batch => {
+                const batchRolls = rolls.filter(r => r.batch_id === batch.id);
+                const hasBruto = batchRolls.some(r => r.status === 'BRUTO');
+                const isUnfinished = batchRolls.length < (batch.expected_count || 1);
+                return hasBruto || isUnfinished;
+            }).map(batch => {
                 const batchRolls = rolls.filter(r => r.batch_id === batch.id);
                 const doneCount = batchRolls.length;
                 const totalCount = batch.expected_count || 0;
