@@ -965,47 +965,6 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
             stockGroups[key].rolls.push(r);
         });
 
-        if (selNetoGroup) {
-            const group = stockGroups[selNetoGroup];
-            const batchWise = {};
-            group.rolls.forEach(r => {
-                if (!batchWise[r.batch_number]) batchWise[r.batch_number] = { net: 0, count: 0 };
-                batchWise[r.batch_number].net += (Number(r.neto) || 0);
-                batchWise[r.batch_number].count += 1;
-            });
-
-            return (
-                <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
-                    <button onClick={() => setSelNetoGroup(null)} style={{ background: 'none', border: 'none', color: '#4FC3F7', fontWeight: 'bold', marginBottom: 20, cursor: 'pointer' }}>← ORQAGA</button>
-                    <div style={{ ...S.card, borderLeft: '5px solid #4FC3F7' }}>
-                        <h2 style={{ margin: 0 }}>{group.type}</h2>
-                        <b style={{ color: '#888' }}>{group.color}</b>
-                    </div>
-
-                    <h3 style={{ margin: '20px 0 10px 0', fontSize: 14, color: '#555' }}>PARTIYALAR RO'YXATI (NETO)</h3>
-                    <div style={{ display: 'grid', gap: 10 }}>
-                        {Object.entries(batchWise).map(([bn, data]) => (
-                            <div key={bn} onClick={() => setActiveNetoBatch(bn)} style={{ ...S.card, borderLeft: '3px solid #4FC3F7', cursor: 'pointer' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div>
-                                        <div style={{ fontWeight: 'bold', fontSize: 16 }}>{bn} Partiya</div>
-                                        <div style={{ fontSize: 12, color: '#888' }}>{data.count} dona tayyor rulon</div>
-                                    </div>
-                                    <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 10 }}>
-                                        <div>
-                                            <div style={{ fontSize: 18, fontWeight: 'bold', color: '#4FC3F7' }}>{data.net.toFixed(1)} {group.unit}</div>
-                                            <div style={{ fontSize: 10, color: '#555' }}>NETO JAMI</div>
-                                        </div>
-                                        <ChevronRight size={18} color="#333" />
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </motion.div>
-            );
-        }
-
         if (activeNetoBatch && selNetoGroup) {
             const group = stockGroups[selNetoGroup];
             const batchRolls = group.rolls.filter(r => r.batch_number === activeNetoBatch);
@@ -1069,6 +1028,47 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                             </div>
                         );
                     })}
+                </motion.div>
+            );
+        }
+
+        if (selNetoGroup) {
+            const group = stockGroups[selNetoGroup];
+            const batchWise = {};
+            group.rolls.forEach(r => {
+                if (!batchWise[r.batch_number]) batchWise[r.batch_number] = { net: 0, count: 0 };
+                batchWise[r.batch_number].net += (Number(r.neto) || 0);
+                batchWise[r.batch_number].count += 1;
+            });
+
+            return (
+                <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
+                    <button onClick={() => setSelNetoGroup(null)} style={{ background: 'none', border: 'none', color: '#4FC3F7', fontWeight: 'bold', marginBottom: 20, cursor: 'pointer' }}>← ORQAGA</button>
+                    <div style={{ ...S.card, borderLeft: '5px solid #4FC3F7' }}>
+                        <h2 style={{ margin: 0 }}>{group.type}</h2>
+                        <b style={{ color: '#888' }}>{group.color}</b>
+                    </div>
+
+                    <h3 style={{ margin: '20px 0 10px 0', fontSize: 14, color: '#555' }}>PARTIYALAR RO'YXATI (NETO)</h3>
+                    <div style={{ display: 'grid', gap: 10 }}>
+                        {Object.entries(batchWise).map(([bn, data]) => (
+                            <div key={bn} onClick={() => setActiveNetoBatch(bn)} style={{ ...S.card, borderLeft: '3px solid #4FC3F7', cursor: 'pointer' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 'bold', fontSize: 16 }}>{bn} Partiya</div>
+                                        <div style={{ fontSize: 12, color: '#888' }}>{data.count} dona tayyor rulon</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <div>
+                                            <div style={{ fontSize: 18, fontWeight: 'bold', color: '#4FC3F7' }}>{data.net.toFixed(1)} {group.unit}</div>
+                                            <div style={{ fontSize: 10, color: '#555' }}>NETO JAMI</div>
+                                        </div>
+                                        <ChevronRight size={18} color="#333" />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </motion.div>
             );
         }
