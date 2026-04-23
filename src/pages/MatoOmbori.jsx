@@ -14,6 +14,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const [printBatchRolls, setPrintBatchRolls] = useState(null);
     const [dashTab, setDashTab] = useState('season'); // 'season', 'status', 'supplier', 'alerts', 'brak', 'orders', 'remains'
     const [selQuarter, setSelQuarter] = useState(null);
+    const [selStockGroup, setSelStockGroup] = useState(null);
 
     // Kirim (Yangi Partiya) Formasi uchun state
     const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg' });
@@ -487,62 +488,86 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
         );
     }
 
-    const renderStock = () => (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <h2 style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Package color="#81C784" /> Ombor Stok
-            </h2>
+    const renderStock = () => {
+        const stockGroups = {};
 
-            {batches.map(batch => {
-                const batchRolls = rolls.filter(r => r.batch_id === batch.id);
-                const doneCount = batchRolls.length;
-                const totalCount = batch.expected_count || 0;
+        // Group inspected rolls by type and color
+        rolls.filter(r => r.status === 'KONTROLDAN_OTDI').forEach(r => {
+            const key = `${r.fabric_name}_${r.color}`;
+            if (!stockGroups[key]) {
+                stockGroups[key] = { type: r.fabric_name, color: r.color, totalNeto: 0, rolls: [], unit: r.color_code || 'kg' };
+            }
+            stockGroups[key].totalNeto += (Number(r.neto) || 0);
+            stockGroups[key].rolls.push(r);
+        });
 
-                // Hisoblangan Kg lar
-                const totalBrutoKg = batchRolls.reduce((sum, r) => sum + (Number(r.bruto) || 0), 0);
-                const expectedWeight = batch.expected_weight || 0;
+        if (selStockGroup) {
+            const group = stockGroups[selStockGroup];
+            const batchWise = {};
+            group.rolls.forEach(r => {
+                if (!batchWise[r.batch_number]) batchWise[r.batch_number] = { net: 0, count: 0 };
+                batchWise[r.batch_number].net += (Number(r.neto) || 0);
+                batchWise[r.batch_number].count += 1;
+            });
 
-                const isComplete = doneCount >= totalCount && totalCount > 0;
-                const progress = totalCount > 0 ? (doneCount / totalCount) * 100 : 0;
-
-                return (
-                    <div key={batch.id} style={{ ...S.card, cursor: 'pointer', position: 'relative', overflow: 'hidden' }} onClick={() => setActiveBatch(batch)}>
-                        <div style={{ position: 'absolute', bottom: 0, left: 0, height: 4, background: '#1a1a2e', width: '100%' }}>
-                            <div style={{ width: `${Math.min(progress, 100)}%`, height: '100%', background: isComplete ? '#81C784' : '#FFAB40', transition: 'width 0.5s' }} />
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <Package size={20} color="#888" />
-                                <span style={{ fontSize: 18, fontWeight: 'bold' }}>{batch.batch_number}</span>
-                                <span style={S.badge(isComplete)}>
-                                    {isComplete ? 'KONTROLGA TAYYOR ✅' : 'CHALA ⏳'}
-                                </span>
-                            </div>
-                            <ChevronRight color="#555" />
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 13, color: '#aaa', background: 'rgba(0,0,0,0.2)', padding: 15, borderRadius: 12 }}>
-                            <div>Sana: <b style={{ color: '#fff' }}>{new Date(batch.arrival_date || batch.created_at).toLocaleDateString()}</b></div>
-                            <div>Turi: <b style={{ color: '#fff' }}>{parseColor(batch.color).type}</b></div>
-                            <div>Rangi: <b style={{ color: '#fff' }}>{parseColor(batch.color).c}</b></div>
-                            <div>Birlik: <b style={{ color: '#fff' }}>{parseColor(batch.color).unit.toUpperCase()}</b></div>
-
-                            <div style={{ borderTop: '1px solid #2a2a40', paddingTop: 10, marginTop: 5 }}>
-                                <span style={{ fontSize: 11, display: 'block', marginBottom: 2 }}>{parseColor(batch.color).unit === 'kg' ? 'Vazn' : 'Metir'} (Qabul / Jami)</span>
-                                <b style={{ color: isComplete ? '#81C784' : '#FFAB40', fontSize: 16 }}>{totalBrutoKg.toFixed(1)}</b> / {expectedWeight} {parseColor(batch.color).unit}
-                            </div>
-                            <div style={{ borderTop: '1px solid #2a2a40', paddingTop: 10, marginTop: 5 }}>
-                                <span style={{ fontSize: 11, display: 'block', marginBottom: 2 }}>Rulonlar (Qabul / Jami)</span>
-                                <b style={{ color: isComplete ? '#81C784' : '#FFAB40', fontSize: 16 }}>{doneCount}</b> / {totalCount} dona
-                            </div>
-                        </div>
+            return (
+                <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
+                    <button onClick={() => setSelStockGroup(null)} style={{ background: 'none', border: 'none', color: '#81C784', fontWeight: 'bold', marginBottom: 20, cursor: 'pointer' }}>← ORQAGA</button>
+                    <div style={S.card}>
+                        <h2 style={{ margin: 0 }}>{group.type}</h2>
+                        <b style={{ color: '#888' }}>{group.color}</b>
                     </div>
-                );
-            })}
-            {batches.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#555' }}>Omborda partiyalar mavjud emas</div>}
-        </motion.div>
-    );
+
+                    <h3 style={{ margin: '20px 0 10px 0', fontSize: 14, color: '#555' }}>PARTIYALAR RO'YXATI</h3>
+                    <div style={{ display: 'grid', gap: 10 }}>
+                        {Object.entries(batchWise).map(([bn, data]) => (
+                            <div key={bn} style={S.card}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 'bold', fontSize: 16 }}>{bn} Partiya</div>
+                                        <div style={{ fontSize: 12, color: '#888' }}>{data.count} dona rulon</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontSize: 18, fontWeight: 'bold', color: '#81C784' }}>{data.net.toFixed(1)} {group.unit}</div>
+                                        <div style={{ fontSize: 10, color: '#555' }}>NETO VAZN</div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </motion.div>
+            );
+        }
+
+        return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <h2 style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Package color="#81C784" /> Ombor Stok (Neto)
+                </h2>
+
+                <div style={{ display: 'grid', gap: 12 }}>
+                    {Object.entries(stockGroups).map(([key, g]) => (
+                        <div key={key} style={{ ...S.card, cursor: 'pointer' }} onClick={() => setSelStockGroup(key)}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: 18 }}>{g.type}</div>
+                                    <div style={{ color: '#888', fontSize: 13, marginTop: 4 }}>{g.color}</div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ fontSize: 22, fontWeight: 'bold', color: '#81C784' }}>{g.totalNeto.toFixed(1)}</div>
+                                    <div style={{ fontSize: 10, color: '#555' }}>JAMI {g.unit.toUpperCase()}</div>
+                                </div>
+                            </div>
+                            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#555' }}>
+                                <ChevronRight size={14} /> Batafsil ko'rish ({g.rolls.length} ta rulon)
+                            </div>
+                        </div>
+                    ))}
+                    {Object.keys(stockGroups).length === 0 && <div style={{ textAlign: 'center', padding: 50, opacity: 0.5 }}>Omborda tayyor matolar yo'q</div>}
+                </div>
+            </motion.div>
+        );
+    };
 
     const renderActiveBatch = () => {
         const batchRolls = rolls.filter(r => r.batch_id === activeBatch.id);
