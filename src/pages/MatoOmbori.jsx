@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import {
     Package, Calendar, ChevronRight,
     Printer, AlertCircle, PlusCircle, Download, CheckCircle2,
-    Users, Palette, AlertTriangle, TrendingUp, Info, Trash2, Edit3, History, Clock
+    Users, Palette, AlertTriangle, TrendingUp, Info, Trash2, Edit3, History, Clock, Archive, ClipboardCheck
 } from 'lucide-react';
 
 export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
