@@ -23,6 +23,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const [selStatusType, setSelStatusType] = useState(null);
     const [selStatusColor, setSelStatusColor] = useState(null);
     const [selSupplier, setSelSupplier] = useState(null);
+    const [activeNetoBatch, setActiveNetoBatch] = useState(null);
 
     // Kirim (Yangi Partiya) Formasi uchun state
     const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg', g: '' });
@@ -984,20 +985,90 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                     <h3 style={{ margin: '20px 0 10px 0', fontSize: 14, color: '#555' }}>PARTIYALAR RO'YXATI (NETO)</h3>
                     <div style={{ display: 'grid', gap: 10 }}>
                         {Object.entries(batchWise).map(([bn, data]) => (
-                            <div key={bn} style={{ ...S.card, borderLeft: '3px solid #4FC3F7' }}>
+                            <div key={bn} onClick={() => setActiveNetoBatch(bn)} style={{ ...S.card, borderLeft: '3px solid #4FC3F7', cursor: 'pointer' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
                                         <div style={{ fontWeight: 'bold', fontSize: 16 }}>{bn} Partiya</div>
                                         <div style={{ fontSize: 12, color: '#888' }}>{data.count} dona tayyor rulon</div>
                                     </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <div style={{ fontSize: 18, fontWeight: 'bold', color: '#4FC3F7' }}>{data.net.toFixed(1)} {group.unit}</div>
-                                        <div style={{ fontSize: 10, color: '#555' }}>NETO JAMI</div>
+                                    <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <div>
+                                            <div style={{ fontSize: 18, fontWeight: 'bold', color: '#4FC3F7' }}>{data.net.toFixed(1)} {group.unit}</div>
+                                            <div style={{ fontSize: 10, color: '#555' }}>NETO JAMI</div>
+                                        </div>
+                                        <ChevronRight size={18} color="#333" />
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
+                </motion.div>
+            );
+        }
+
+        if (activeNetoBatch && selNetoGroup) {
+            const group = stockGroups[selNetoGroup];
+            const batchRolls = group.rolls.filter(r => r.batch_number === activeNetoBatch);
+
+            return (
+                <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
+                    <button onClick={() => setActiveNetoBatch(null)} style={{ background: 'none', border: 'none', color: '#4FC3F7', fontWeight: 'bold', marginBottom: 20, cursor: 'pointer' }}>← PARTIYALAR RO'YXATI</button>
+                    <div style={{ ...S.card, background: 'rgba(79,195,247,0.05)', borderColor: '#4FC3F7' }}>
+                        <div style={{ fontSize: 12, color: '#4FC3F7', fontWeight: 'bold' }}>PARTIYA: {activeNetoBatch}</div>
+                        <h2 style={{ margin: '5px 0' }}>{group.type}</h2>
+                        <div style={{ color: '#888', fontSize: 14 }}>{group.color} • {batchRolls.length} ta rulon</div>
+                    </div>
+
+                    <h3 style={{ margin: '20px 0 10px 0', fontSize: 14, opacity: 0.7 }}>RULON PASPORTLARI:</h3>
+                    {batchRolls.map(r => {
+                        const defects = JSON.parse(r.defects || '{}');
+                        const inspectTime = new Date(r.neto_date || r.created_at);
+                        const readyTime = new Date(inspectTime.getTime() + 24 * 60 * 60 * 1000);
+                        const isReady = new Date() > readyTime;
+                        const timeLeft = readyTime.getTime() - new Date().getTime();
+                        const hoursLeft = Math.max(0, Math.ceil(timeLeft / (1000 * 60 * 60)));
+
+                        return (
+                            <div key={r.id} style={{ ...S.card, padding: 15, position: 'relative', overflow: 'hidden' }}>
+                                {isReady ? (
+                                    <div style={{ position: 'absolute', top: 0, right: 0, background: '#81C784', color: '#000', fontSize: 10, padding: '4px 10px', fontWeight: 'bold' }}>BICHUVGA TAYYOR ✅</div>
+                                ) : (
+                                    <div style={{ position: 'absolute', top: 0, right: 0, background: '#FFAB40', color: '#000', fontSize: 10, padding: '4px 10px', fontWeight: 'bold' }}>DAM OLMOQDA ({hoursLeft}s) ⏳</div>
+                                )}
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                                    <div>
+                                        <div style={{ fontSize: 10, color: '#555' }}>ID: ROLL-{r.id}</div>
+                                        <div style={{ fontSize: 18, fontWeight: 'bold', color: '#81C784' }}>{r.neto} <small>{group.unit}</small></div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontSize: 12, fontWeight: 'bold' }}>Eni: {r.en || '---'} sm</div>
+                                        <div style={{ fontSize: 12, color: '#888' }}>Gramaj: {r.gramaj || '---'}</div>
+                                    </div>
+                                </div>
+
+                                <div style={{ background: 'rgba(255,255,255,0.03)', padding: 10, borderRadius: 10 }}>
+                                    <div style={{ fontSize: 10, color: '#555', marginBottom: 5 }}>ANIQLANGAN NUQSONLAR:</div>
+                                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                                        {Object.entries(defects).some(([_, c]) => c > 0) ? (
+                                            Object.entries(defects).map(([d, count]) => count > 0 && (
+                                                <span key={d} style={{ fontSize: 11, background: 'rgba(229,115,115,0.1)', color: '#E57373', padding: '2px 8px', borderRadius: 6 }}>
+                                                    {d}: {count}
+                                                </span>
+                                            ))
+                                        ) : (
+                                            <span style={{ fontSize: 11, color: '#81C784' }}>Sifatli (Nuqsonlar yo'q)</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#444' }}>
+                                    <div>Nazorat: {inspectTime.toLocaleString()}</div>
+                                    <div style={{ color: isReady ? '#81C784' : '#FFAB40' }}>Tayyor: {readyTime.toLocaleString()}</div>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </motion.div>
             );
         }
