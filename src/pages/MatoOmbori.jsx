@@ -67,12 +67,13 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const rolls = data.whRolls || [];
 
     const parseColor = (str) => {
-        if (!str) return { c: '', type: '', unit: 'kg' };
-        if (str.includes('|')) {
-            const [type, col, unit] = str.split('|').map(x => x.trim());
+        const s = String(str || '');
+        if (!s) return { c: '', type: '', unit: 'kg' };
+        if (s.includes('|')) {
+            const [type, col, unit] = s.split('|').map(x => x.trim());
             return { type, c: col, unit: unit || 'kg' };
         }
-        return { type: '', c: str, unit: 'kg' };
+        return { type: '', c: s, unit: 'kg' };
     };
 
     const handleKirim = async () => {
@@ -345,7 +346,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                 <CheckCircle2 color="#81C784" size={20} />
                                 <div>
                                     <div style={{ fontWeight: 'bold', fontSize: 14 }}>Ombor Holati: ME'YORIDA</div>
-                                    <div style={{ fontSize: 11, color: '#888' }}>Oxirgi harakat: {new Date(data.whLog[0]?.timestamp).toLocaleTimeString()}</div>
+                                    <div style={{ fontSize: 11, color: '#888' }}>Oxirgi harakat: {data.whLog[0] ? new Date(data.whLog[0].timestamp).toLocaleTimeString() : '---'}</div>
                                 </div>
                             </div>
                         </div>
@@ -456,8 +457,8 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                             return (
                                 <div key={r.id} style={S.card}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <b>{batch?.supplier_name}</b>
-                                        <span style={{ fontSize: 12, color: '#ff5252' }}>{new Date(r.neto_date).toLocaleDateString()}</span>
+                                        <b>{batch?.supplier_name || '---'}</b>
+                                        <span style={{ fontSize: 12, color: '#ff5252' }}>{r.neto_date ? new Date(r.neto_date).toLocaleDateString() : '---'}</span>
                                     </div>
                                     <div style={{ marginTop: 10, fontSize: 13 }}>
                                         {r.fabric_name} • {r.color}
@@ -496,7 +497,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     {o.fabric_type} • {o.color}
                                 </div>
                                 <div style={{ fontSize: 12, color: '#888', marginTop: 5 }}>
-                                    Kutilmoqda: {new Date(o.expected_date).toLocaleDateString()}
+                                    Kutilmoqda: {o.expected_date ? new Date(o.expected_date).toLocaleDateString() : '---'}
                                 </div>
                             </div>
                         ))}
@@ -566,7 +567,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 13, color: '#aaa', background: 'rgba(0,0,0,0.2)', padding: 15, borderRadius: 12 }}>
-                            <div>Sana: <b style={{ color: '#fff' }}>{new Date(batch.arrival_date || batch.created_at).toLocaleDateString()}</b></div>
+                            <div>Sana: <b style={{ color: '#fff' }}>{batch.arrival_date || batch.created_at ? new Date(batch.arrival_date || batch.created_at).toLocaleDateString() : '---'}</b></div>
                             <div>Turi: <b style={{ color: '#fff' }}>{parseColor(batch.color).type}</b></div>
                             <div>Rangi: <b style={{ color: '#fff' }}>{parseColor(batch.color).c}</b></div>
                             <div>Birlik: <b style={{ color: '#fff' }}>{parseColor(batch.color).unit.toUpperCase()}</b></div>
@@ -751,7 +752,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                 </div>
                                 <div>
                                     <div style={{ fontWeight: 'bold', fontSize: 16 }}>{r.bruto} {parseColor(activeBatch.color).unit}</div>
-                                    <div style={{ fontSize: 11, color: '#888' }}>{new Date(r.created_at).toLocaleTimeString()}</div>
+                                    <div style={{ fontSize: 11, color: '#888' }}>{r.created_at ? new Date(r.created_at).toLocaleTimeString() : '---'}</div>
                                 </div>
                             </div>
                             <span style={S.badge(true)}>BRUTO OLINDI</span>
@@ -786,7 +787,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                             <div key={r.id} style={{ width: 300, border: '2px solid #000', borderRadius: 12, padding: 20, background: '#fff', color: '#000', boxSizing: 'border-box' }} className="print-ticket">
                                 <div style={{ textAlign: 'center', marginBottom: 15, borderBottom: '2px solid #000', paddingBottom: 10 }}>
                                     <h2 style={{ margin: 0, fontSize: 24, textTransform: 'uppercase' }}>BESPO MATO Ombori</h2>
-                                    <div style={{ fontSize: 14 }}>SANA: {new Date(r.created_at).toLocaleDateString()}</div>
+                                    <div style={{ fontSize: 14 }}>SANA: {r.created_at ? new Date(r.created_at).toLocaleDateString() : '---'}</div>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div style={{ flex: 1 }}>
