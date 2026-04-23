@@ -14,7 +14,39 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const [printBatchRolls, setPrintBatchRolls] = useState(null);
 
     // Kirim (Yangi Partiya) Formasi uchun state
-    const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '' });
+    const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg' });
+    const [fabricTypes, setFabricTypes] = useState(['2 IPPL', '3 IP Kashkors', 'Bingall', 'Rebana', 'Elastik', 'Salfetka', 'Suprem']);
+    const [isAddingType, setIsAddingType] = useState(false);
+    const [newType, setNewType] = useState('');
+
+    // Fetch and sync fabric types
+    React.useEffect(() => {
+        const fetchTypes = async () => {
+            const { data: cfg } = await supabase.from('system_config').select('value').eq('key', 'fabric_types').single();
+            if (cfg && cfg.value) {
+                try {
+                    const parsed = JSON.parse(cfg.value);
+                    if (Array.isArray(parsed)) setFabricTypes(parsed);
+                } catch (e) { console.error("Parse error:", e); }
+            }
+        };
+        fetchTypes();
+    }, []);
+
+    const saveFabricTypes = async (newList) => {
+        setFabricTypes(newList);
+        await supabase.from('system_config').upsert({ key: 'fabric_types', value: JSON.stringify(newList) }, { onConflict: 'key' });
+    };
+
+    const handleAddType = () => {
+        if (newType && !fabricTypes.includes(newType)) {
+            const newList = [...fabricTypes, newType];
+            saveFabricTypes(newList);
+            setF({ ...f, type: newType });
+            setNewType('');
+            setIsAddingType(false);
+        }
+    };
 
     // Umumiy Dizayn (Stil) moslamalari
     const S = {
@@ -28,16 +60,27 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const batches = data.whBatches || [];
     const rolls = data.whRolls || [];
 
+    const parseColor = (str) => {
+        if (!str) return { c: '', type: '', unit: 'kg' };
+        if (str.includes('|')) {
+            const [type, col, unit] = str.split('|').map(x => x.trim());
+            return { type, c: col, unit: unit || 'kg' };
+        }
+        return { type: '', c: str, unit: 'kg' };
+    };
+
     const handleCreateBatch = async (e) => {
         e.preventDefault();
         try {
+            // Store type, color, unit together in color field
+            const combinedColor = `${f.type} | ${f.c} | ${f.unit}`;
             const { error } = await supabase.from('warehouse_batches').insert([{
-                batch_number: f.bn, supplier_name: f.sup, color: f.c,
+                batch_number: f.bn, supplier_name: f.sup, color: combinedColor,
                 expected_count: Number(f.eC), expected_weight: Number(f.eW), status: 'IN_PROGRESS'
             }]);
             if (error) throw error;
             showMsg('Yangi kirim muvaffaqiyatli saqlandi!');
-            setF({ bn: '', eC: '', eW: '', sup: '', c: '' });
+            setF({ ...f, bn: '', eC: '', eW: '', sup: '', c: '' });
             load(true);
         } catch (err) {
             showMsg('Saqlashda xatolik!', 'err');
@@ -46,21 +89,23 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
 
     const handleAddRoll = async () => {
         if (!newRollWeight || isNaN(newRollWeight) || Number(newRollWeight) <= 0) {
-            return showMsg('Noto\'g\'ri vazn kiritildi!', 'err');
+            return showMsg('Noto\'g\'ri qiymat kiritildi!', 'err');
         }
+        const { type, c, unit } = parseColor(activeBatch.color);
         try {
             const payload = {
                 batch_id: activeBatch.id,
                 batch_number: activeBatch.batch_number,
                 bruto: Number(newRollWeight),
                 status: 'BRUTO',
-                fabric_name: activeBatch.color,
-                color: activeBatch.color
+                fabric_name: type,
+                color: c,
+                color_code: unit // Reuse color_code to store unit for the roll
             };
             const { error } = await supabase.from('warehouse_rolls').insert([payload]);
             if (error) throw error;
             setNewRollWeight('');
-            showMsg('Rulon (bruto) omborga qo\'shildi!');
+            showMsg('Rulon omborga qo\'shildi!');
             load(true);
         } catch (e) {
             showMsg('Saqlashda xatolik!', 'err');
@@ -76,10 +121,57 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                 <form onSubmit={handleCreateBatch}>
                     <input style={S.input} placeholder="Partiya raqami (masalan: P-99)" value={f.bn} onChange={e => setF({ ...f, bn: e.target.value })} required />
                     <input style={S.input} placeholder="Ta'minotchi (kimdan keldi?)" value={f.sup} onChange={e => setF({ ...f, sup: e.target.value })} required />
+
+                    <div style={{ marginBottom: 15 }}>
+                        <label style={{ fontSize: 12, color: '#81C784', display: 'block', marginBottom: 5 }}>Mato turi:</label>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <select
+                                style={{ ...S.input, marginBottom: 0, flex: 1, color: '#fff', background: '#1a1a2e' }}
+                                value={f.type}
+                                onChange={e => setF({ ...f, type: e.target.value })}
+                            >
+                                {fabricTypes.map(t => <option key={t} value={t} style={{ background: '#1a1a2e' }}>{t}</option>)}
+                            </select>
+                            <button
+                                type="button"
+                                onClick={() => setIsAddingType(true)}
+                                style={{ ...S.primaryBtn, width: 'auto', padding: '0 15px' }}
+                            >
+                                +
+                            </button>
+                        </div>
+                    </div>
+
+                    {isAddingType && (
+                        <div style={{ marginBottom: 15, display: 'flex', gap: 10 }}>
+                            <input
+                                style={{ ...S.input, marginBottom: 0, flex: 1 }}
+                                placeholder="Yangi mato turi"
+                                value={newType}
+                                onChange={e => setNewType(e.target.value)}
+                            />
+                            <button type="button" onClick={handleAddType} style={{ ...S.primaryBtn, width: 'auto' }}>QO'SHISH</button>
+                            <button type="button" onClick={() => setIsAddingType(false)} style={{ ...S.primaryBtn, width: 'auto', background: '#555' }}>X</button>
+                        </div>
+                    )}
+
                     <input style={S.input} placeholder="Rangi (masalan: Qora, Oq)" value={f.c} onChange={e => setF({ ...f, c: e.target.value })} required />
+
+                    <div style={{ marginBottom: 15 }}>
+                        <label style={{ fontSize: 12, color: '#81C784', display: 'block', marginBottom: 5 }}>O'lchov birligi:</label>
+                        <div style={{ display: 'flex', gap: 20 }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                <input type="radio" name="unit" value="kg" checked={f.unit === 'kg'} onChange={() => setF({ ...f, unit: 'kg' })} /> KG
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                <input type="radio" name="unit" value="meter" checked={f.unit === 'meter'} onChange={() => setF({ ...f, unit: 'meter' })} /> METIR
+                            </label>
+                        </div>
+                    </div>
+
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                         <input style={S.input} type="number" placeholder="Jami Rulon (dona)" value={f.eC} onChange={e => setF({ ...f, eC: e.target.value })} required />
-                        <input style={S.input} type="number" placeholder="Jami Vazn (KG)" value={f.eW} onChange={e => setF({ ...f, eW: e.target.value })} required />
+                        <input style={S.input} type="number" placeholder={f.unit === 'kg' ? "Jami Vazn (KG)" : "Jami Metir"} value={f.eW} onChange={e => setF({ ...f, eW: e.target.value })} required />
                     </div>
                     <button style={S.primaryBtn} type="submit">OMBORGA QO'SHISH</button>
                 </form>
@@ -91,9 +183,10 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
         // Group data by Supplier + Color
         const summary = {};
         batches.forEach(b => {
-            const key = `${b.supplier_name}_${b.color}`;
+            const { type, c, unit } = parseColor(b.color);
+            const key = `${b.supplier_name}_${type}_${c}`;
             if (!summary[key]) {
-                summary[key] = { sup: b.supplier_name, col: b.color, bruto: 0, neto: 0, brak: 0, batches: 0 };
+                summary[key] = { sup: b.supplier_name, type, col: c, unit, bruto: 0, neto: 0, brak: 0, batches: 0 };
             }
             summary[key].batches += 1;
 
@@ -141,19 +234,20 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#fff', fontWeight: 'bold' }}>
-                                        <Palette size={14} color={s.col} /> {s.col}
+                                        <Palette size={14} color="#81C784" /> {s.type}
                                     </div>
-                                    <div style={{ fontSize: 10, color: '#555' }}>MATO RANGI</div>
+                                    <div style={{ fontSize: 10, color: '#555' }}>MATO TURI</div>
+                                    <div style={{ fontSize: 12, color: '#81C784', marginTop: 4 }}>{s.col}</div>
                                 </div>
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, background: 'rgba(0,0,0,0.2)', padding: 12, borderRadius: 12 }}>
                                 <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: 9, color: '#81C784', marginBottom: 4 }}>BRUTO KG</div>
+                                    <div style={{ fontSize: 9, color: '#81C784', marginBottom: 4 }}>BRUTO {s.unit.toUpperCase()}</div>
                                     <div style={{ fontWeight: 'bold' }}>{s.bruto.toFixed(1)}</div>
                                 </div>
                                 <div style={{ textAlign: 'center', borderLeft: '1px solid #2a2a40' }}>
-                                    <div style={{ fontSize: 9, color: '#4FC3F7', marginBottom: 4 }}>NETO KG</div>
+                                    <div style={{ fontSize: 9, color: '#4FC3F7', marginBottom: 4 }}>NETO {s.unit.toUpperCase()}</div>
                                     <div style={{ fontWeight: 'bold' }}>{s.neto.toFixed(1)}</div>
                                 </div>
                                 <div style={{ textAlign: 'center', borderLeft: '1px solid #2a2a40' }}>
@@ -209,11 +303,13 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 13, color: '#aaa', background: 'rgba(0,0,0,0.2)', padding: 15, borderRadius: 12 }}>
                             <div>Sana: <b style={{ color: '#fff' }}>{new Date(batch.arrival_date || batch.created_at).toLocaleDateString()}</b></div>
-                            <div>Rangi: <b style={{ color: '#fff' }}>{batch.color}</b></div>
+                            <div>Turi: <b style={{ color: '#fff' }}>{parseColor(batch.color).type}</b></div>
+                            <div>Rangi: <b style={{ color: '#fff' }}>{parseColor(batch.color).c}</b></div>
+                            <div>Birlik: <b style={{ color: '#fff' }}>{parseColor(batch.color).unit.toUpperCase()}</b></div>
 
                             <div style={{ borderTop: '1px solid #2a2a40', paddingTop: 10, marginTop: 5 }}>
-                                <span style={{ fontSize: 11, display: 'block', marginBottom: 2 }}>Vazn (Qabul / Jami)</span>
-                                <b style={{ color: isComplete ? '#81C784' : '#FFAB40', fontSize: 16 }}>{totalBrutoKg.toFixed(1)}</b> / {expectedWeight} kg
+                                <span style={{ fontSize: 11, display: 'block', marginBottom: 2 }}>{parseColor(batch.color).unit === 'kg' ? 'Vazn' : 'Metir'} (Qabul / Jami)</span>
+                                <b style={{ color: isComplete ? '#81C784' : '#FFAB40', fontSize: 16 }}>{totalBrutoKg.toFixed(1)}</b> / {expectedWeight} {parseColor(batch.color).unit}
                             </div>
                             <div style={{ borderTop: '1px solid #2a2a40', paddingTop: 10, marginTop: 5 }}>
                                 <span style={{ fontSize: 11, display: 'block', marginBottom: 2 }}>Rulonlar (Qabul / Jami)</span>
@@ -243,12 +339,12 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
                             <h1 style={{ margin: 0, color: '#81C784' }}>{activeBatch.batch_number}</h1>
-                            <p style={{ margin: '5px 0 0 0', opacity: 0.7 }}>{activeBatch.supplier_name} • {activeBatch.color}</p>
+                            <p style={{ margin: '5px 0 0 0', opacity: 0.7 }}>{activeBatch.supplier_name} • {parseColor(activeBatch.color).type} ({parseColor(activeBatch.color).c})</p>
                         </div>
                         <div style={{ textAlign: 'right' }}>
                             <div style={{ fontSize: 24, fontWeight: 'bold' }}>{doneCount} / {activeBatch.expected_count}</div>
                             <div style={{ fontSize: 11, color: '#aaa' }}>Rulon yig'ildi</div>
-                            <div style={{ fontSize: 14, fontWeight: 'bold', color: '#81C784', marginTop: 5 }}>{totalBrutoKg.toFixed(1)} kg jami</div>
+                            <div style={{ fontSize: 14, fontWeight: 'bold', color: '#81C784', marginTop: 5 }}>{totalBrutoKg.toFixed(1)} {parseColor(activeBatch.color).unit} jami</div>
                         </div>
                     </div>
 
@@ -267,11 +363,11 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
 
                 {!isComplete && (
                     <>
-                        <h3 style={{ marginBottom: 15, marginTop: 30 }}>Yangi Rulon Qo'shish (Bruto kg)</h3>
+                        <h3 style={{ marginBottom: 15, marginTop: 30 }}>Yangi Rulon Qo'shish ({parseColor(activeBatch.color).unit === 'kg' ? 'Bruto kg' : 'Metir'})</h3>
                         <div style={{ display: 'flex', gap: 10, marginBottom: 30 }}>
                             <input
                                 type="number"
-                                placeholder="Masanlan: 24.5"
+                                placeholder={parseColor(activeBatch.color).unit === 'kg' ? "Masanlan: 24.5" : "Kelgan metir"}
                                 style={S.input}
                                 value={newRollWeight}
                                 onChange={(e) => setNewRollWeight(e.target.value)}
@@ -293,7 +389,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     {i + 1}
                                 </div>
                                 <div>
-                                    <div style={{ fontWeight: 'bold', fontSize: 16 }}>{r.bruto} kg</div>
+                                    <div style={{ fontWeight: 'bold', fontSize: 16 }}>{r.bruto} {parseColor(activeBatch.color).unit}</div>
                                     <div style={{ fontSize: 11, color: '#888' }}>{new Date(r.created_at).toLocaleTimeString()}</div>
                                 </div>
                             </div>
@@ -337,10 +433,10 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                         <div style={{ fontSize: 18, marginBottom: 10 }}>{r.batch_number}</div>
 
                                         <div style={{ fontSize: 12, fontWeight: 'bold' }}>Rangi:</div>
-                                        <div style={{ fontSize: 16, marginBottom: 10 }}>{r.fabric_name}</div>
+                                        <div style={{ fontSize: 16, marginBottom: 10 }}>{r.color}</div>
 
-                                        <div style={{ fontSize: 12, fontWeight: 'bold' }}>Vazni (BRUTO):</div>
-                                        <div style={{ fontSize: 28, fontWeight: '900' }}>{r.bruto} kg</div>
+                                        <div style={{ fontSize: 12, fontWeight: 'bold' }}>{r.color_code === 'meter' ? 'Metir' : 'Vazni (BRUTO)'}:</div>
+                                        <div style={{ fontSize: 28, fontWeight: '900' }}>{r.bruto} {r.color_code || 'kg'}</div>
                                     </div>
                                     <div style={{ padding: 10, background: '#fff' }}>
                                         <QRCodeCanvas value={qrData} size={100} level={"H"} />
@@ -380,8 +476,8 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                         {netoRolls.map(r => (
                             <div key={r.id} style={{ ...S.card, marginBottom: 0, padding: '15px 20px', borderLeft: '4px solid #4FC3F7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                    <div style={{ fontSize: 12, color: '#888' }}>Partiya: {r.batch_number} • Rangi: {r.fabric_name}</div>
-                                    <div style={{ fontSize: 18, fontWeight: 'bold' }}>{r.neto ? r.neto.toFixed(2) : '---'} kg</div>
+                                    <div style={{ fontSize: 12, color: '#888' }}>Partiya: {r.batch_number} • Turi: {r.fabric_name} • Rangi: {r.color}</div>
+                                    <div style={{ fontSize: 18, fontWeight: 'bold' }}>{r.neto ? r.neto.toFixed(2) : '---'} {r.color_code || 'kg'}</div>
                                     <div style={{ fontSize: 12, marginTop: 5 }}>
                                         Eni: <b style={{ color: '#fff' }}>{r.en || '--'} sm</b> | Gramaj: <b style={{ color: '#fff' }}>{r.gramaj || '--'}</b>
                                     </div>
@@ -391,7 +487,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                         NETO OLINDI
                                     </span>
                                     <div style={{ fontSize: 11, color: '#555', marginTop: 10 }}>
-                                        Bruto: {r.bruto} kg | Tara: {r.tara || 0} kg
+                                        Bruto: {r.bruto} {r.color_code || 'kg'} | Tara: {r.tara || 0} kg
                                     </div>
                                 </div>
                             </div>

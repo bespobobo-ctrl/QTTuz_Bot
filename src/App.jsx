@@ -127,6 +127,7 @@ export default function App() {
         <nav style={S.nav}>
           {[
             { id: 'dashboard', icon: LayoutDashboard, l: user.role === 'omborchi' ? 'Bruto Partiyalar' : 'Asosiy' },
+            { id: 'scan', icon: Scan, l: 'Skayner' },
             ...(user.role !== 'omborchi' ? [{ id: 'kirim', icon: Download, l: 'Kirim' }] : []),
             { id: 'ombor', icon: Package, l: user.role === 'omborchi' ? 'Tayyor (Dam)' : 'Stock' },
             ...(user.role === 'mato_ombori' ? [{ id: 'neto', icon: CheckCircle2, l: 'Neto' }] : [])
