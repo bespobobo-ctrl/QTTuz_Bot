@@ -806,14 +806,15 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                 </span>
                             </div>
                             <div style={{ display: 'flex', gap: 10 }} onClick={e => e.stopPropagation()}>
-                                <button onClick={() => {
+                                <button onClick={(e) => {
+                                    e.stopPropagation();
                                     const pc = parseColor(batch.color);
-                                    setF({ bn: batch.batch_number, sup: batch.supplier_name, eW: batch.expected_weight, eC: batch.expected_count, type: pc.type, c: pc.c, unit: pc.unit });
+                                    setF({ bn: batch.batch_number, sup: batch.supplier_name, eW: batch.expected_weight, eC: batch.expected_count, type: pc.type, c: pc.c, unit: pc.unit, g: pc.g });
                                     setIsEdit(true);
                                     setEditID(batch.id);
                                     window.scrollTo({ top: 0, behavior: 'smooth' });
                                 }} style={{ background: 'none', border: 'none', color: '#4FC3F7', cursor: 'pointer' }}><Edit3 size={18} /></button>
-                                <button onClick={() => handleDeleteBatch(batch.id, batch.batch_number)} style={{ background: 'none', border: 'none', color: '#ff5252', cursor: 'pointer' }}><Trash2 size={18} /></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleDeleteBatch(batch.id, batch.batch_number); }} style={{ background: 'none', border: 'none', color: '#ff5252', cursor: 'pointer' }}><Trash2 size={18} /></button>
                                 <ChevronRight color="#555" />
                             </div>
                         </div>
@@ -1179,7 +1180,8 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
 
                                 <div style={{ marginTop: 15, display: 'flex', gap: 10, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 10 }}>
                                     <button
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                            e.stopPropagation();
                                             setEditingRoll(r);
                                             setRollForm({ neto: r.neto, en: r.en || '', gramaj: r.gramaj || '' });
                                         }}
@@ -1188,7 +1190,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                         <Edit3 size={14} /> TAHRIRLASH
                                     </button>
                                     <button
-                                        onClick={() => handleDeleteRoll(r)}
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteRoll(r); }}
                                         style={{ ...S.primaryBtn, background: 'rgba(255,82,82,0.1)', color: '#ff5252', padding: '8px', fontSize: 12 }}
                                     >
                                         <Trash2 size={14} /> O'CHIRISH
