@@ -15,6 +15,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const [dashTab, setDashTab] = useState('season'); // 'season', 'status', 'supplier', 'alerts', 'brak', 'orders', 'remains'
     const [selQuarter, setSelQuarter] = useState(null);
     const [selNetoGroup, setSelNetoGroup] = useState(null);
+    const [verdict, setVerdict] = useState(null); // 'ombor', 'supplier'
 
     // Kirim (Yangi Partiya) Formasi uchun state
     const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg' });
@@ -507,7 +508,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                 const progress = totalCount > 0 ? (doneCount / totalCount) * 100 : 0;
 
                 return (
-                    <div key={batch.id} style={{ ...S.card, cursor: 'pointer', position: 'relative', overflow: 'hidden' }} onClick={() => setActiveBatch(batch)}>
+                    <div key={batch.id} style={{ ...S.card, cursor: 'pointer', position: 'relative', overflow: 'hidden' }} onClick={() => { setVerdict(null); setActiveBatch(batch); }}>
                         <div style={{ position: 'absolute', bottom: 0, left: 0, height: 4, background: '#1a1a2e', width: '100%' }}>
                             <div style={{ width: `${Math.min(progress, 100)}%`, height: '100%', background: isComplete ? '#81C784' : '#FFAB40', transition: 'width 0.5s' }} />
                         </div>
@@ -606,11 +607,58 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                         </div>
                     </div>
 
-                    <div style={{ marginTop: 20, display: 'flex', gap: 10 }}>
+                    <div style={{ marginTop: 20, display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                         {isComplete ? (
-                            <button onClick={() => setPrintBatchRolls(batchRolls)} style={{ ...S.primaryBtn, width: '100%', background: '#81C784', color: '#000' }}>
-                                <Printer size={20} /> Barcha Rulonlarga Passport (QR) Chiqarish
-                            </button>
+                            <>
+                                <button onClick={() => setPrintBatchRolls(batchRolls)} style={{ ...S.primaryBtn, width: '100%', background: '#81C784', color: '#000', marginBottom: 5 }}>
+                                    <Printer size={20} /> Barcha Rulonlarga Passport (QR) Chiqarish
+                                </button>
+
+                                <div style={{ width: '100%', padding: 15, background: 'rgba(255,255,255,0.05)', borderRadius: 12, border: '1px solid #444', marginTop: 10 }}>
+                                    <div style={{ textAlign: 'center', marginBottom: 15, fontWeight: 'bold', fontSize: 14 }}>
+                                        <AlertTriangle size={18} style={{ verticalAlign: 'middle', marginRight: 5, color: '#FFAB40' }} />
+                                        QAYSI VAZN TO'G'RI DEB QABUL QILINSIN?
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                        <button
+                                            onClick={async () => {
+                                                setVerdict('ombor');
+                                                await supabase.from('warehouse_log').insert({
+                                                    batch_id: activeBatch.id,
+                                                    item_name: `VERDICT: OMBOR VAZNI (${totalBrutoKg})`,
+                                                    quantity: totalBrutoKg,
+                                                    action_type: 'VERDICT_CONFIRMED'
+                                                });
+                                                showMsg("Ombor vazni tasdiqlandi!");
+                                            }}
+                                            style={{ ...S.primaryBtn, background: verdict === 'ombor' ? '#81C784' : '#333', color: verdict === 'ombor' ? '#000' : '#fff', fontSize: 11 }}
+                                        >
+                                            OMBOR VAZNI ({totalBrutoKg.toFixed(1)})
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                setVerdict('supplier');
+                                                await supabase.from('warehouse_log').insert({
+                                                    batch_id: activeBatch.id,
+                                                    item_name: `VERDICT: TAMINOTCHI VAZNI (${activeBatch.expected_weight})`,
+                                                    quantity: activeBatch.expected_weight,
+                                                    action_type: 'VERDICT_CONFIRMED'
+                                                });
+                                                showMsg("Taminotchi vazni tasdiqlandi!");
+                                            }}
+                                            style={{ ...S.primaryBtn, background: verdict === 'supplier' ? '#81C784' : '#333', color: verdict === 'supplier' ? '#000' : '#fff', fontSize: 11 }}
+                                        >
+                                            TAMINOTCHI ({activeBatch.expected_weight})
+                                        </button>
+                                    </div>
+                                    {verdict && (
+                                        <div style={{ textAlign: 'center', marginTop: 10, color: '#81C784', fontSize: 12, fontWeight: 'bold' }}>
+                                            <CheckCircle2 size={14} style={{ verticalAlign: 'middle', marginRight: 5 }} />
+                                            TANLOV SAQLANDI
+                                        </div>
+                                    )}
+                                </div>
+                            </>
                         ) : (
                             <div style={{ width: '100%', background: 'rgba(255,171,64,0.1)', padding: 15, borderRadius: 12, color: '#FFAB40', display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
                                 <AlertCircle size={18} /> Barcha rulonlar o'lchangandan so'ng QR passport yoziladi.
