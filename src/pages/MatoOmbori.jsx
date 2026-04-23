@@ -582,13 +582,15 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                         </div>
 
                         {isComplete && (
-                            <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: Math.abs(totalBrutoKg - expectedWeight) < 0.5 ? 'rgba(129,199,132,0.1)' : 'rgba(255,171,64,0.1)', border: '1px dashed' }}>
-                                <div style={{ fontSize: 11, color: '#888' }}>TAQQOSLASH (OMBOR vs TAMINOTCHI):</div>
+                            <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: batch.status?.startsWith('VERDICT_') ? 'rgba(129,199,132,0.1)' : (Math.abs(totalBrutoKg - expectedWeight) < 0.5 ? 'rgba(129,199,132,0.1)' : 'rgba(255,171,64,0.1)'), border: '1px dashed' }}>
+                                <div style={{ fontSize: 11, color: '#888' }}>
+                                    {batch.status?.startsWith('VERDICT_') ? "YAKUNIY QAROR (TASDIQLANGAN):" : "TAQQOSLASH (OMBOR vs TAMINOTCHI):"}
+                                </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 }}>
-                                    <b style={{ color: Math.abs(totalBrutoKg - expectedWeight) < 0.5 ? '#81C784' : '#FFAB40' }}>
-                                        {Math.abs(totalBrutoKg - expectedWeight) < 0.5
-                                            ? "MA'LUMOTLAR TO'G'RI (MOS)"
-                                            : `FARQ MAVJUD: ${(totalBrutoKg - expectedWeight).toFixed(1)} ${parseColor(batch.color).unit}`}
+                                    <b style={{ color: batch.status?.startsWith('VERDICT_') ? '#81C784' : (Math.abs(totalBrutoKg - expectedWeight) < 0.5 ? '#81C784' : '#FFAB40') }}>
+                                        {batch.status === 'VERDICT_OMBOR' ? "OMBOR VAZNI QABUL QILINDI" :
+                                            batch.status === 'VERDICT_SUPPLIER' ? "TAMINOTCHI VAZNI QABUL QILINDI" :
+                                                Math.abs(totalBrutoKg - expectedWeight) < 0.5 ? "MA'LUMOTLAR TO'G'RI (MOS)" : `FARQ MAVJUD: ${(totalBrutoKg - expectedWeight).toFixed(1)} ${parseColor(batch.color).unit}`}
                                     </b>
                                     <div style={{ fontSize: 10, opacity: 0.6 }}>
                                         {totalBrutoKg.toFixed(1)} vs {expectedWeight}
@@ -655,50 +657,62 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     <Printer size={20} /> Barcha Rulonlarga Passport (QR) Chiqarish
                                 </button>
 
-                                <div style={{ width: '100%', padding: 15, background: 'rgba(255,255,255,0.05)', borderRadius: 12, border: '1px solid #444', marginTop: 10 }}>
-                                    <div style={{ textAlign: 'center', marginBottom: 15, fontWeight: 'bold', fontSize: 14 }}>
-                                        <AlertTriangle size={18} style={{ verticalAlign: 'middle', marginRight: 5, color: '#FFAB40' }} />
-                                        QAYSI VAZN TO'G'RI DEB QABUL QILINSIN?
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                                        <button
-                                            onClick={async () => {
-                                                setVerdict('ombor');
-                                                await supabase.from('warehouse_log').insert({
-                                                    batch_id: activeBatch.id,
-                                                    item_name: `VERDICT: OMBOR VAZNI (${totalBrutoKg})`,
-                                                    quantity: totalBrutoKg,
-                                                    action_type: 'VERDICT_CONFIRMED'
-                                                });
-                                                showMsg("Ombor vazni tasdiqlandi!");
-                                            }}
-                                            style={{ ...S.primaryBtn, background: verdict === 'ombor' ? '#81C784' : '#333', color: verdict === 'ombor' ? '#000' : '#fff', fontSize: 11 }}
-                                        >
-                                            OMBOR VAZNI ({totalBrutoKg.toFixed(1)})
-                                        </button>
-                                        <button
-                                            onClick={async () => {
-                                                setVerdict('supplier');
-                                                await supabase.from('warehouse_log').insert({
-                                                    batch_id: activeBatch.id,
-                                                    item_name: `VERDICT: TAMINOTCHI VAZNI (${activeBatch.expected_weight})`,
-                                                    quantity: activeBatch.expected_weight,
-                                                    action_type: 'VERDICT_CONFIRMED'
-                                                });
-                                                showMsg("Taminotchi vazni tasdiqlandi!");
-                                            }}
-                                            style={{ ...S.primaryBtn, background: verdict === 'supplier' ? '#81C784' : '#333', color: verdict === 'supplier' ? '#000' : '#fff', fontSize: 11 }}
-                                        >
-                                            TAMINOTCHI ({activeBatch.expected_weight})
-                                        </button>
-                                    </div>
-                                    {verdict && (
-                                        <div style={{ textAlign: 'center', marginTop: 10, color: '#81C784', fontSize: 12, fontWeight: 'bold' }}>
-                                            <CheckCircle2 size={14} style={{ verticalAlign: 'middle', marginRight: 5 }} />
-                                            TANLOV SAQLANDI
+                                {activeBatch.status?.startsWith('VERDICT_') ? (
+                                    <div style={{ width: '100%', padding: 15, background: 'rgba(129,199,132,0.1)', borderRadius: 12, border: '1px solid #81C784', marginTop: 10, textAlign: 'center' }}>
+                                        <div style={{ color: '#81C784', fontWeight: 'bold' }}>
+                                            <CheckCircle2 size={18} style={{ verticalAlign: 'middle', marginRight: 5 }} />
+                                            TASDIQLANGAN VAZN: {activeBatch.status === 'VERDICT_OMBOR' ? 'OMBOR (BIZNING) VAZN' : 'TAMINOTCHI VAZNI'}
                                         </div>
-                                    )}
-                                </div>
+                                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 5 }}>Ushbu partiya uchun yakuniy qaror qabul qilingan</div>
+                                    </div>
+                                ) : (
+                                    <div style={{ width: '100%', padding: 15, background: 'rgba(255,255,255,0.05)', borderRadius: 12, border: '1px solid #444', marginTop: 10 }}>
+                                        <div style={{ textAlign: 'center', marginBottom: 15, fontWeight: 'bold', fontSize: 14 }}>
+                                            <AlertTriangle size={18} style={{ verticalAlign: 'middle', marginRight: 5, color: '#FFAB40' }} />
+                                            QAYSI VAZN TO'G'RI DEB QABUL QILINSIN?
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        const { error } = await supabase.from('warehouse_batches').update({ status: 'VERDICT_OMBOR' }).eq('id', activeBatch.id);
+                                                        if (error) throw error;
+                                                        await supabase.from('warehouse_log').insert({
+                                                            batch_id: activeBatch.id,
+                                                            item_name: `VERDICT: OMBOR VAZNI (${totalBrutoKg})`,
+                                                            quantity: totalBrutoKg,
+                                                            action_type: 'VERDICT_CONFIRMED'
+                                                        });
+                                                        showMsg("Ombor vazni tasdiqlandi!");
+                                                        load(true);
+                                                    } catch (e) { showMsg('Xato yuz berdi', 'err'); }
+                                                }}
+                                                style={{ ...S.primaryBtn, background: '#333', color: '#fff', fontSize: 11 }}
+                                            >
+                                                OMBOR VAZNI ({totalBrutoKg.toFixed(1)})
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        const { error } = await supabase.from('warehouse_batches').update({ status: 'VERDICT_SUPPLIER' }).eq('id', activeBatch.id);
+                                                        if (error) throw error;
+                                                        await supabase.from('warehouse_log').insert({
+                                                            batch_id: activeBatch.id,
+                                                            item_name: `VERDICT: TAMINOTCHI VAZNI (${activeBatch.expected_weight})`,
+                                                            quantity: activeBatch.expected_weight,
+                                                            action_type: 'VERDICT_CONFIRMED'
+                                                        });
+                                                        showMsg("Taminotchi vazni tasdiqlandi!");
+                                                        load(true);
+                                                    } catch (e) { showMsg('Xato yuz berdi', 'err'); }
+                                                }}
+                                                style={{ ...S.primaryBtn, background: '#333', color: '#fff', fontSize: 11 }}
+                                            >
+                                                TAMINOTCHI ({activeBatch.expected_weight})
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </>
                         ) : (
                             <div style={{ width: '100%', background: 'rgba(255,171,64,0.1)', padding: 15, borderRadius: 12, color: '#FFAB40', display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
