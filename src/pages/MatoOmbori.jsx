@@ -12,6 +12,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const [activeBatch, setActiveBatch] = useState(null);
     const [newRollWeight, setNewRollWeight] = useState('');
     const [printBatchRolls, setPrintBatchRolls] = useState(null);
+    const [dashTab, setDashTab] = useState('season'); // 'season', 'supplier', 'alerts', 'brak', 'orders', 'remains'
 
     // Kirim (Yangi Partiya) Formasi uchun state
     const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg' });
@@ -179,88 +180,233 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
         </motion.div>
     );
 
-    const renderSummaryDashboard = () => {
-        // Group data by Supplier + Color
-        const summary = {};
-        batches.forEach(b => {
-            const { type, c, unit } = parseColor(b.color);
-            const key = `${b.supplier_name}_${type}_${c}`;
-            if (!summary[key]) {
-                summary[key] = { sup: b.supplier_name, type, col: c, unit, bruto: 0, neto: 0, brak: 0, batches: 0 };
-            }
-            summary[key].batches += 1;
+    const getSeason = (fabricType, gramaj) => {
+        const ft = (fabricType || '').toLowerCase();
+        const gr = parseInt(gramaj) || 0;
 
-            const batchRolls = rolls.filter(r => r.batch_id === b.id);
-            batchRolls.forEach(r => {
-                summary[key].bruto += (Number(r.bruto) || 0);
-                summary[key].neto += (Number(r.neto) || 0);
-                if (r.status === 'BRAK') summary[key].brak += 1;
-            });
+        if (ft.includes('3 ipli') || ft.includes('kashmir') || ft.includes('nachos')) return 'WINTER (Okt-Dek)';
+        if (ft.includes('2 ipli') && gr === 240) return 'T-240 (Yan-Mar)';
+        if (ft.includes('bingal') || ft.includes('halodok') || ft.includes('suprem') || (ft.includes('2 ipli') && gr === 180)) return 'SUMMER (Apr-Iyun)';
+        if (ft.includes('elastik') || (ft.includes('2 ipli') && gr >= 240)) return 'ELASTIC (Iyun-Okt)';
+        return 'BOSHQA';
+    };
+
+    const renderSummaryDashboard = () => {
+        // Group data for various sections
+        const seasonalStats = {};
+        const supplierStats = {};
+        const stockStats = {}; // To find low stock
+        const brakRolls = rolls.filter(r => r.status === 'BRAK');
+        const orders = data.whOrders || [];
+
+        rolls.forEach(r => {
+            const { type, c, unit } = parseColor(r.color_code === 'meter' ? ' | | meter' : ' | | kg');
+            const fabricType = r.fabric_name || type;
+            const gramaj = r.gramaj;
+            const season = getSeason(fabricType, gramaj);
+            const rollUnit = r.color_code || 'kg';
+
+            // Seasonal calculations
+            const seasonKey = `${season}_${fabricType}_${gramaj}_${r.color}`;
+            if (!seasonalStats[seasonKey]) {
+                seasonalStats[seasonKey] = { season, type: fabricType, gramaj, color: r.color, bruto: 0, neto: 0, count: 0, unit: rollUnit };
+            }
+            seasonalStats[seasonKey].bruto += (Number(r.bruto) || 0);
+            seasonalStats[seasonKey].neto += (Number(r.neto) || 0);
+            seasonalStats[seasonKey].count += 1;
+
+            // Supplier calculations
+            const batch = batches.find(b => b.id === r.batch_id);
+            const supName = batch?.supplier_name || 'Noma\'lum';
+            const supKey = `${supName}_${fabricType}_${r.color}_${gramaj}`;
+            if (!supplierStats[supKey]) {
+                supplierStats[supKey] = { sup: supName, type: fabricType, color: r.color, gramaj, bruto: 0, neto: 0, brak: 0, unit: rollUnit };
+            }
+            supplierStats[supKey].bruto += (Number(r.bruto) || 0);
+            supplierStats[supKey].neto += (Number(r.neto) || 0);
+            if (r.status === 'BRAK') supplierStats[supKey].brak += 1;
+
+            // Stock tracking (only for products currently in stock - status 'KONTROLDAN_OTDI')
+            if (r.status === 'KONTROLDAN_OTDI') {
+                const stockKey = `${fabricType}_${r.color}_${gramaj}`;
+                if (!stockStats[stockKey]) {
+                    stockStats[stockKey] = { type: fabricType, color: r.color, gramaj, totalNeto: 0, unit: rollUnit };
+                }
+                stockStats[stockKey].totalNeto += (Number(r.neto) || 0);
+            }
         });
 
-        const stats = Object.values(summary);
+        const lowStock = Object.values(stockStats).filter(s => {
+            const isPopular = ['qora', 'to\'q ko\'k', 'mokriy', 'dark blue'].some(c => s.color.toLowerCase().includes(c));
+            const threshold = isPopular ? 2000 : 200;
+            return s.totalNeto < threshold;
+        });
+
+        const subTabs = [
+            { id: 'season', l: 'Sezoniy Analiz', icon: Calendar },
+            { id: 'supplier', l: 'Ta\'minotchilar', icon: Users },
+            { id: 'alerts', l: 'Kamayganlar', icon: AlertTriangle, count: lowStock.length },
+            { id: 'brak', l: 'Braklar', icon: AlertCircle, count: brakRolls.length },
+            { id: 'orders', l: 'Zakazlar', icon: TrendingUp },
+            { id: 'remains', l: 'Qoldiqlar', icon: Info }
+        ];
 
         return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <h2 style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <TrendingUp color="#81C784" /> Umumiy Analitika
-                </h2>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
-                    <div style={{ ...S.card, marginBottom: 0, padding: 15, textAlign: 'center' }}>
-                        <div style={{ color: '#81C784', fontSize: 11, fontWeight: 'bold' }}>JAMI BRUTO</div>
-                        <div style={{ fontSize: 20, fontWeight: 'bold' }}>{stats.reduce((a, b) => a + b.bruto, 0).toFixed(1)} <small>kg</small></div>
-                    </div>
-                    <div style={{ ...S.card, marginBottom: 0, padding: 15, textAlign: 'center' }}>
-                        <div style={{ color: '#4FC3F7', fontSize: 11, fontWeight: 'bold' }}>JAMI NETO</div>
-                        <div style={{ fontSize: 20, fontWeight: 'bold' }}>{stats.reduce((a, b) => a + b.neto, 0).toFixed(1)} <small>kg</small></div>
-                    </div>
+                <div style={{ display: 'flex', overflowX: 'auto', gap: 10, marginBottom: 20, paddingBottom: 10, scrollbarWidth: 'none' }}>
+                    {subTabs.map(t => (
+                        <button key={t.id} onClick={() => setDashTab(t.id)} style={{
+                            flexShrink: 0, padding: '10px 15px', borderRadius: 12, border: 'none',
+                            background: dashTab === t.id ? '#81C784' : 'rgba(255,255,255,0.05)',
+                            color: dashTab === t.id ? '#000' : '#888',
+                            fontSize: 12, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer'
+                        }}>
+                            <t.icon size={16} />
+                            {t.l} {t.count > 0 && <span style={{ background: '#ff5252', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{t.count}</span>}
+                        </button>
+                    ))}
                 </div>
 
-                {stats.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: 40, color: '#555' }}>Analitika uchun ma'lumot yetarli emas</div>
-                ) : (
-                    stats.map((s, idx) => (
-                        <div key={idx} style={S.card}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <div style={{ background: 'rgba(129,199,132,0.1)', padding: 8, borderRadius: 10 }}>
-                                        <Users size={18} color="#81C784" />
-                                    </div>
+                {dashTab === 'season' && (
+                    <div style={{ display: 'grid', gap: 12 }}>
+                        {Object.values(seasonalStats).map((s, i) => (
+                            <div key={i} style={S.card}>
+                                <div style={S.badge(true)}>{s.season}</div>
+                                <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between' }}>
                                     <div>
-                                        <div style={{ fontWeight: 'bold', fontSize: 16 }}>{s.sup}</div>
-                                        <div style={{ fontSize: 11, color: '#888' }}>Ta'minotchi</div>
+                                        <div style={{ fontWeight: 'bold', fontSize: 16 }}>{s.type}</div>
+                                        <div style={{ color: '#888', fontSize: 12 }}>{s.color} • {s.gramaj} gr</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontSize: 18, fontWeight: 'bold', color: '#81C784' }}>{s.neto.toFixed(1)} {s.unit}</div>
+                                        <div style={{ fontSize: 11, color: '#555' }}>Neto Jami</div>
                                     </div>
                                 </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#fff', fontWeight: 'bold' }}>
-                                        <Palette size={14} color="#81C784" /> {s.type}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {dashTab === 'supplier' && (
+                    <div style={{ display: 'grid', gap: 12 }}>
+                        {Object.values(supplierStats).map((s, i) => (
+                            <div key={i} style={S.card}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                                    <b>{s.sup}</b>
+                                    <span style={{ fontSize: 12, color: '#888' }}>{s.type}</span>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, background: 'rgba(0,0,0,0.2)', padding: 10, borderRadius: 10 }}>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: 9, color: '#81C784' }}>BRUTO</div>
+                                        <div style={{ fontWeight: 'bold' }}>{s.bruto.toFixed(1)}</div>
                                     </div>
-                                    <div style={{ fontSize: 10, color: '#555' }}>MATO TURI</div>
-                                    <div style={{ fontSize: 12, color: '#81C784', marginTop: 4 }}>{s.col}</div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: 9, color: '#4FC3F7' }}>NETO</div>
+                                        <div style={{ fontWeight: 'bold' }}>{s.neto.toFixed(1)}</div>
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: 9, color: '#ff5252' }}>BRAK</div>
+                                        <div style={{ fontWeight: 'bold', color: s.brak > 0 ? '#ff5252' : '#fff' }}>{s.brak}</div>
+                                    </div>
                                 </div>
                             </div>
+                        ))}
+                    </div>
+                )}
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, background: 'rgba(0,0,0,0.2)', padding: 12, borderRadius: 12 }}>
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: 9, color: '#81C784', marginBottom: 4 }}>BRUTO {s.unit.toUpperCase()}</div>
-                                    <div style={{ fontWeight: 'bold' }}>{s.bruto.toFixed(1)}</div>
-                                </div>
-                                <div style={{ textAlign: 'center', borderLeft: '1px solid #2a2a40' }}>
-                                    <div style={{ fontSize: 9, color: '#4FC3F7', marginBottom: 4 }}>NETO {s.unit.toUpperCase()}</div>
-                                    <div style={{ fontWeight: 'bold' }}>{s.neto.toFixed(1)}</div>
-                                </div>
-                                <div style={{ textAlign: 'center', borderLeft: '1px solid #2a2a40' }}>
-                                    <div style={{ fontSize: 9, color: '#ff5252', marginBottom: 4 }}>BRAK</div>
-                                    <div style={{ fontWeight: 'bold', color: s.brak > 0 ? '#ff5252' : '#fff' }}>{s.brak} <small> dona</small></div>
-                                </div>
-                            </div>
-
-                            <div style={{ marginTop: 10, fontSize: 10, color: '#555', textAlign: 'center' }}>
-                                Umumiy {s.batches} ta partiya birlashtirildi
+                {dashTab === 'alerts' && (
+                    <div style={{ display: 'grid', gap: 12 }}>
+                        <div style={{ ...S.card, background: 'rgba(255,171,64,0.1)', borderColor: '#FFAB40' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#FFAB40' }}>
+                                <AlertTriangle size={20} />
+                                <b>Zaxira kamaygan matolar</b>
                             </div>
                         </div>
-                    ))
+                        {lowStock.map((s, i) => (
+                            <div key={i} style={S.card}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 'bold' }}>{s.type}</div>
+                                        <div style={{ fontSize: 12, color: '#888' }}>{s.color} • {s.gramaj} gr</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontSize: 18, fontWeight: 'bold', color: '#ff5252' }}>{s.totalNeto.toFixed(1)} {s.unit}</div>
+                                        <div style={{ fontSize: 10, color: '#555' }}>QOLDIQ</div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {lowStock.length === 0 && <div style={{ textAlign: 'center', padding: 40, opacity: 0.5 }}>Barcha zaxiralar yetarli</div>}
+                    </div>
+                )}
+
+                {dashTab === 'brak' && (
+                    <div style={{ display: 'grid', gap: 12 }}>
+                        {brakRolls.map(r => {
+                            const batch = batches.find(b => b.id === r.batch_id);
+                            const defects = JSON.parse(r.defects || '{}');
+                            return (
+                                <div key={r.id} style={S.card}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <b>{batch?.supplier_name}</b>
+                                        <span style={{ fontSize: 12, color: '#ff5252' }}>{new Date(r.neto_date).toLocaleDateString()}</span>
+                                    </div>
+                                    <div style={{ marginTop: 10, fontSize: 13 }}>
+                                        {r.fabric_name} • {r.color}
+                                        <div style={{ display: 'flex', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
+                                            {Object.entries(defects).map(([d, c]) => c > 0 && <span key={d} style={{ background: 'rgba(255,82,82,0.1)', color: '#ff5252', padding: '2px 6px', borderRadius: 4, fontSize: 10 }}>{d}:{c}</span>)}
+                                        </div>
+                                    </div>
+                                    <button onClick={async () => {
+                                        // Simple flow: notify boss (Rahbar)
+                                        await supabase.from('warehouse_log').insert([{
+                                            item_name: `BRAK: ${batch?.supplier_name} - ${r.fabric_name}`,
+                                            quantity: r.bruto,
+                                            user_name: 'Omborchi',
+                                            timestamp: new Date().toISOString()
+                                        }]);
+                                        showMsg('Rahbarga xabar yuborildi!');
+                                    }} style={{ ...S.primaryBtn, background: '#ff5252', color: '#fff', marginTop: 15, fontSize: 12 }}>
+                                        RAHBARGA YECHIM UCHUN YUBORISH
+                                    </button>
+                                </div>
+                            )
+                        })}
+                        {brakRolls.length === 0 && <div style={{ textAlign: 'center', padding: 40, opacity: 0.5 }}>Brak matolar yo'q</div>}
+                    </div>
+                )}
+
+                {dashTab === 'orders' && (
+                    <div style={{ display: 'grid', gap: 12 }}>
+                        {orders.map(o => (
+                            <div key={o.id} style={S.card}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <b>{o.supplier_name}</b>
+                                    <span style={S.badge(o.status === 'RECEIVED')}>{o.status}</span>
+                                </div>
+                                <div style={{ marginTop: 10 }}>
+                                    {o.fabric_type} • {o.color}
+                                </div>
+                                <div style={{ fontSize: 12, color: '#888', marginTop: 5 }}>
+                                    Kutilmoqda: {new Date(o.expected_date).toLocaleDateString()}
+                                </div>
+                            </div>
+                        ))}
+                        {orders.length === 0 && <div style={{ textAlign: 'center', padding: 40, opacity: 0.5 }}>Amaldagi zakazlar yo'q</div>}
+                    </div>
+                )}
+
+                {dashTab === 'remains' && (
+                    <div style={{ display: 'grid', gap: 12 }}>
+                        <div style={{ ...S.card, display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Butun Rulonlar:</span>
+                            <b>{rolls.filter(r => r.status === 'KONTROLDAN_OTDI').length} ta</b>
+                        </div>
+                        <div style={{ ...S.card, display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Qiyqimlar (Qoldiq):</span>
+                            <b>{rolls.filter(r => r.status === 'KONTROLDAN_OTDI' && r.neto < 5).length} ta</b>
+                        </div>
+                    </div>
                 )}
             </motion.div>
         );

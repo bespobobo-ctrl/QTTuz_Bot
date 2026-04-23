@@ -14,7 +14,7 @@ import OmborchiPanel from './pages/Omborchi';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const VERSION = "13.1 PRO";
+const VERSION = "13.2 PRO";
 
 const DEPARTMENTS = [
   { id: 'rahbar', name: 'Rahbar', icon: Shield, color: '#FFD700' },
@@ -39,7 +39,7 @@ export default function App() {
   });
   const [selectedDept, setSelectedDept] = useState(null);
   const [tab, setTab] = useState('dashboard');
-  const [data, setData] = useState({ whBatches: [], whRolls: [], whLog: [], deptLogins: [] });
+  const [data, setData] = useState({ whBatches: [], whRolls: [], whLog: [], deptLogins: [], whOrders: [] });
   const [msg, setMsg] = useState(null);
   const [loading, setLoading] = useState(false);
   const [dbVer, setDbVer] = useState(null);
@@ -49,18 +49,20 @@ export default function App() {
   const load = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
     try {
-      const [wb, wr, wl, dl, settings] = await Promise.all([
+      const [wb, wr, wl, dl, wo, settings] = await Promise.all([
         supabase.from('warehouse_batches').select('*').order('arrival_date', { ascending: false }),
         supabase.from('warehouse_rolls').select('*').order('created_at', { ascending: false }),
         supabase.from('warehouse_log').select('*').order('timestamp', { ascending: false }).limit(20),
         supabase.from('department_logins').select('*'),
+        supabase.from('warehouse_orders').select('*').order('created_at', { ascending: false }),
         supabase.from('system_config').select('value').eq('key', 'app_version').single()
       ]);
       setData({
         whBatches: wb.data || [],
         whRolls: wr.data || [],
         whLog: wl.data || [],
-        deptLogins: dl.data || []
+        deptLogins: dl.data || [],
+        whOrders: wo.data || []
       });
       if (settings.data) setDbVer(settings.data.value);
     } catch (e) { console.error("Load error:", e); }
