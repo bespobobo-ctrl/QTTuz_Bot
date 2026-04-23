@@ -273,16 +273,16 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
         const orders = data.whOrders || [];
 
         rolls.forEach(r => {
-            const { type, c, unit } = parseColor(r.color_code === 'meter' ? ' | | meter' : ' | | kg');
-            const fabricType = r.fabric_name || type;
-            const gramaj = r.gramaj;
-            const season = getSeason(fabricType, gramaj);
+            const fabricType = r.fabric_name || 'Noma\'lum';
+            const gramaj = r.gramaj || '---';
             const rollUnit = r.color_code || 'kg';
+            const season = getSeason(fabricType, gramaj);
+            const rollColor = r.color || 'Noma\'lum';
 
             // Seasonal calculations
-            const seasonKey = `${season}_${fabricType}_${gramaj}_${r.color}`;
+            const seasonKey = `${season}_${fabricType}_${gramaj}_${rollColor}`;
             if (!seasonalStats[seasonKey]) {
-                seasonalStats[seasonKey] = { season, type: fabricType, gramaj, color: r.color, bruto: 0, neto: 0, count: 0, unit: rollUnit };
+                seasonalStats[seasonKey] = { season, type: fabricType, gramaj, color: rollColor, bruto: 0, neto: 0, count: 0, unit: rollUnit };
             }
             seasonalStats[seasonKey].bruto += (Number(r.bruto) || 0);
             seasonalStats[seasonKey].neto += (Number(r.neto) || 0);
@@ -291,9 +291,9 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
             // Supplier calculations
             const batch = batches.find(b => b.id === r.batch_id);
             const supName = batch?.supplier_name || 'Noma\'lum';
-            const supKey = `${supName}_${fabricType}_${r.color}_${gramaj}`;
+            const supKey = `${supName}_${fabricType}_${rollColor}_${gramaj}`;
             if (!supplierStats[supKey]) {
-                supplierStats[supKey] = { sup: supName, type: fabricType, color: r.color, gramaj, bruto: 0, neto: 0, brak: 0, unit: rollUnit };
+                supplierStats[supKey] = { sup: supName, type: fabricType, color: rollColor, gramaj, bruto: 0, neto: 0, brak: 0, unit: rollUnit };
             }
             supplierStats[supKey].bruto += (Number(r.bruto) || 0);
             supplierStats[supKey].neto += (Number(r.neto) || 0);
@@ -301,9 +301,9 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
 
             // Stock tracking (only for products currently in stock - status 'KONTROLDAN_OTDI')
             if (r.status === 'KONTROLDAN_OTDI') {
-                const stockKey = `${fabricType}_${r.color}_${gramaj}`;
+                const stockKey = `${fabricType}_${rollColor}_${gramaj}`;
                 if (!stockStats[stockKey]) {
-                    stockStats[stockKey] = { type: fabricType, color: r.color, gramaj, totalNeto: 0, unit: rollUnit };
+                    stockStats[stockKey] = { type: fabricType, color: rollColor, gramaj, totalNeto: 0, unit: rollUnit };
                 }
                 stockStats[stockKey].totalNeto += (Number(r.neto) || 0);
             }
@@ -359,13 +359,13 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                             <div style={{ ...S.card, textAlign: 'center', marginBottom: 0, borderColor: statusView === 'bruto' ? (unitView === 'kg' ? '#FFAB40' : '#4FC3F7') : '#81C784' }}>
                                 <div style={{ color: statusView === 'bruto' ? (unitView === 'kg' ? '#FFAB40' : '#4FC3F7') : '#81C784', fontSize: 11, fontWeight: 'bold' }}>JAMI {unitView.toUpperCase()}</div>
                                 <div style={{ fontSize: 24, fontWeight: 'bold' }}>
-                                    {rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === unitView).reduce((a, b) => a + (Number(statusView === 'bruto' ? b.bruto : b.neto) || 0), 0).toFixed(1)}
+                                    {rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.color_code || 'kg') === unitView).reduce((a, b) => a + (Number(statusView === 'bruto' ? b.bruto : b.neto) || 0), 0).toFixed(1)}
                                     <small style={{ fontSize: 10, opacity: 0.5 }}> {unitView === 'kg' ? 'kg' : 'm'}</small>
                                 </div>
                             </div>
                             <div style={{ ...S.card, textAlign: 'center', marginBottom: 0 }}>
                                 <div style={{ color: '#aaa', fontSize: 11, fontWeight: 'bold' }}>RULONLAR</div>
-                                <div style={{ fontSize: 24, fontWeight: 'bold' }}>{rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === unitView).length} <small style={{ fontSize: 10, opacity: 0.5 }}>ta</small></div>
+                                <div style={{ fontSize: 24, fontWeight: 'bold' }}>{rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.color_code || 'kg') === unitView).length} <small style={{ fontSize: 10, opacity: 0.5 }}>ta</small></div>
                             </div>
                         </div>
 
@@ -375,7 +375,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                 <>
                                     <h3 style={{ margin: '0 0 15px 0', fontSize: 14 }}>Mato turlari ({unitView.toUpperCase()}):</h3>
                                     {Object.entries(
-                                        rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === unitView)
+                                        rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.color_code || 'kg') === unitView)
                                             .reduce((acc, r) => {
                                                 const type = r.fabric_name || 'Noma\'lum';
                                                 if (!acc[type]) acc[type] = { weight: 0, rolls: 0, unit: unitView === 'kg' ? 'kg' : 'm' };
@@ -395,7 +395,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                             </div>
                                         </div>
                                     ))}
-                                    {rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === unitView).length === 0 && <div style={{ textAlign: 'center', padding: 40, opacity: 0.5 }}>Ma'lumot yo'q</div>}
+                                    {rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.color_code || 'kg') === unitView).length === 0 && <div style={{ textAlign: 'center', padding: 40, opacity: 0.5 }}>Ma'lumot yo'q</div>}
                                 </>
                             ) : !selStatusColor ? (
                                 <>
@@ -404,7 +404,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     </button>
                                     <h3 style={{ margin: '0 0 15px 0', fontSize: 14 }}>Ranglar bo'yicha:</h3>
                                     {Object.entries(
-                                        rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType) && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === unitView)
+                                        rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType) && (r.color_code || 'kg') === unitView)
                                             .reduce((acc, r) => {
                                                 const color = r.color || 'Noma\'lum';
                                                 const gramaj = r.gramaj ? `${r.gramaj} gr` : '';
@@ -437,7 +437,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     </button>
                                     <h3 style={{ margin: '0 0 15px 0', fontSize: 14 }}>Partiyalar tafsiloti:</h3>
                                     {Object.entries(
-                                        rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType) && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === unitView)
+                                        rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType) && (r.color_code || 'kg') === unitView)
                                             .reduce((acc, r) => {
                                                 const colorKey = `${r.color || 'Noma\'lum'} ${r.gramaj ? `${r.gramaj} gr` : ''}`.trim();
                                                 if (colorKey !== selStatusColor) return acc;
@@ -688,10 +688,10 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                 };
                             };
 
-                            const kirim = stats(batches, 'arrival_date', 'expected_weight');
-                            const kontrol = stats(rolls, 'neto_date', 'neto', 'KONTROLDAN_OTDI');
-                            const brak = stats(rolls, 'neto_date', 'bruto', 'BRAK');
-                            const tara = stats(rolls.filter(r => r.status === 'KONTROLDAN_OTDI' || r.status === 'BRAK'), 'neto_date', 'tara');
+                            const kirim = stats(batches.map(b => ({ ...b, d: b.arrival_date || b.created_at })), 'd', 'expected_weight');
+                            const kontrol = stats(rolls.map(r => ({ ...r, d: r.neto_date || r.created_at })), 'd', 'neto', 'KONTROLDAN_OTDI');
+                            const brak = stats(rolls.map(r => ({ ...r, d: r.neto_date || r.created_at })), 'd', 'bruto', 'BRAK');
+                            const tara = stats(rolls.filter(r => r.status === 'KONTROLDAN_OTDI' || r.status === 'BRAK').map(r => ({ ...r, d: r.neto_date || r.created_at })), 'd', 'tara');
 
                             const ReportSection = ({ title, data, unit = 'kg', icon: Icon, color }) => (
                                 <div style={{ ...S.card, borderLeft: `6px solid ${color}`, marginBottom: 0 }}>
