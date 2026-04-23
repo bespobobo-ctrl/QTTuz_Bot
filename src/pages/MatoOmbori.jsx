@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import {
     Package, Calendar, ChevronRight,
     Printer, AlertCircle, PlusCircle, Download, CheckCircle2,
-    Users, Palette, AlertTriangle, TrendingUp, Info, Trash2, Edit3
+    Users, Palette, AlertTriangle, TrendingUp, Info, Trash2, Edit3, History, Clock
 } from 'lucide-react';
 
 export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
@@ -86,24 +86,31 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
         if (!f.bn || !f.sup || !f.eW) return showMsg('Barcha maydonlarni to\'ldiring', 'err');
         try {
             if (isEdit) {
-                const { error } = await supabase.from('warehouse_batches').update({
+                const { error: err1 } = await supabase.from('warehouse_batches').update({
                     batch_number: f.bn,
                     supplier_name: f.sup,
                     expected_weight: Number(f.eW),
                     expected_count: Number(f.eC),
                     color: `${f.type} | ${f.c} | ${f.unit} | ${f.g}`
                 }).eq('id', editID);
-                if (error) throw error;
+                if (err1) throw err1;
                 showMsg('Partiya muvaffaqiyatli tahrirlandi!');
             } else {
-                const { error } = await supabase.from('warehouse_batches').insert({
+                const { data: newBatch, error: err2 } = await supabase.from('warehouse_batches').insert({
                     batch_number: f.bn,
                     supplier_name: f.sup,
                     expected_weight: Number(f.eW),
                     expected_count: Number(f.eC),
                     color: `${f.type} | ${f.c} | ${f.unit} | ${f.g}`
+                }).select().single();
+                if (err2) throw err2;
+
+                await supabase.from('warehouse_log').insert({
+                    batch_id: newBatch.id,
+                    item_name: `YANGI PARTIYA: ${f.bn}`,
+                    quantity: Number(f.eW),
+                    action_type: 'KIRIM'
                 });
-                if (error) throw error;
                 showMsg('Yangi partiya muvaffaqiyatli qo\'shildi!');
             }
             setF({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg', g: '' });
@@ -118,7 +125,10 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
         try {
             await supabase.from('warehouse_rolls').delete().eq('batch_id', id);
             const { error } = await supabase.from('warehouse_batches').delete().eq('id', id);
-            if (error) throw error;
+            await supabase.from('warehouse_log').insert({
+                item_name: `PARTIYA O'CHIRILDI: ${bn}`,
+                action_type: 'DELETE'
+            });
             showMsg('Partiya o\'chirildi');
             load(true);
         } catch (e) { showMsg('Ochirishda xato', 'err'); }
@@ -140,8 +150,16 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                 gramaj: g,
                 color_code: unit
             };
-            const { error } = await supabase.from('warehouse_rolls').insert([payload]);
+            const { data: nr, error } = await supabase.from('warehouse_rolls').insert([payload]).select().single();
             if (error) throw error;
+
+            await supabase.from('warehouse_log').insert({
+                batch_id: activeBatch.id,
+                item_name: `RULON BRUTO: ${activeBatch.batch_number}`,
+                quantity: Number(newRollWeight),
+                action_type: 'WEIGHT_BRUTO'
+            });
+
             setNewRollWeight('');
             showMsg('Rulon omborga qo\'shildi!');
             load(true);
@@ -1121,6 +1139,33 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
             )}
 
             {tab === 'neto' && !activeBatch && renderNeto()}
+
+            {tab === 'history' && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <h2 style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, color: '#4FC3F7' }}>
+                        <History size={24} /> Amallar Tarixi (Log)
+                    </h2>
+                    <div style={{ display: 'grid', gap: 12 }}>
+                        {(data.whLog || []).map(l => (
+                            <div key={l.id} style={{ ...S.card, padding: '15px 20px', borderLeft: `4px solid ${l.action_type === 'KIRIM' ? '#4FC3F7' : l.action_type === 'DELETE' ? '#ff5252' : l.action_type === 'VERDICT_CONFIRMED' ? '#81C784' : '#FFAB40'}` }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: 'bold', fontSize: 15 }}>{l.item_name}</div>
+                                        <div style={{ fontSize: 11, color: '#555', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                            <Clock size={12} /> {new Date(l.timestamp).toLocaleString()}
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        {l.quantity && <div style={{ fontWeight: 'bold', color: l.action_type === 'VERDICT_CONFIRMED' ? '#81C784' : '#fff' }}>{l.quantity} kg</div>}
+                                        <div style={{ fontSize: 9, textTransform: 'uppercase', opacity: 0.5 }}>{l.action_type}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {(data.whLog || []).length === 0 && <div style={{ textAlign: 'center', padding: 50, opacity: 0.5 }}>Hozircha tarix mavjud emas</div>}
+                    </div>
+                </motion.div>
+            )}
         </div>
     );
 }

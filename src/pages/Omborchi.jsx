@@ -75,6 +75,13 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                 throw error;
             }
 
+            const { error: logErr } = await supabase.from('warehouse_log').insert({
+                batch_id: activeRoll.batch_id,
+                item_name: `INSPEKSIYA: ${finalStatus === 'BRAK' ? 'BRAK' : 'TAYYOR'} (ROLL-${activeRoll.id})`,
+                quantity: netoValue,
+                action_type: finalStatus
+            });
+
             alert('Muvaffaqiyatli saqlandi! ✅');
             setQrRoll({ ...activeRoll, ...updData });
             setActiveRoll(null);

@@ -3,7 +3,7 @@ import {
   Plus, Minus, Scale, Search, CheckCircle2, AlertTriangle, Printer, Layers, Scan,
   ArrowDown, RefreshCcw, LogOut, Package, Download, Upload, LayoutDashboard, X, Trash2,
   Shield, Users, Box, Scissors, Filter, GitBranch, Shirt, CheckCircle, Zap, Archive,
-  Warehouse, ShoppingCart, HardHat, ChevronRight, Lock, Key, Settings, Edit3
+  Warehouse, ShoppingCart, HardHat, ChevronRight, Lock, Key, Settings, Edit3, History
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -52,7 +52,7 @@ export default function App() {
       const [wb, wr, wl, dl, wo, settings] = await Promise.all([
         supabase.from('warehouse_batches').select('*').order('arrival_date', { ascending: false }),
         supabase.from('warehouse_rolls').select('*').order('created_at', { ascending: false }),
-        supabase.from('warehouse_log').select('*').order('timestamp', { ascending: false }).limit(20),
+        supabase.from('warehouse_log').select('*').order('timestamp', { ascending: false }).limit(100),
         supabase.from('department_logins').select('*'),
         supabase.from('warehouse_orders').select('*').order('created_at', { ascending: false }),
         supabase.from('system_config').select('value').eq('key', 'app_version').single()
@@ -132,7 +132,10 @@ export default function App() {
             { id: 'scan', icon: Scan, l: 'Skayner' },
             ...(user.role !== 'omborchi' ? [{ id: 'kirim', icon: Download, l: 'Kirim' }] : []),
             { id: 'ombor', icon: Package, l: user.role === 'omborchi' ? 'Tayyor (Dam)' : 'Bruto' },
-            ...(user.role === 'mato_ombori' ? [{ id: 'neto', icon: CheckCircle2, l: 'Neto' }] : [])
+            ...(user.role === 'mato_ombori' ? [
+              { id: 'neto', icon: CheckCircle2, l: 'Neto' },
+              { id: 'history', icon: History, l: 'Istoriya' }
+            ] : [])
           ].map(x => (
             <button key={x.id} onClick={() => setTab(x.id)} style={{ ...S.nb, color: tab === x.id ? '#00e676' : '#555' }}>
               <x.icon size={22} /><span style={{ fontSize: 9 }}>{x.l}</span>
