@@ -992,13 +992,41 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
             const group = stockGroups[selNetoGroup];
             const batchRolls = group.rolls.filter(r => r.batch_number === activeNetoBatch);
 
+            // Calculate Analytics for this batch
+            const allRollsInBatch = rolls.filter(r => r.batch_number === activeNetoBatch);
+            const totalBrutoBatch = allRollsInBatch.reduce((a, b) => a + (Number(b.bruto) || 0), 0);
+            const inspectedRolls = allRollsInBatch.filter(r => r.status === 'KONTROLDAN_OTDI' || r.status === 'BRAK');
+            const totalNetoInspected = inspectedRolls.reduce((a, b) => a + (Number(b.neto) || 0), 0);
+            const totalTaraBatch = inspectedRolls.reduce((a, b) => a + (Number(b.tara) || 0), 0);
+            const totalBrakBruto = allRollsInBatch.filter(r => r.status === 'BRAK').reduce((a, b) => a + (Number(b.bruto) || 0), 0);
+
             return (
                 <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
                     <button onClick={() => setActiveNetoBatch(null)} style={{ background: 'none', border: 'none', color: '#4FC3F7', fontWeight: 'bold', marginBottom: 20, cursor: 'pointer' }}>← PARTIYALAR RO'YXATI</button>
+
                     <div style={{ ...S.card, background: 'rgba(79,195,247,0.05)', borderColor: '#4FC3F7' }}>
                         <div style={{ fontSize: 12, color: '#4FC3F7', fontWeight: 'bold' }}>PARTIYA: {activeNetoBatch}</div>
                         <h2 style={{ margin: '5px 0' }}>{group.type}</h2>
-                        <div style={{ color: '#888', fontSize: 14 }}>{group.color} • {batchRolls.length} ta rulon</div>
+                        <div style={{ color: '#888', fontSize: 14 }}>{group.color} • {allRollsInBatch.length} ta jami rulon</div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginBottom: 20 }}>
+                        <div style={{ ...S.card, marginBottom: 0, padding: 15, background: 'rgba(255,255,255,0.02)' }}>
+                            <div style={{ fontSize: 11, color: '#aaa' }}>JAMI BRUTO:</div>
+                            <div style={{ fontSize: 18, fontWeight: 'bold' }}>{totalBrutoBatch.toFixed(1)} <small>{group.unit}</small></div>
+                        </div>
+                        <div style={{ ...S.card, marginBottom: 0, padding: 15, background: 'rgba(129,199,132,0.1)', borderColor: '#81C784' }}>
+                            <div style={{ fontSize: 11, color: '#81C784' }}>JAMI NETO:</div>
+                            <div style={{ fontSize: 18, fontWeight: 'bold', color: '#81C784' }}>{totalNetoInspected.toFixed(1)} <small>{group.unit}</small></div>
+                        </div>
+                        <div style={{ ...S.card, marginBottom: 0, padding: 15, background: 'rgba(255,171,64,0.1)', borderColor: '#FFAB40' }}>
+                            <div style={{ fontSize: 11, color: '#FFAB40' }}>JAMI TARA:</div>
+                            <div style={{ fontSize: 18, fontWeight: 'bold', color: '#FFAB40' }}>{totalTaraBatch.toFixed(1)} <small>{group.unit}</small></div>
+                        </div>
+                        <div style={{ ...S.card, marginBottom: 0, padding: 15, background: 'rgba(255,82,82,0.1)', borderColor: '#ff5252' }}>
+                            <div style={{ fontSize: 11, color: '#ff5252' }}>BRAK (BRUTO):</div>
+                            <div style={{ fontSize: 18, fontWeight: 'bold', color: '#ff5252' }}>{totalBrakBruto.toFixed(1)} <small>{group.unit}</small></div>
+                        </div>
                     </div>
 
                     <h3 style={{ margin: '20px 0 10px 0', fontSize: 14, opacity: 0.7 }}>RULON PASPORTLARI:</h3>
