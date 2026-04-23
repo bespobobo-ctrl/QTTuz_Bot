@@ -12,7 +12,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const [activeBatch, setActiveBatch] = useState(null);
     const [newRollWeight, setNewRollWeight] = useState('');
     const [printBatchRolls, setPrintBatchRolls] = useState(null);
-    const [dashTab, setDashTab] = useState('season'); // 'season', 'supplier', 'alerts', 'brak', 'orders', 'remains'
+    const [dashTab, setDashTab] = useState('season'); // 'season', 'status', 'supplier', 'alerts', 'brak', 'orders', 'remains'
 
     // Kirim (Yangi Partiya) Formasi uchun state
     const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg' });
@@ -244,6 +244,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
 
         const subTabs = [
             { id: 'season', l: 'Sezoniy Analiz', icon: Calendar },
+            { id: 'status', l: 'Ombor Holati', icon: Package },
             { id: 'supplier', l: 'Ta\'minotchilar', icon: Users },
             { id: 'alerts', l: 'Kamayganlar', icon: AlertTriangle, count: lowStock.length },
             { id: 'brak', l: 'Braklar', icon: AlertCircle, count: brakRolls.length },
@@ -267,6 +268,45 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                     ))}
                 </div>
 
+                {dashTab === 'status' && (
+                    <div style={{ display: 'grid', gap: 15 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+                            <div style={{ ...S.card, textAlign: 'center', marginBottom: 0 }}>
+                                <div style={{ color: '#81C784', fontSize: 11, fontWeight: 'bold' }}>JAMI NETO</div>
+                                <div style={{ fontSize: 24, fontWeight: 'bold' }}>{rolls.filter(r => r.status === 'KONTROLDAN_OTDI').reduce((a, b) => a + (Number(b.neto) || 0), 0).toFixed(1)} <small style={{ fontSize: 12, opacity: 0.5 }}>kg</small></div>
+                            </div>
+                            <div style={{ ...S.card, textAlign: 'center', marginBottom: 0 }}>
+                                <div style={{ color: '#4FC3F7', fontSize: 11, fontWeight: 'bold' }}>RULONLAR</div>
+                                <div style={{ fontSize: 24, fontWeight: 'bold' }}>{rolls.filter(r => r.status === 'KONTROLDAN_OTDI').length} <small style={{ fontSize: 12, opacity: 0.5 }}>та</small></div>
+                            </div>
+                        </div>
+
+                        <div style={S.card}>
+                            <h3 style={{ margin: '0 0 15px 0', fontSize: 14 }}>Mato turlari bo'yicha ulush:</h3>
+                            {Object.entries(stockStats).slice(0, 5).map(([key, s]) => (
+                                <div key={key} style={{ marginBottom: 12 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                                        <span>{s.type} ({s.color})</span>
+                                        <b>{s.totalNeto.toFixed(0)} {s.unit}</b>
+                                    </div>
+                                    <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
+                                        <div style={{ width: `${Math.min(100, (s.totalNeto / 5000) * 100)}%`, height: '100%', background: '#81C784' }} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ ...S.card, background: 'rgba(129,199,132,0.05)', borderStyle: 'dashed' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <CheckCircle2 color="#81C784" size={20} />
+                                <div>
+                                    <div style={{ fontWeight: 'bold', fontSize: 14 }}>Ombor Holati: ME'YORIDA</div>
+                                    <div style={{ fontSize: 11, color: '#888' }}>Oxirgi harakat: {new Date(data.whLog[0]?.timestamp).toLocaleTimeString()}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {dashTab === 'season' && (
                     <div style={{ display: 'grid', gap: 12 }}>
                         {Object.values(seasonalStats).map((s, i) => (
