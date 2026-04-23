@@ -19,6 +19,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const [isEdit, setIsEdit] = useState(false);
     const [editID, setEditID] = useState(null);
     const [statusView, setStatusView] = useState('bruto'); // 'bruto', 'neto'
+    const [unitView, setUnitView] = useState('kg'); // 'kg', 'meter'
     const [selStatusType, setSelStatusType] = useState(null);
     const [selStatusColor, setSelStatusColor] = useState(null);
 
@@ -318,31 +319,29 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
 
                 {dashTab === 'status' && (
                     <div style={{ display: 'grid', gap: 15 }}>
+                        {/* Unit Toggle */}
                         <div style={{ display: 'flex', gap: 10, background: 'rgba(255,255,255,0.05)', padding: 5, borderRadius: 12 }}>
-                            <button onClick={() => { setStatusView('bruto'); setSelStatusType(null); setSelStatusColor(null); }} style={{ flex: 1, padding: 10, borderRadius: 10, border: 'none', background: statusView === 'bruto' ? '#FFAB40' : 'none', color: statusView === 'bruto' ? '#000' : '#888', fontWeight: 'bold', fontSize: 12 }}>BRUTO</button>
-                            <button onClick={() => { setStatusView('neto'); setSelStatusType(null); setSelStatusColor(null); }} style={{ flex: 1, padding: 10, borderRadius: 10, border: 'none', background: statusView === 'neto' ? '#81C784' : 'none', color: statusView === 'neto' ? '#000' : '#888', fontWeight: 'bold', fontSize: 12 }}>NETO</button>
+                            <button onClick={() => { setUnitView('kg'); setSelStatusType(null); setSelStatusColor(null); }} style={{ flex: 1, padding: 8, borderRadius: 10, border: 'none', background: unitView === 'kg' ? '#fff' : 'none', color: unitView === 'kg' ? '#000' : '#888', fontWeight: 'bold', fontSize: 11 }}>Vazn (KG)</button>
+                            <button onClick={() => { setUnitView('meter'); setSelStatusType(null); setSelStatusColor(null); }} style={{ flex: 1, padding: 8, borderRadius: 10, border: 'none', background: unitView === 'meter' ? '#fff' : 'none', color: unitView === 'meter' ? '#000' : '#888', fontWeight: 'bold', fontSize: 11 }}>Metir (M)</button>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: rolls.some(r => parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === 'meter') ? '1fr 1fr 1fr' : '1fr 1fr', gap: 10 }}>
-                            <div style={{ ...S.card, textAlign: 'center', marginBottom: 0, borderColor: statusView === 'bruto' ? '#FFAB40' : '#81C784' }}>
-                                <div style={{ color: statusView === 'bruto' ? '#FFAB40' : '#81C784', fontSize: 11, fontWeight: 'bold' }}>JAMI (KG)</div>
-                                <div style={{ fontSize: 20, fontWeight: 'bold' }}>
-                                    {rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === 'kg').reduce((a, b) => a + (Number(statusView === 'bruto' ? b.bruto : b.neto) || 0), 0).toFixed(1)}
-                                    <small style={{ fontSize: 10, opacity: 0.5 }}> kg</small>
+                        {/* Status Toggle */}
+                        <div style={{ display: 'flex', gap: 10, background: 'rgba(255,255,255,0.05)', padding: 5, borderRadius: 12 }}>
+                            <button onClick={() => { setStatusView('bruto'); setSelStatusType(null); setSelStatusColor(null); }} style={{ flex: 1, padding: 10, borderRadius: 10, border: 'none', background: statusView === 'bruto' ? (unitView === 'kg' ? '#FFAB40' : '#4FC3F7') : 'none', color: statusView === 'bruto' ? '#000' : '#888', fontWeight: 'bold', fontSize: 12 }}>{unitView.toUpperCase()} BRUTO</button>
+                            <button onClick={() => { setStatusView('neto'); setSelStatusType(null); setSelStatusColor(null); }} style={{ flex: 1, padding: 10, borderRadius: 10, border: 'none', background: statusView === 'neto' ? '#81C784' : 'none', color: statusView === 'neto' ? '#000' : '#888', fontWeight: 'bold', fontSize: 12 }}>{unitView.toUpperCase()} NETO</button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                            <div style={{ ...S.card, textAlign: 'center', marginBottom: 0, borderColor: statusView === 'bruto' ? (unitView === 'kg' ? '#FFAB40' : '#4FC3F7') : '#81C784' }}>
+                                <div style={{ color: statusView === 'bruto' ? (unitView === 'kg' ? '#FFAB40' : '#4FC3F7') : '#81C784', fontSize: 11, fontWeight: 'bold' }}>JAMI {unitView.toUpperCase()}</div>
+                                <div style={{ fontSize: 24, fontWeight: 'bold' }}>
+                                    {rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === unitView).reduce((a, b) => a + (Number(statusView === 'bruto' ? b.bruto : b.neto) || 0), 0).toFixed(1)}
+                                    <small style={{ fontSize: 10, opacity: 0.5 }}> {unitView === 'kg' ? 'kg' : 'm'}</small>
                                 </div>
                             </div>
-                            {rolls.some(r => r && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === 'meter') && (
-                                <div style={{ ...S.card, textAlign: 'center', marginBottom: 0, borderColor: '#4FC3F7' }}>
-                                    <div style={{ color: '#4FC3F7', fontSize: 11, fontWeight: 'bold' }}>JAMI (METIR)</div>
-                                    <div style={{ fontSize: 20, fontWeight: 'bold' }}>
-                                        {rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === 'meter').reduce((a, b) => a + (Number(statusView === 'bruto' ? b.bruto : b.neto) || 0), 0).toFixed(1)}
-                                        <small style={{ fontSize: 10, opacity: 0.5 }}> m</small>
-                                    </div>
-                                </div>
-                            )}
                             <div style={{ ...S.card, textAlign: 'center', marginBottom: 0 }}>
                                 <div style={{ color: '#aaa', fontSize: 11, fontWeight: 'bold' }}>RULONLAR</div>
-                                <div style={{ fontSize: 20, fontWeight: 'bold' }}>{rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI')).length} <small style={{ fontSize: 10, opacity: 0.5 }}>ta</small></div>
+                                <div style={{ fontSize: 24, fontWeight: 'bold' }}>{rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === unitView).length} <small style={{ fontSize: 10, opacity: 0.5 }}>ta</small></div>
                             </div>
                         </div>
 
@@ -350,14 +349,12 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                         <div style={S.card}>
                             {!selStatusType ? (
                                 <>
-                                    <h3 style={{ margin: '0 0 15px 0', fontSize: 14 }}>Mato turlari:</h3>
+                                    <h3 style={{ margin: '0 0 15px 0', fontSize: 14 }}>Mato turlari ({unitView.toUpperCase()}):</h3>
                                     {Object.entries(
-                                        rolls.filter(r => statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI')
+                                        rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === unitView)
                                             .reduce((acc, r) => {
                                                 const type = r.fabric_name || 'Noma\'lum';
-                                                const batch = batches.find(b => b.id === r.batch_id);
-                                                const unit = parseColor(batch?.color).unit;
-                                                if (!acc[type]) acc[type] = { weight: 0, rolls: 0, unit };
+                                                if (!acc[type]) acc[type] = { weight: 0, rolls: 0, unit: unitView === 'kg' ? 'kg' : 'm' };
                                                 acc[type].weight += (Number(statusView === 'bruto' ? r.bruto : r.neto) || 0);
                                                 acc[type].rolls += 1;
                                                 return acc;
@@ -369,11 +366,12 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                                 <div style={{ fontSize: 11, color: '#888' }}>{s.rolls} ta rulon</div>
                                             </div>
                                             <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                <div style={{ fontSize: 16, fontWeight: 'bold', color: statusView === 'bruto' ? '#FFAB40' : '#81C784' }}>{s.weight.toFixed(0)} <small style={{ fontSize: 10 }}>{s.unit}</small></div>
+                                                <div style={{ fontSize: 16, fontWeight: 'bold', color: statusView === 'bruto' ? (unitView === 'kg' ? '#FFAB40' : '#4FC3F7') : '#81C784' }}>{s.weight.toFixed(0)} <small style={{ fontSize: 10 }}>{s.unit}</small></div>
                                                 <ChevronRight size={16} color="#444" />
                                             </div>
                                         </div>
                                     ))}
+                                    {rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === unitView).length === 0 && <div style={{ textAlign: 'center', padding: 40, opacity: 0.5 }}>Ma'lumot yo'q</div>}
                                 </>
                             ) : !selStatusColor ? (
                                 <>
@@ -382,14 +380,12 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     </button>
                                     <h3 style={{ margin: '0 0 15px 0', fontSize: 14 }}>Ranglar bo'yicha:</h3>
                                     {Object.entries(
-                                        rolls.filter(r => (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType))
+                                        rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType) && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === unitView)
                                             .reduce((acc, r) => {
                                                 const color = r.color || 'Noma\'lum';
                                                 const gramaj = r.gramaj ? `${r.gramaj} gr` : '';
                                                 const key = `${color} ${gramaj}`.trim();
-                                                const batch = batches.find(b => b.id === r.batch_id);
-                                                const unit = parseColor(batch?.color).unit;
-                                                if (!acc[key]) acc[key] = { color, gramaj, weight: 0, rolls: 0, unit };
+                                                if (!acc[key]) acc[key] = { color, gramaj, weight: 0, rolls: 0, unit: unitView === 'kg' ? 'kg' : 'm' };
                                                 acc[key].weight += (Number(statusView === 'bruto' ? r.bruto : r.neto) || 0);
                                                 acc[key].rolls += 1;
                                                 return acc;
@@ -417,14 +413,12 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     </button>
                                     <h3 style={{ margin: '0 0 15px 0', fontSize: 14 }}>Partiyalar tafsiloti:</h3>
                                     {Object.entries(
-                                        rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType))
+                                        rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType) && parseColor(batches.find(b => b.id === r.batch_id)?.color).unit === unitView)
                                             .reduce((acc, r) => {
                                                 const colorKey = `${r.color || 'Noma\'lum'} ${r.gramaj ? `${r.gramaj} gr` : ''}`.trim();
                                                 if (colorKey !== selStatusColor) return acc;
                                                 const bn = r.batch_number || 'Noma\'lum';
-                                                const batch = batches.find(b => b.id === r.batch_id);
-                                                const unit = parseColor(batch?.color).unit;
-                                                if (!acc[bn]) acc[bn] = { weight: 0, rolls: 0, unit };
+                                                if (!acc[bn]) acc[bn] = { weight: 0, rolls: 0, unit: unitView === 'kg' ? 'kg' : 'm' };
                                                 acc[bn].weight += (Number(statusView === 'bruto' ? r.bruto : r.neto) || 0);
                                                 acc[bn].rolls += 1;
                                                 return acc;
