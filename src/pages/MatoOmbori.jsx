@@ -322,6 +322,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
             { id: 'alerts', l: 'Kamayganlar', icon: AlertTriangle, count: lowStock.length },
             { id: 'brak', l: 'Braklar', icon: AlertCircle, count: brakRolls.length },
             { id: 'orders', l: 'Zakazlar', icon: TrendingUp },
+            { id: 'reports', l: 'Hisobotlar', icon: ClipboardCheck },
             { id: 'remains', l: 'Qoldiqlar', icon: Info }
         ];
 
@@ -662,6 +663,76 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                             <span>Qiyqimlar (Qoldiq):</span>
                             <b>{rolls.filter(r => r.status === 'KONTROLDAN_OTDI' && r.neto < 5).length} ta</b>
                         </div>
+                    </div>
+                )}
+                {dashTab === 'reports' && (
+                    <div style={{ display: 'grid', gap: 20 }}>
+                        {(() => {
+                            const now = new Date();
+                            const isDay = d => d && new Date(d).toDateString() === now.toDateString();
+                            const isWeek = d => d && (now - new Date(d)) / (1000 * 86400) < 7;
+                            const isMonth = d => d && new Date(d).getMonth() === now.getMonth() && new Date(d).getFullYear() === now.getFullYear();
+                            const isYear = d => d && new Date(d).getFullYear() === now.getFullYear();
+
+                            const stats = (arr, dateField, weightField = 'bruto', statusFilter = null) => {
+                                const f = arr.filter(x => !statusFilter || x.status === statusFilter);
+                                return {
+                                    day: f.filter(x => isDay(x[dateField])).reduce((a, b) => a + (Number(b[weightField]) || 0), 0),
+                                    week: f.filter(x => isWeek(x[dateField])).reduce((a, b) => a + (Number(b[weightField]) || 0), 0),
+                                    month: f.filter(x => isMonth(x[dateField])).reduce((a, b) => a + (Number(b[weightField]) || 0), 0),
+                                    year: f.filter(x => isYear(x[dateField])).reduce((a, b) => a + (Number(b[weightField]) || 0), 0),
+                                    dayCount: f.filter(x => isDay(x[dateField])).length,
+                                    weekCount: f.filter(x => isWeek(x[dateField])).length,
+                                    monthCount: f.filter(x => isMonth(x[dateField])).length,
+                                    yearCount: f.filter(x => isYear(x[dateField])).length
+                                };
+                            };
+
+                            const kirim = stats(batches, 'arrival_date', 'expected_weight');
+                            const kontrol = stats(rolls, 'neto_date', 'neto', 'KONTROLDAN_OTDI');
+                            const brak = stats(rolls, 'neto_date', 'bruto', 'BRAK');
+                            const tara = stats(rolls.filter(r => r.status === 'KONTROLDAN_OTDI' || r.status === 'BRAK'), 'neto_date', 'tara');
+
+                            const ReportSection = ({ title, data, unit = 'kg', icon: Icon, color }) => (
+                                <div style={{ ...S.card, borderLeft: `6px solid ${color}`, marginBottom: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15, color }}>
+                                        <Icon size={20} />
+                                        <b style={{ fontSize: 16 }}>{title}</b>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+                                        <div>
+                                            <div style={{ fontSize: 10, color: '#555' }}>BUGUN</div>
+                                            <div style={{ fontSize: 16, fontWeight: 'bold' }}>{data.day.toFixed(1)} <small>{unit}</small></div>
+                                            {data.dayCount !== undefined && <div style={{ fontSize: 9, opacity: 0.5 }}>{data.dayCount} ta</div>}
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 10, color: '#555' }}>HAFTALIK</div>
+                                            <div style={{ fontSize: 16, fontWeight: 'bold' }}>{data.week.toFixed(1)} <small>{unit}</small></div>
+                                            {data.weekCount !== undefined && <div style={{ fontSize: 9, opacity: 0.5 }}>{data.weekCount} ta</div>}
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 10, color: '#555' }}>OYLIK</div>
+                                            <div style={{ fontSize: 16, fontWeight: 'bold' }}>{data.month.toFixed(1)} <small>{unit}</small></div>
+                                            {data.monthCount !== undefined && <div style={{ fontSize: 9, opacity: 0.5 }}>{data.monthCount} ta</div>}
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 10, color: '#555' }}>YILLIK</div>
+                                            <div style={{ fontSize: 16, fontWeight: 'bold' }}>{data.year.toFixed(1)} <small>{unit}</small></div>
+                                            {data.yearCount !== undefined && <div style={{ fontSize: 9, opacity: 0.5 }}>{data.yearCount} ta</div>}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+
+                            return (
+                                <>
+                                    <ReportSection title="KIRIM (KUTILAYOTGAN)" data={kirim} icon={Download} color="#4FC3F7" />
+                                    <ReportSection title="KONTROL (TAYYOR)" data={kontrol} icon={CheckCircle2} color="#81C784" />
+                                    <ReportSection title="BRAK (CHIQUVCHI)" data={brak} icon={AlertCircle} color="#ff5252" />
+                                    <ReportSection title="TARA (O'RAM VAZNI)" data={tara} icon={Archive} color="#FFAB40" />
+                                </>
+                            );
+                        })()}
                     </div>
                 )}
             </motion.div>
