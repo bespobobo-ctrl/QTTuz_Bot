@@ -24,6 +24,8 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const [selStatusColor, setSelStatusColor] = useState(null);
     const [selSupplier, setSelSupplier] = useState(null);
     const [activeNetoBatch, setActiveNetoBatch] = useState(null);
+    const [editingRoll, setEditingRoll] = useState(null);
+    const [rollForm, setRollForm] = useState({ neto: '', en: '', gramaj: '' });
 
     // Kirim (Yangi Partiya) Formasi uchun state
     const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg', g: '' });
@@ -132,6 +134,33 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
             showMsg('Partiya o\'chirildi');
             load(true);
         } catch (e) { showMsg('Ochirishda xato', 'err'); }
+    };
+
+    const handleDeleteRoll = async (roll) => {
+        if (!window.confirm(`Rulonni (Neto: ${roll.neto}) o'chirmoqchimisiz?`)) return;
+        try {
+            await supabase.from('warehouse_rolls').delete().eq('id', roll.id);
+            await supabase.from('warehouse_log').insert({
+                item_name: `RULON O'CHIRILDI (ID: ${roll.id})`,
+                action_type: 'DELETE'
+            });
+            showMsg("Rulon o'chirildi");
+            load(true);
+        } catch (e) { showMsg("O'chirishda xato", "err"); }
+    };
+
+    const handleSaveRollEdit = async () => {
+        try {
+            const { error } = await supabase.from('warehouse_rolls').update({
+                neto: Number(rollForm.neto),
+                en: Number(rollForm.en),
+                gramaj: rollForm.gramaj
+            }).eq('id', editingRoll.id);
+            if (error) throw error;
+            showMsg("Rulon o'zgartirildi!");
+            setEditingRoll(null);
+            load(true);
+        } catch (e) { showMsg("Saqlashda xato", "err"); }
     };
 
     const handleAddRoll = async () => {
@@ -1147,9 +1176,46 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     <div>Nazorat: {inspectTime.toLocaleString()}</div>
                                     <div style={{ color: isReady ? '#81C784' : '#FFAB40' }}>Tayyor: {readyTime.toLocaleString()}</div>
                                 </div>
+
+                                <div style={{ marginTop: 15, display: 'flex', gap: 10, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 10 }}>
+                                    <button
+                                        onClick={() => {
+                                            setEditingRoll(r);
+                                            setRollForm({ neto: r.neto, en: r.en || '', gramaj: r.gramaj || '' });
+                                        }}
+                                        style={{ ...S.primaryBtn, background: 'rgba(79,195,247,0.1)', color: '#4FC3F7', padding: '8px', fontSize: 12 }}
+                                    >
+                                        <Edit3 size={14} /> TAHRIRLASH
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteRoll(r)}
+                                        style={{ ...S.primaryBtn, background: 'rgba(255,82,82,0.1)', color: '#ff5252', padding: '8px', fontSize: 12 }}
+                                    >
+                                        <Trash2 size={14} /> O'CHIRISH
+                                    </button>
+                                </div>
                             </div>
                         );
                     })}
+
+                    {editingRoll && (
+                        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                            <div style={{ ...S.card, width: '100%', maxWidth: 400 }}>
+                                <h2 style={{ color: '#4FC3F7', marginBottom: 20 }}>Rulonni Tahrirlash</h2>
+                                <label style={{ fontSize: 12, color: '#888' }}>Neto Vazn:</label>
+                                <input style={S.input} type="number" value={rollForm.neto} onChange={e => setRollForm({ ...rollForm, neto: e.target.value })} />
+                                <label style={{ fontSize: 12, color: '#888' }}>Eni (sm):</label>
+                                <input style={S.input} type="number" value={rollForm.en} onChange={e => setRollForm({ ...rollForm, en: e.target.value })} />
+                                <label style={{ fontSize: 12, color: '#888' }}>Gramaj:</label>
+                                <input style={S.input} value={rollForm.gramaj} onChange={e => setRollForm({ ...rollForm, gramaj: e.target.value })} />
+
+                                <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                                    <button onClick={handleSaveRollEdit} style={S.primaryBtn}>SAQLASH</button>
+                                    <button onClick={() => setEditingRoll(null)} style={{ ...S.primaryBtn, background: '#333' }}>YOPISH</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </motion.div>
             );
         }
