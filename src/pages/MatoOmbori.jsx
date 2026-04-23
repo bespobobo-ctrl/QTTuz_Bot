@@ -22,6 +22,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const [unitView, setUnitView] = useState('kg'); // 'kg', 'meter'
     const [selStatusType, setSelStatusType] = useState(null);
     const [selStatusColor, setSelStatusColor] = useState(null);
+    const [selSupplier, setSelSupplier] = useState(null);
 
     // Kirim (Yangi Partiya) Formasi uchun state
     const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg' });
@@ -524,16 +525,16 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginTop: 20 }}>
                                         <div style={{ background: 'rgba(0,0,0,0.2)', padding: 15, borderRadius: 12 }}>
                                             <div style={{ fontSize: 11, color: '#aaa', fontWeight: 'bold' }}>BRUTO JAMI</div>
-                                            <div style={{ fontSize: 18, fontWeight: 'bold' }}>{rolls.filter(r => r && batches.find(b => b.id === r.batch_id)?.supplier_name === selSupplier && r.status === 'BRUTO').reduce((a, b) => a + (Number(b.bruto) || 0), 0).toFixed(1)} <small style={{ fontSize: 10 }}>kg</small></div>
+                                            <div style={{ fontSize: 18, fontWeight: 'bold' }}>{rolls.filter(r => r && (batches.find(b => b.id === r.batch_id)?.supplier_name || '').trim().toUpperCase() === selSupplier && r.status === 'BRUTO').reduce((a, b) => a + (Number(b.bruto) || 0), 0).toFixed(1)} <small style={{ fontSize: 10 }}>kg</small></div>
                                         </div>
                                         <div style={{ background: 'rgba(129,199,132,0.1)', padding: 15, borderRadius: 12 }}>
                                             <div style={{ fontSize: 11, color: '#81C784', fontWeight: 'bold' }}>NETO JAMI</div>
-                                            <div style={{ fontSize: 18, fontWeight: 'bold', color: '#81C784' }}>{rolls.filter(r => r && batches.find(b => b.id === r.batch_id)?.supplier_name === selSupplier && r.status === 'KONTROLDAN_OTDI').reduce((a, b) => a + (Number(b.neto) || 0), 0).toFixed(1)} <small style={{ fontSize: 10 }}>kg</small></div>
+                                            <div style={{ fontSize: 18, fontWeight: 'bold', color: '#81C784' }}>{rolls.filter(r => r && (batches.find(b => b.id === r.batch_id)?.supplier_name || '').trim().toUpperCase() === selSupplier && r.status === 'KONTROLDAN_OTDI').reduce((a, b) => a + (Number(b.neto) || 0), 0).toFixed(1)} <small style={{ fontSize: 10 }}>kg</small></div>
                                         </div>
                                     </div>
                                 </div>
                                 <h3 style={{ fontSize: 14, margin: '20px 0 10px 0' }}>Partiyalar tarixi:</h3>
-                                {batches.filter(b => b.supplier_name === selSupplier).map(b => {
+                                {batches.filter(b => (b.supplier_name || '').trim().toUpperCase() === selSupplier).map(b => {
                                     const bRolls = rolls.filter(r => r.batch_id === b.id);
                                     const bBruto = bRolls.filter(r => r.status === 'BRUTO').reduce((a, x) => a + (Number(x.bruto) || 0), 0);
                                     const bNeto = bRolls.filter(r => r.status === 'KONTROLDAN_OTDI').reduce((a, x) => a + (Number(x.neto) || 0), 0);
