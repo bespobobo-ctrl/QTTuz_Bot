@@ -13,6 +13,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const [newRollWeight, setNewRollWeight] = useState('');
     const [printBatchRolls, setPrintBatchRolls] = useState(null);
     const [dashTab, setDashTab] = useState('season'); // 'season', 'status', 'supplier', 'alerts', 'brak', 'orders', 'remains'
+    const [selQuarter, setSelQuarter] = useState(null);
 
     // Kirim (Yangi Partiya) Formasi uchun state
     const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg' });
@@ -184,11 +185,21 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
         const ft = (fabricType || '').toLowerCase();
         const gr = parseInt(gramaj) || 0;
 
-        if (ft.includes('3 ipli') || ft.includes('kashmir') || ft.includes('nachos')) return 'WINTER (Okt-Dek)';
-        if (ft.includes('2 ipli') && gr === 240) return 'T-240 (Yan-Mar)';
-        if (ft.includes('bingal') || ft.includes('halodok') || ft.includes('suprem') || (ft.includes('2 ipli') && gr === 180)) return 'SUMMER (Apr-Iyun)';
-        if (ft.includes('elastik') || (ft.includes('2 ipli') && gr >= 240)) return 'ELASTIC (Iyun-Okt)';
-        return 'BOSHQA';
+        // User's specific Quarter rules:
+        // 1 Chorak: Apr, May, Jun -> 180g, Bingal, Suprem
+        if (ft.includes('bingal') || ft.includes('suprem') || ft.includes('180')) return '1-CHORAK (Apr-Iyun)';
+
+        // 2 Chorak: Jul, Aug, Sep -> 240g, 260g, Elastic
+        if (ft.includes('elastik') || gr === 240 || gr === 260) {
+            // We'll differentiate by season/usage - if it's 240/260 and not winter type
+            if (!ft.includes('3 ipli')) return '2-CHORAK (Iyul-Sent)';
+        }
+
+        // 3 Chorak: Oct, Nov, Dec -> 3-ply, Kashmir, Nachos
+        if (ft.includes('3 ipli') || ft.includes('kashmir') || ft.includes('nachos')) return '3-CHORAK (Okt-Dek)';
+
+        // 4 Chorak: Jan, Feb, Mar -> 240g, 260g (Remaining)
+        return '4-CHORAK (Yan-Mar)';
     };
 
     const renderSummaryDashboard = () => {
@@ -309,21 +320,45 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                 )}
                 {dashTab === 'season' && (
                     <div style={{ display: 'grid', gap: 12 }}>
-                        {Object.values(seasonalStats).map((s, i) => (
-                            <div key={i} style={S.card}>
-                                <div style={S.badge(true)}>{s.season}</div>
-                                <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between' }}>
-                                    <div>
-                                        <div style={{ fontWeight: 'bold', fontSize: 16 }}>{s.type}</div>
-                                        <div style={{ color: '#888', fontSize: 12 }}>{s.color} • {s.gramaj} gr</div>
+                        {selQuarter ? (
+                            <>
+                                <button onClick={() => setSelQuarter(null)} style={{ background: 'none', border: 'none', color: '#81C784', fontWeight: 'bold', textAlign: 'left', marginBottom: 10, cursor: 'pointer' }}>← ORQAGA (CHORAKLAR)</button>
+                                <h3 style={{ margin: '0 0 10px 0' }}>{selQuarter} tafsiloti:</h3>
+                                {Object.values(seasonalStats).filter(s => s.season === selQuarter).map((s, i) => (
+                                    <div key={i} style={S.card}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <div>
+                                                <div style={{ fontWeight: 'bold', fontSize: 16 }}>{s.type}</div>
+                                                <div style={{ color: '#888', fontSize: 12 }}>{s.color} • {s.gramaj} gr</div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: 18, fontWeight: 'bold', color: '#81C784' }}>{s.neto.toFixed(1)} {s.unit}</div>
+                                                <div style={{ fontSize: 11, color: '#555' }}>Neto Jami</div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <div style={{ fontSize: 18, fontWeight: 'bold', color: '#81C784' }}>{s.neto.toFixed(1)} {s.unit}</div>
-                                        <div style={{ fontSize: 11, color: '#555' }}>Neto Jami</div>
+                                ))}
+                            </>
+                        ) : (
+                            ['1-CHORAK (Apr-Iyun)', '2-CHORAK (Iyul-Sent)', '3-CHORAK (Okt-Dek)', '4-CHORAK (Yan-Mar)'].map(q => {
+                                const qNeto = Object.values(seasonalStats).filter(s => s.season === q).reduce((a, b) => a + b.neto, 0);
+                                const qCount = Object.values(seasonalStats).filter(s => s.season === q).length;
+                                return (
+                                    <div key={q} style={{ ...S.card, cursor: 'pointer', borderLeft: '5px solid #81C784' }} onClick={() => setSelQuarter(q)}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div>
+                                                <h3 style={{ margin: 0 }}>{q}</h3>
+                                                <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{qCount} turdagi mato mavjud</div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: 20, fontWeight: 'bold', color: '#81C784' }}>{qNeto.toFixed(0)}</div>
+                                                <div style={{ fontSize: 10, color: '#555' }}>UMUMIY NETO</div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        ))}
+                                );
+                            })
+                        )}
                     </div>
                 )}
 
