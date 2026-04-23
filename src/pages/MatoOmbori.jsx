@@ -538,6 +538,22 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                 <b style={{ color: isComplete ? '#81C784' : '#FFAB40', fontSize: 16 }}>{doneCount}</b> / {totalCount} ta
                             </div>
                         </div>
+
+                        {isComplete && (
+                            <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: Math.abs(totalBrutoKg - expectedWeight) < 0.5 ? 'rgba(129,199,132,0.1)' : 'rgba(255,171,64,0.1)', border: '1px dashed' }}>
+                                <div style={{ fontSize: 11, color: '#888' }}>TAQQOSLASH (OMBOR vs TAMINOTCHI):</div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 }}>
+                                    <b style={{ color: Math.abs(totalBrutoKg - expectedWeight) < 0.5 ? '#81C784' : '#FFAB40' }}>
+                                        {Math.abs(totalBrutoKg - expectedWeight) < 0.5
+                                            ? "MA'LUMOTLAR TO'G'RI (MOS)"
+                                            : `FARQ MAVJUD: ${(totalBrutoKg - expectedWeight).toFixed(1)} ${parseColor(batch.color).unit}`}
+                                    </b>
+                                    <div style={{ fontSize: 10, opacity: 0.6 }}>
+                                        {totalBrutoKg.toFixed(1)} vs {expectedWeight}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
             })}
