@@ -18,6 +18,9 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const [verdict, setVerdict] = useState(null); // 'ombor', 'supplier'
     const [isEdit, setIsEdit] = useState(false);
     const [editID, setEditID] = useState(null);
+    const [statusView, setStatusView] = useState('bruto'); // 'bruto', 'neto'
+    const [selStatusType, setSelStatusType] = useState(null);
+    const [selStatusColor, setSelStatusColor] = useState(null);
 
     // Kirim (Yangi Partiya) Formasi uchun state
     const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg' });
@@ -315,40 +318,114 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
 
                 {dashTab === 'status' && (
                     <div style={{ display: 'grid', gap: 15 }}>
+                        <div style={{ display: 'flex', gap: 10, background: 'rgba(255,255,255,0.05)', padding: 5, borderRadius: 12 }}>
+                            <button onClick={() => { setStatusView('bruto'); setSelStatusType(null); setSelStatusColor(null); }} style={{ flex: 1, padding: 10, borderRadius: 10, border: 'none', background: statusView === 'bruto' ? '#FFAB40' : 'none', color: statusView === 'bruto' ? '#000' : '#888', fontWeight: 'bold', fontSize: 12 }}>BRUTO</button>
+                            <button onClick={() => { setStatusView('neto'); setSelStatusType(null); setSelStatusColor(null); }} style={{ flex: 1, padding: 10, borderRadius: 10, border: 'none', background: statusView === 'neto' ? '#81C784' : 'none', color: statusView === 'neto' ? '#000' : '#888', fontWeight: 'bold', fontSize: 12 }}>NETO</button>
+                        </div>
+
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
-                            <div style={{ ...S.card, textAlign: 'center', marginBottom: 0 }}>
-                                <div style={{ color: '#81C784', fontSize: 11, fontWeight: 'bold' }}>JAMI NETO</div>
-                                <div style={{ fontSize: 24, fontWeight: 'bold' }}>{rolls.filter(r => r.status === 'KONTROLDAN_OTDI').reduce((a, b) => a + (Number(b.neto) || 0), 0).toFixed(1)} <small style={{ fontSize: 12, opacity: 0.5 }}>kg</small></div>
+                            <div style={{ ...S.card, textAlign: 'center', marginBottom: 0, borderColor: statusView === 'bruto' ? '#FFAB40' : '#81C784' }}>
+                                <div style={{ color: statusView === 'bruto' ? '#FFAB40' : '#81C784', fontSize: 11, fontWeight: 'bold' }}>JAMI {statusView.toUpperCase()}</div>
+                                <div style={{ fontSize: 24, fontWeight: 'bold' }}>
+                                    {rolls.filter(r => statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI').reduce((a, b) => a + (Number(statusView === 'bruto' ? b.bruto : b.neto) || 0), 0).toFixed(1)}
+                                    <small style={{ fontSize: 12, opacity: 0.5 }}> {parseColor(batches[0]?.color).unit}</small>
+                                </div>
                             </div>
                             <div style={{ ...S.card, textAlign: 'center', marginBottom: 0 }}>
                                 <div style={{ color: '#4FC3F7', fontSize: 11, fontWeight: 'bold' }}>RULONLAR</div>
-                                <div style={{ fontSize: 24, fontWeight: 'bold' }}>{rolls.filter(r => r.status === 'KONTROLDAN_OTDI').length} <small style={{ fontSize: 12, opacity: 0.5 }}>та</small></div>
+                                <div style={{ fontSize: 24, fontWeight: 'bold' }}>{rolls.filter(r => statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI').length} <small style={{ fontSize: 12, opacity: 0.5 }}>ta</small></div>
                             </div>
                         </div>
 
+                        {/* Hierarchical View */}
                         <div style={S.card}>
-                            <h3 style={{ margin: '0 0 15px 0', fontSize: 14 }}>Mato turlari bo'yicha ulush:</h3>
-                            {Object.entries(stockStats).slice(0, 5).map(([key, s]) => (
-                                <div key={key} style={{ marginBottom: 12 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                                        <span>{s.type} ({s.color})</span>
-                                        <b>{s.totalNeto.toFixed(0)} {s.unit}</b>
-                                    </div>
-                                    <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
-                                        <div style={{ width: `${Math.min(100, (s.totalNeto / 5000) * 100)}%`, height: '100%', background: '#81C784' }} />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div style={{ ...S.card, background: 'rgba(129,199,132,0.05)', borderStyle: 'dashed' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <CheckCircle2 color="#81C784" size={20} />
-                                <div>
-                                    <div style={{ fontWeight: 'bold', fontSize: 14 }}>Ombor Holati: ME'YORIDA</div>
-                                    <div style={{ fontSize: 11, color: '#888' }}>Oxirgi harakat: {data.whLog[0] ? new Date(data.whLog[0].timestamp).toLocaleTimeString() : '---'}</div>
-                                </div>
-                            </div>
+                            {!selStatusType ? (
+                                <>
+                                    <h3 style={{ margin: '0 0 15px 0', fontSize: 14 }}>Mato turlari:</h3>
+                                    {Object.entries(
+                                        rolls.filter(r => statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI')
+                                            .reduce((acc, r) => {
+                                                const type = r.fabric_name || 'Noma\'lum';
+                                                if (!acc[type]) acc[type] = { weight: 0, rolls: 0 };
+                                                acc[type].weight += (Number(statusView === 'bruto' ? r.bruto : r.neto) || 0);
+                                                acc[type].rolls += 1;
+                                                return acc;
+                                            }, {})
+                                    ).map(([type, s]) => (
+                                        <div key={type} onClick={() => setSelStatusType(type)} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '12px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                                            <div>
+                                                <div style={{ fontWeight: 'bold', fontSize: 15 }}>{type}</div>
+                                                <div style={{ fontSize: 11, color: '#888' }}>{s.rolls} ta rulon</div>
+                                            </div>
+                                            <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                <div style={{ fontSize: 16, fontWeight: 'bold', color: statusView === 'bruto' ? '#FFAB40' : '#81C784' }}>{s.weight.toFixed(0)} <small style={{ fontSize: 10 }}>kg</small></div>
+                                                <ChevronRight size={16} color="#444" />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </>
+                            ) : !selStatusColor ? (
+                                <>
+                                    <button onClick={() => setSelStatusType(null)} style={{ background: 'none', border: 'none', color: '#888', fontSize: 12, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 5, padding: 0 }}>
+                                        <ChevronRight size={14} style={{ transform: 'rotate(180deg)' }} /> {selStatusType} (Orqaga)
+                                    </button>
+                                    <h3 style={{ margin: '0 0 15px 0', fontSize: 14 }}>Ranglar bo'yicha:</h3>
+                                    {Object.entries(
+                                        rolls.filter(r => (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType))
+                                            .reduce((acc, r) => {
+                                                const color = r.color || 'Noma\'lum';
+                                                if (!acc[color]) acc[color] = { weight: 0, rolls: 0 };
+                                                acc[color].weight += (Number(statusView === 'bruto' ? r.bruto : r.neto) || 0);
+                                                acc[color].rolls += 1;
+                                                return acc;
+                                            }, {})
+                                    ).map(([color, s]) => (
+                                        <div key={color} onClick={() => setSelStatusColor(color)} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '12px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                <Palette size={16} color="#888" />
+                                                <div>
+                                                    <div style={{ fontWeight: 'bold', fontSize: 14 }}>{color}</div>
+                                                    <div style={{ fontSize: 11, color: '#888' }}>{s.rolls} ta rulon</div>
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                <div style={{ fontSize: 14, fontWeight: 'bold' }}>{s.weight.toFixed(1)} <small style={{ fontSize: 10 }}>kg</small></div>
+                                                <ChevronRight size={16} color="#444" />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </>
+                            ) : (
+                                <>
+                                    <button onClick={() => setSelStatusColor(null)} style={{ background: 'none', border: 'none', color: '#888', fontSize: 12, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 5, padding: 0 }}>
+                                        <ChevronRight size={14} style={{ transform: 'rotate(180deg)' }} /> {selStatusColor} (Orqaga Rangga)
+                                    </button>
+                                    <h3 style={{ margin: '0 0 15px 0', fontSize: 14 }}>Partiyalar tafsiloti:</h3>
+                                    {Object.entries(
+                                        rolls.filter(r => (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType) && (r.color === selStatusColor))
+                                            .reduce((acc, r) => {
+                                                const bn = r.batch_number || 'Noma\'lum';
+                                                if (!acc[bn]) acc[bn] = { weight: 0, rolls: 0 };
+                                                acc[bn].weight += (Number(statusView === 'bruto' ? r.bruto : r.neto) || 0);
+                                                acc[bn].rolls += 1;
+                                                return acc;
+                                            }, {})
+                                    ).map(([bn, s]) => (
+                                        <div key={bn} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '12px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                <Package size={16} color="#888" />
+                                                <div>
+                                                    <div style={{ fontWeight: 'bold', fontSize: 14 }}>Partiya: {bn}</div>
+                                                    <div style={{ fontSize: 11, color: '#888' }}>{s.rolls} ta rulon</div>
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: 14, fontWeight: 'bold' }}>{s.weight.toFixed(1)} <small style={{ fontSize: 10 }}>kg</small></div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </>
+                            )}
                         </div>
                     </div>
                 )}
