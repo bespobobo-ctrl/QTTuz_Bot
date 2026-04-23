@@ -586,6 +586,26 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                         </div>
                     </div>
 
+                    <div style={{ marginTop: 15, padding: '10px 15px', background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#888', marginBottom: 5 }}>
+                            <span>TAMINOTCHI VAZNI: <b>{activeBatch.expected_weight}</b></span>
+                            <span>FARQ:</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ height: 6, flex: 1, background: 'rgba(0,0,0,0.3)', borderRadius: 3, marginRight: 15, overflow: 'hidden' }}>
+                                <div style={{ width: `${Math.min(100, (totalBrutoKg / activeBatch.expected_weight) * 100)}%`, height: '100%', background: '#81C784' }} />
+                            </div>
+                            <b style={{ color: Math.abs(totalBrutoKg - activeBatch.expected_weight) > 0.5 ? '#FFAB40' : '#81C784', fontSize: 13 }}>
+                                {(totalBrutoKg - activeBatch.expected_weight).toFixed(1)} {parseColor(activeBatch.color).unit}
+                            </b>
+                        </div>
+                        <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>
+                            {totalBrutoKg < activeBatch.expected_weight
+                                ? `Yana ${(activeBatch.expected_weight - totalBrutoKg).toFixed(1)} ${parseColor(activeBatch.color).unit} kiritilishi kerak`
+                                : `Me'yordan ${(totalBrutoKg - activeBatch.expected_weight).toFixed(1)} ${parseColor(activeBatch.color).unit} ortiqcha`}
+                        </div>
+                    </div>
+
                     <div style={{ marginTop: 20, display: 'flex', gap: 10 }}>
                         {isComplete ? (
                             <button onClick={() => setPrintBatchRolls(batchRolls)} style={{ ...S.primaryBtn, width: '100%', background: '#81C784', color: '#000' }}>
