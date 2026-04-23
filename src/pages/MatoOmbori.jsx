@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import {
     Package, Calendar, ChevronRight,
     Printer, AlertCircle, PlusCircle, Download, CheckCircle2,
-    Users, Palette, AlertTriangle, TrendingUp, Info
+    Users, Palette, AlertTriangle, TrendingUp, Info, Trash2, Edit3
 } from 'lucide-react';
 
 export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
@@ -16,6 +16,8 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const [selQuarter, setSelQuarter] = useState(null);
     const [selNetoGroup, setSelNetoGroup] = useState(null);
     const [verdict, setVerdict] = useState(null); // 'ombor', 'supplier'
+    const [isEdit, setIsEdit] = useState(false);
+    const [editID, setEditID] = useState(null);
 
     // Kirim (Yangi Partiya) Formasi uchun state
     const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg' });
@@ -73,22 +75,46 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
         return { type: '', c: str, unit: 'kg' };
     };
 
-    const handleCreateBatch = async (e) => {
-        e.preventDefault();
+    const handleKirim = async () => {
+        if (!f.bn || !f.sup || !f.eW) return showMsg('Barcha maydonlarni to\'ldiring', 'err');
         try {
-            // Store type, color, unit together in color field
-            const combinedColor = `${f.type} | ${f.c} | ${f.unit}`;
-            const { error } = await supabase.from('warehouse_batches').insert([{
-                batch_number: f.bn, supplier_name: f.sup, color: combinedColor,
-                expected_count: Number(f.eC), expected_weight: Number(f.eW), status: 'IN_PROGRESS'
-            }]);
-            if (error) throw error;
-            showMsg('Yangi kirim muvaffaqiyatli saqlandi!');
-            setF({ ...f, bn: '', eC: '', eW: '', sup: '', c: '' });
+            if (isEdit) {
+                const { error } = await supabase.from('warehouse_batches').update({
+                    batch_number: f.bn,
+                    supplier_name: f.sup,
+                    expected_weight: Number(f.eW),
+                    expected_count: Number(f.eC),
+                    color: `${f.type} | ${f.c} | ${f.unit}`
+                }).eq('id', editID);
+                if (error) throw error;
+                showMsg('Partiya muvaffaqiyatli tahrirlandi!');
+            } else {
+                const { error } = await supabase.from('warehouse_batches').insert({
+                    batch_number: f.bn,
+                    supplier_name: f.sup,
+                    expected_weight: Number(f.eW),
+                    expected_count: Number(f.eC),
+                    color: `${f.type} | ${f.c} | ${f.unit}`
+                });
+                if (error) throw error;
+                showMsg('Yangi partiya muvaffaqiyatli qo\'shildi!');
+            }
+            setF({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg' });
+            setIsEdit(false);
+            setEditID(null);
             load(true);
-        } catch (err) {
-            showMsg('Saqlashda xatolik!', 'err');
-        }
+        } catch (e) { showMsg('Xato yuz berdi', 'err'); }
+    };
+
+    const handleDeleteBatch = async (id, bn) => {
+        if (!window.confirm(`${bn} partiyani o'chirmoqchimisiz? BU BARCHA RULONLARNI HAM O'CHIRIB YUBORADI!`)) return;
+        try {
+            await supabase.from('warehouse_rolls').delete().eq('batch_id', id);
+            const { error } = await supabase.from('warehouse_batches').delete().eq('id', id);
+            if (error) throw error;
+            showMsg('Partiya o\'chirildi');
+            load(true);
+        } catch (e) { showMsg('Ochirishda xato', 'err'); }
     };
 
     const handleAddRoll = async () => {
@@ -119,66 +145,71 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const renderKirim = () => (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <h2 style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, color: '#81C784' }}>
-                <Download size={24} /> Yangi Partiya Kirimi
+                <Download size={24} /> {isEdit ? "Partiyani Tahrirlash" : "Yangi Partiya Kirimi"}
             </h2>
             <div style={S.card}>
-                <form onSubmit={handleCreateBatch}>
-                    <input style={S.input} placeholder="Partiya raqami (masalan: P-99)" value={f.bn} onChange={e => setF({ ...f, bn: e.target.value })} required />
-                    <input style={S.input} placeholder="Ta'minotchi (kimdan keldi?)" value={f.sup} onChange={e => setF({ ...f, sup: e.target.value })} required />
+                <input style={S.input} placeholder="Partiya raqami (masalan: P-99)" value={f.bn} onChange={e => setF({ ...f, bn: e.target.value })} required />
+                <input style={S.input} placeholder="Ta'minotchi (kimdan keldi?)" value={f.sup} onChange={e => setF({ ...f, sup: e.target.value })} required />
 
-                    <div style={{ marginBottom: 15 }}>
-                        <label style={{ fontSize: 12, color: '#81C784', display: 'block', marginBottom: 5 }}>Mato turi:</label>
-                        <div style={{ display: 'flex', gap: 10 }}>
-                            <select
-                                style={{ ...S.input, marginBottom: 0, flex: 1, color: '#fff', background: '#1a1a2e' }}
-                                value={f.type}
-                                onChange={e => setF({ ...f, type: e.target.value })}
-                            >
-                                {fabricTypes.map(t => <option key={t} value={t} style={{ background: '#1a1a2e' }}>{t}</option>)}
-                            </select>
-                            <button
-                                type="button"
-                                onClick={() => setIsAddingType(true)}
-                                style={{ ...S.primaryBtn, width: 'auto', padding: '0 15px' }}
-                            >
-                                +
-                            </button>
-                        </div>
+                <div style={{ marginBottom: 15 }}>
+                    <label style={{ fontSize: 12, color: '#81C784', display: 'block', marginBottom: 5 }}>Mato turi:</label>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        <select
+                            style={{ ...S.input, marginBottom: 0, flex: 1, color: '#fff', background: '#1a1a2e' }}
+                            value={f.type}
+                            onChange={e => setF({ ...f, type: e.target.value })}
+                        >
+                            {fabricTypes.map(t => <option key={t} value={t} style={{ background: '#1a1a2e' }}>{t}</option>)}
+                        </select>
+                        <button
+                            type="button"
+                            onClick={() => setIsAddingType(true)}
+                            style={{ ...S.primaryBtn, width: 'auto', padding: '0 15px' }}
+                        >
+                            +
+                        </button>
                     </div>
+                </div>
 
-                    {isAddingType && (
-                        <div style={{ marginBottom: 15, display: 'flex', gap: 10 }}>
-                            <input
-                                style={{ ...S.input, marginBottom: 0, flex: 1 }}
-                                placeholder="Yangi mato turi"
-                                value={newType}
-                                onChange={e => setNewType(e.target.value)}
-                            />
-                            <button type="button" onClick={handleAddType} style={{ ...S.primaryBtn, width: 'auto' }}>QO'SHISH</button>
-                            <button type="button" onClick={() => setIsAddingType(false)} style={{ ...S.primaryBtn, width: 'auto', background: '#555' }}>X</button>
-                        </div>
-                    )}
-
-                    <input style={S.input} placeholder="Rangi (masalan: Qora, Oq)" value={f.c} onChange={e => setF({ ...f, c: e.target.value })} required />
-
-                    <div style={{ marginBottom: 15 }}>
-                        <label style={{ fontSize: 12, color: '#81C784', display: 'block', marginBottom: 5 }}>O'lchov birligi:</label>
-                        <div style={{ display: 'flex', gap: 20 }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                                <input type="radio" name="unit" value="kg" checked={f.unit === 'kg'} onChange={() => setF({ ...f, unit: 'kg' })} /> KG
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                                <input type="radio" name="unit" value="meter" checked={f.unit === 'meter'} onChange={() => setF({ ...f, unit: 'meter' })} /> METIR
-                            </label>
-                        </div>
+                {isAddingType && (
+                    <div style={{ marginBottom: 15, display: 'flex', gap: 10 }}>
+                        <input
+                            style={{ ...S.input, marginBottom: 0, flex: 1 }}
+                            placeholder="Yangi mato turi"
+                            value={newType}
+                            onChange={e => setNewType(e.target.value)}
+                        />
+                        <button type="button" onClick={handleAddType} style={{ ...S.primaryBtn, width: 'auto' }}>QO'SHISH</button>
+                        <button type="button" onClick={() => setIsAddingType(false)} style={{ ...S.primaryBtn, width: 'auto', background: '#555' }}>X</button>
                     </div>
+                )}
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                        <input style={S.input} type="number" placeholder="Jami Rulon (dona)" value={f.eC} onChange={e => setF({ ...f, eC: e.target.value })} required />
-                        <input style={S.input} type="number" placeholder={f.unit === 'kg' ? "Jami Vazn (KG)" : "Jami Metir"} value={f.eW} onChange={e => setF({ ...f, eW: e.target.value })} required />
+                <input style={S.input} placeholder="Rangi (masalan: Qora, Oq)" value={f.c} onChange={e => setF({ ...f, c: e.target.value })} required />
+
+                <div style={{ marginBottom: 15 }}>
+                    <label style={{ fontSize: 12, color: '#81C784', display: 'block', marginBottom: 5 }}>O'lchov birligi:</label>
+                    <div style={{ display: 'flex', gap: 20 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                            <input type="radio" name="unit" value="kg" checked={f.unit === 'kg'} onChange={() => setF({ ...f, unit: 'kg' })} /> KG
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                            <input type="radio" name="unit" value="meter" checked={f.unit === 'meter'} onChange={() => setF({ ...f, unit: 'meter' })} /> METIR
+                        </label>
                     </div>
-                    <button style={S.primaryBtn} type="submit">OMBORGA QO'SHISH</button>
-                </form>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <input style={S.input} type="number" placeholder="Jami Rulon (dona)" value={f.eC} onChange={e => setF({ ...f, eC: e.target.value })} required />
+                    <input style={S.input} type="number" placeholder={f.unit === 'kg' ? "Jami Vazn (KG)" : "Jami Metir"} value={f.eW} onChange={e => setF({ ...f, eW: e.target.value })} required />
+                </div>
+                <button onClick={handleKirim} style={S.primaryBtn}>
+                    <PlusCircle size={20} /> {isEdit ? "O'ZGARIHLARNI SAQLASH" : "PARTIYANI QABUL QILISH"}
+                </button>
+                {isEdit && (
+                    <button onClick={() => { setIsEdit(false); setF({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg' }); }} style={{ ...S.primaryBtn, background: '#333', marginTop: 10 }}>
+                        BEKOR QILISH
+                    </button>
+                )}
             </div>
         </motion.div>
     );
@@ -521,7 +552,17 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     {isComplete ? 'TAYYOR ✅' : 'JARAYONDA ⏳'}
                                 </span>
                             </div>
-                            <ChevronRight color="#555" />
+                            <div style={{ display: 'flex', gap: 10 }} onClick={e => e.stopPropagation()}>
+                                <button onClick={() => {
+                                    const pc = parseColor(batch.color);
+                                    setF({ bn: batch.batch_number, sup: batch.supplier_name, eW: batch.expected_weight, eC: batch.expected_count, type: pc.type, c: pc.c, unit: pc.unit });
+                                    setIsEdit(true);
+                                    setEditID(batch.id);
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }} style={{ background: 'none', border: 'none', color: '#4FC3F7', cursor: 'pointer' }}><Edit3 size={18} /></button>
+                                <button onClick={() => handleDeleteBatch(batch.id, batch.batch_number)} style={{ background: 'none', border: 'none', color: '#ff5252', cursor: 'pointer' }}><Trash2 size={18} /></button>
+                                <ChevronRight color="#555" />
+                            </div>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 13, color: '#aaa', background: 'rgba(0,0,0,0.2)', padding: 15, borderRadius: 12 }}>
