@@ -14,7 +14,7 @@ import OmborchiPanel from './pages/Omborchi';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const VERSION = "16.0 PRO";
+const VERSION = "17.0 SUPER PRO";
 
 const DEPARTMENTS = [
   { id: 'rahbar', name: 'Rahbar', icon: Shield, color: '#FFD700' },
@@ -114,7 +114,7 @@ export default function App() {
           </div>
           <div>
             <div style={{ fontWeight: 'bold' }}>{user.name}</div>
-            <div style={{ fontSize: 9, color: '#00e676' }}>{user.deptName} • {VERSION}</div>
+            <div style={{ fontSize: 9, color: '#ff5252', fontWeight: 'bold' }}>{user.deptName} • {VERSION} ⚡</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>

@@ -12,7 +12,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const [activeBatch, setActiveBatch] = useState(null);
     const [newRollWeight, setNewRollWeight] = useState('');
     const [printBatchRolls, setPrintBatchRolls] = useState(null);
-    const [dashTab, setDashTab] = useState('season'); // 'season', 'status', 'supplier', 'alerts', 'brak', 'orders', 'remains'
+    const [dashTab, setDashTab] = useState('season'); // 'season', 'status', 'suppliers', 'alerts', 'brak', 'orders', 'remains'
     const [selQuarter, setSelQuarter] = useState(null);
     const [selNetoGroup, setSelNetoGroup] = useState(null);
     const [verdict, setVerdict] = useState(null); // 'ombor', 'supplier'
@@ -294,7 +294,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
         const subTabs = [
             { id: 'season', l: 'Sezoniy Analiz', icon: Calendar },
             { id: 'status', l: 'Ombor Holati', icon: Package },
-            { id: 'supplier', l: 'Ta\'minotchilar', icon: Users },
+            { id: 'suppliers', l: 'Ta\'minotchilar', icon: Users },
             { id: 'alerts', l: 'Kamayganlar', icon: AlertTriangle, count: lowStock.length },
             { id: 'brak', l: 'Braklar', icon: AlertCircle, count: brakRolls.length },
             { id: 'orders', l: 'Zakazlar', icon: TrendingUp },
@@ -330,7 +330,6 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                             <button onClick={() => { setStatusView('bruto'); setSelStatusType(null); setSelStatusColor(null); }} style={{ flex: 1, padding: 10, borderRadius: 10, border: 'none', background: statusView === 'bruto' ? (unitView === 'kg' ? '#FFAB40' : '#4FC3F7') : 'none', color: statusView === 'bruto' ? '#000' : '#888', fontWeight: 'bold', fontSize: 12 }}>{unitView.toUpperCase()} BRUTO</button>
                             <button onClick={() => { setStatusView('neto'); setSelStatusType(null); setSelStatusColor(null); }} style={{ flex: 1, padding: 10, borderRadius: 10, border: 'none', background: statusView === 'neto' ? '#81C784' : 'none', color: statusView === 'neto' ? '#000' : '#888', fontWeight: 'bold', fontSize: 12 }}>{unitView.toUpperCase()} NETO</button>
                         </div>
-
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                             <div style={{ ...S.card, textAlign: 'center', marginBottom: 0, borderColor: statusView === 'bruto' ? (unitView === 'kg' ? '#FFAB40' : '#4FC3F7') : '#81C784' }}>
                                 <div style={{ color: statusView === 'bruto' ? (unitView === 'kg' ? '#FFAB40' : '#4FC3F7') : '#81C784', fontSize: 11, fontWeight: 'bold' }}>JAMI {unitView.toUpperCase()}</div>
@@ -485,34 +484,76 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                         )}
                     </div>
                 )}
+                {dashTab === 'suppliers' && (
+                    <div style={{ display: 'grid', gap: 15 }}>
+                        {!selSupplier ? (
+                            <>
+                                <h3 style={{ margin: '0 0 10px 10px', fontSize: 14, opacity: 0.7 }}>Taminotchilar hisoboti:</h3>
+                                {Array.from(new Set(batches.map(b => (b.supplier_name || 'Noma\'lum').trim().toUpperCase()))).map(slug => {
+                                    const supName = slug;
+                                    const supBatches = batches.filter(b => (b.supplier_name || '').trim().toUpperCase() === slug);
+                                    const supRolls = rolls.filter(r => r && supBatches.some(b => b.id === r.batch_id));
+                                    const brutoSum = supRolls.filter(r => r.status === 'BRUTO').reduce((a, b) => a + (Number(b.bruto) || 0), 0);
+                                    const netoSum = supRolls.filter(r => r.status === 'KONTROLDAN_OTDI').reduce((a, b) => a + (Number(b.neto) || 0), 0);
+                                    const brakCount = supRolls.filter(r => r.status === 'BRAK').length;
 
-                {dashTab === 'supplier' && (
-                    <div style={{ display: 'grid', gap: 12 }}>
-                        {Object.values(supplierStats).map((s, i) => (
-                            <div key={i} style={S.card}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                                    <b>{s.sup}</b>
-                                    <span style={{ fontSize: 12, color: '#888' }}>{s.type}</span>
+                                    return (
+                                        <div key={supName} onClick={() => setSelSupplier(supName)} style={{ ...S.card, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div>
+                                                <div style={{ fontWeight: 'bold', fontSize: 18, color: '#4FC3F7' }}>{supName}</div>
+                                                <div style={{ fontSize: 11, color: '#888', marginTop: 5 }}>{supBatches.length} ta partiya • {supRolls.length} ta jami rulon</div>
+                                                {brakCount > 0 && <div style={{ fontSize: 10, color: '#ff5252', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}><AlertTriangle size={10} /> {brakCount} ta brak aniqlangan</div>}
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: 14, fontWeight: 'bold' }}>{brutoSum.toFixed(0)} <small style={{ fontSize: 10, opacity: 0.5 }}>bruto</small></div>
+                                                <div style={{ fontSize: 14, fontWeight: 'bold', color: '#81C784' }}>{netoSum.toFixed(0)} <small style={{ fontSize: 10, opacity: 0.5 }}>neto</small></div>
+                                            </div>
+                                            <ChevronRight size={20} color="#333" />
+                                        </div>
+                                    );
+                                })}
+                            </>
+                        ) : (
+                            <>
+                                <button onClick={() => setSelSupplier(null)} style={{ background: 'none', border: 'none', color: '#888', fontSize: 12, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 5, padding: 0 }}>
+                                    <ChevronRight size={14} style={{ transform: 'rotate(180deg)' }} /> Barcha taminotchilar
+                                </button>
+                                <div style={{ ...S.card, background: 'rgba(79,195,247,0.05)', borderColor: '#4FC3F7' }}>
+                                    <h2 style={{ color: '#4FC3F7', margin: 0 }}>{selSupplier}</h2>
+                                    <p style={{ fontSize: 12, color: '#888' }}>Tafsilotli hisobot</p>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginTop: 20 }}>
+                                        <div style={{ background: 'rgba(0,0,0,0.2)', padding: 15, borderRadius: 12 }}>
+                                            <div style={{ fontSize: 11, color: '#aaa', fontWeight: 'bold' }}>BRUTO JAMI</div>
+                                            <div style={{ fontSize: 18, fontWeight: 'bold' }}>{rolls.filter(r => r && batches.find(b => b.id === r.batch_id)?.supplier_name === selSupplier && r.status === 'BRUTO').reduce((a, b) => a + (Number(b.bruto) || 0), 0).toFixed(1)} <small style={{ fontSize: 10 }}>kg</small></div>
+                                        </div>
+                                        <div style={{ background: 'rgba(129,199,132,0.1)', padding: 15, borderRadius: 12 }}>
+                                            <div style={{ fontSize: 11, color: '#81C784', fontWeight: 'bold' }}>NETO JAMI</div>
+                                            <div style={{ fontSize: 18, fontWeight: 'bold', color: '#81C784' }}>{rolls.filter(r => r && batches.find(b => b.id === r.batch_id)?.supplier_name === selSupplier && r.status === 'KONTROLDAN_OTDI').reduce((a, b) => a + (Number(b.neto) || 0), 0).toFixed(1)} <small style={{ fontSize: 10 }}>kg</small></div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, background: 'rgba(0,0,0,0.2)', padding: 10, borderRadius: 10 }}>
-                                    <div style={{ textAlign: 'center' }}>
-                                        <div style={{ fontSize: 9, color: '#81C784' }}>BRUTO</div>
-                                        <div style={{ fontWeight: 'bold' }}>{s.bruto.toFixed(1)}</div>
-                                    </div>
-                                    <div style={{ textAlign: 'center' }}>
-                                        <div style={{ fontSize: 9, color: '#4FC3F7' }}>NETO</div>
-                                        <div style={{ fontWeight: 'bold' }}>{s.neto.toFixed(1)}</div>
-                                    </div>
-                                    <div style={{ textAlign: 'center' }}>
-                                        <div style={{ fontSize: 9, color: '#ff5252' }}>BRAK</div>
-                                        <div style={{ fontWeight: 'bold', color: s.brak > 0 ? '#ff5252' : '#fff' }}>{s.brak}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                                <h3 style={{ fontSize: 14, margin: '20px 0 10px 0' }}>Partiyalar tarixi:</h3>
+                                {batches.filter(b => b.supplier_name === selSupplier).map(b => {
+                                    const bRolls = rolls.filter(r => r.batch_id === b.id);
+                                    const bBruto = bRolls.filter(r => r.status === 'BRUTO').reduce((a, x) => a + (Number(x.bruto) || 0), 0);
+                                    const bNeto = bRolls.filter(r => r.status === 'KONTROLDAN_OTDI').reduce((a, x) => a + (Number(x.neto) || 0), 0);
+                                    return (
+                                        <div key={b.id} style={{ ...S.card, padding: 15, marginBottom: 10 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                                                <b>{b.batch_number}</b>
+                                                <span style={{ fontSize: 11, color: '#888' }}>{new Date(b.arrival_date || b.created_at).toLocaleDateString()}</span>
+                                            </div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 13 }}>
+                                                <div>Bruto: <b>{bBruto.toFixed(1)}</b></div>
+                                                <div style={{ color: '#81C784' }}>Neto: <b>{bNeto.toFixed(1)}</b></div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </>
+                        )}
                     </div>
                 )}
-
                 {dashTab === 'alerts' && (
                     <div style={{ display: 'grid', gap: 12 }}>
                         <div style={{ ...S.card, background: 'rgba(255,171,64,0.1)', borderColor: '#FFAB40' }}>
@@ -535,10 +576,8 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                 </div>
                             </div>
                         ))}
-                        {lowStock.length === 0 && <div style={{ textAlign: 'center', padding: 40, opacity: 0.5 }}>Barcha zaxiralar yetarli</div>}
                     </div>
                 )}
-
                 {dashTab === 'brak' && (
                     <div style={{ display: 'grid', gap: 12 }}>
                         {brakRolls.map(r => {
@@ -557,7 +596,6 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                         </div>
                                     </div>
                                     <button onClick={async () => {
-                                        // Simple flow: notify boss (Rahbar)
                                         await supabase.from('warehouse_log').insert([{
                                             item_name: `BRAK: ${batch?.supplier_name} - ${r.fabric_name}`,
                                             quantity: r.bruto,
@@ -574,7 +612,6 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                         {brakRolls.length === 0 && <div style={{ textAlign: 'center', padding: 40, opacity: 0.5 }}>Brak matolar yo'q</div>}
                     </div>
                 )}
-
                 {dashTab === 'orders' && (
                     <div style={{ display: 'grid', gap: 12 }}>
                         {orders.map(o => (
@@ -586,15 +623,11 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                 <div style={{ marginTop: 10 }}>
                                     {o.fabric_type} • {o.color}
                                 </div>
-                                <div style={{ fontSize: 12, color: '#888', marginTop: 5 }}>
-                                    Kutilmoqda: {o.expected_date ? new Date(o.expected_date).toLocaleDateString() : '---'}
-                                </div>
                             </div>
                         ))}
                         {orders.length === 0 && <div style={{ textAlign: 'center', padding: 40, opacity: 0.5 }}>Amaldagi zakazlar yo'q</div>}
                     </div>
                 )}
-
                 {dashTab === 'remains' && (
                     <div style={{ display: 'grid', gap: 12 }}>
                         <div style={{ ...S.card, display: 'flex', justifyContent: 'space-between' }}>
