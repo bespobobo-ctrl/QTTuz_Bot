@@ -418,110 +418,105 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
 
     if (tab === 'dashboard' || tab === 'baza' || tab === 'ombor') {
         const list = data.accessories || [];
-        const lowStock = list.filter(i => i.quantity > 0 && i.quantity < (i.min_quantity || 10));
+        const lowStock = list.filter(i => i.quantity > 0 && i.quantity < (i.min_quantity || 15));
+        const critical = list.filter(i => i.quantity > 0 && i.quantity < 5);
         const expected = list.filter(i => i.status === 'KUTILMOQDA');
         const available = list.filter(i => i.status === 'OMBORDA');
+
+        // Dept Stats
+        const deptStats = DEPTS.map(d => {
+            const items = available.filter(it => it.target_dept === d);
+            return { name: d, count: items.length, totalQty: items.reduce((a, b) => a + (b.quantity || 0), 0) };
+        }).filter(d => d.count > 0);
+
         const filtered = selDept === 'HAMMASI' ? available : available.filter(i => i.target_dept === selDept);
 
         return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={S.page}>
-                {/* Stats */}
-                <div style={{ display: 'flex', gap: 12, marginBottom: 30 }}>
-                    <div style={S.statBox('#BA68C8')}>
-                        <TrendingUp size={18} color="#BA68C8" style={{ alignSelf: 'center' }} />
-                        <span style={{ fontSize: 24, fontWeight: '900', color: '#BA68C8' }}>{available.length}</span>
-                        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>BAZA JAMI</span>
-                    </div>
-                    <div style={S.statBox('#ff5252')}>
-                        <AlertTriangle size={18} color="#ff5252" style={{ alignSelf: 'center' }} />
-                        <span style={{ fontSize: 24, fontWeight: '900', color: '#ff5252' }}>{lowStock.length}</span>
-                        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>TUGAYOTGAN</span>
-                    </div>
-                    <div style={S.statBox('#FFAB40')}>
-                        <Clock size={18} color="#FFAB40" style={{ alignSelf: 'center' }} />
-                        <span style={{ fontSize: 24, fontWeight: '900', color: '#FFAB40' }}>{expected.length}</span>
-                        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>KUTILMOQDA</span>
+                {/* Hero Stats */}
+                <div style={{ position: 'relative', overflow: 'hidden', padding: '30px 25px', borderRadius: 30, background: 'linear-gradient(135deg, #6A11CB 0%, #2575FC 100%)', marginBottom: 30, boxShadow: '0 20px 40px rgba(106,17,203,0.3)' }}>
+                    <div style={{ position: 'absolute', right: -20, top: -20, opacity: 0.1 }}><Package size={180} /></div>
+                    <h2 style={{ margin: 0, fontSize: 13, textTransform: 'uppercase', letterSpacing: 2, color: 'rgba(255,255,255,0.7)', fontWeight: '800' }}>Ombor Holati</h2>
+                    <div style={{ fontSize: 42, fontWeight: '900', color: '#fff', margin: '10px 0' }}>{available.length} <span style={{ fontSize: 16 }}>xil mahsulot</span></div>
+                    <div style={{ display: 'flex', gap: 20, marginTop: 20 }}>
+                        <div><div style={{ opacity: 0.6, fontSize: 10 }}>BO'LIMLAR</div><div style={{ fontWeight: '800' }}>{deptStats.length} ta</div></div>
+                        <div style={{ width: 1, background: 'rgba(255,255,255,0.2)' }}></div>
+                        <div><div style={{ opacity: 0.6, fontSize: 10 }}>JAMI ZAPAS</div><div style={{ fontWeight: '800' }}>{available.reduce((a, b) => a + (b.quantity || 0), 0)} dona</div></div>
                     </div>
                 </div>
 
-                {/* Dept Filter */}
-                <div style={{ marginBottom: 25 }}>
-                    <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 15, scrollbarWidth: 'none' }}>
-                        {['HAMMASI', ...DEPTS].map(d => (
-                            <motion.button key={d} whileTap={{ scale: 0.95 }} onClick={() => setSelDept(d)}
-                                style={{
-                                    padding: '12px 20px',
-                                    background: selDept === d ? 'linear-gradient(90deg, #BA68C8, #9C27B0)' : 'rgba(255,255,255,0.05)',
-                                    color: selDept === d ? '#fff' : 'rgba(255,255,255,0.4)',
-                                    borderRadius: 16,
-                                    border: 'none',
-                                    fontSize: 12,
-                                    fontWeight: '800',
-                                    whiteSpace: 'nowrap',
-                                    cursor: 'pointer',
-                                    boxShadow: selDept === d ? '0 5px 15px rgba(186,104,200,0.3)' : 'none'
-                                }}>
-                                {d.toUpperCase()}
-                            </motion.button>
+                {/* Critical Alerts */}
+                {critical.length > 0 && (
+                    <div style={{ marginBottom: 30 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                            <AlertTriangle color="#ff5252" size={20} />
+                            <h3 style={{ fontSize: 14, fontWeight: '900', margin: 0, color: '#ff5252' }}>KRITIK HOLAT (ZAKAZ QILISH KERAK!)</h3>
+                        </div>
+                        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 10, scrollbarWidth: 'none' }}>
+                            {critical.map(it => (
+                                <motion.div key={it.id} whileTap={{ scale: 0.95 }} style={{ minWidth: 160, padding: 18, background: 'rgba(255,82,82,0.1)', border: '1.5px solid rgba(255,82,82,0.3)', borderRadius: 22 }}>
+                                    <div style={{ fontSize: 14, fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name}</div>
+                                    <div style={{ fontSize: 24, fontWeight: '900', color: '#ff5252', marginTop: 5 }}>{it.quantity} <span style={{ fontSize: 10 }}>{it.unit}</span></div>
+                                    <div style={{ fontSize: 9, color: 'rgba(255,82,82,0.6)', marginTop: 5 }}>THRESHOLD: {it.min_quantity || 15}</div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Main Stats Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginBottom: 35 }}>
+                    <div style={{ ...S.statBox('#00e676'), background: 'rgba(0,230,118,0.05)', textAlign: 'left', padding: 20 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                            <Package size={20} color="#00e676" />
+                            <div style={{ fontSize: 22, fontWeight: '900', color: '#00e676' }}>{available.length}</div>
+                        </div>
+                        <div style={{ fontSize: 10, fontWeight: '800', marginTop: 10, opacity: 0.5 }}>OMBORDA MAVJUD</div>
+                    </div>
+                    <div style={{ ...S.statBox('#FFAB40'), background: 'rgba(255,171,64,0.05)', textAlign: 'left', padding: 20 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                            <Clock size={20} color="#FFAB40" />
+                            <div style={{ fontSize: 22, fontWeight: '900', color: '#FFAB40' }}>{expected.length}</div>
+                        </div>
+                        <div style={{ fontSize: 10, fontWeight: '800', marginTop: 10, opacity: 0.5 }}>KUTILMOQDA</div>
+                    </div>
+                </div>
+
+                {/* Section: Dept Breakdown */}
+                <div style={{ marginBottom: 40 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: '900', color: 'rgba(255,255,255,0.4)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Layers size={18} /> BO'LIMLAR KESIMIDA
+                    </h3>
+                    <div style={{ display: 'grid', gap: 12 }}>
+                        {deptStats.map(ds => (
+                            <div key={ds.name} style={{ ...S.card, padding: '15px 20px', marginBottom: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
+                                <div>
+                                    <div style={{ fontSize: 14, fontWeight: '800' }}>{ds.name}</div>
+                                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{ds.count} xil mahsulot</div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ fontSize: 18, fontWeight: '900', color: '#BA68C8' }}>{ds.totalQty}</div>
+                                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)' }}>JAMI DONA</div>
+                                </div>
+                            </div>
                         ))}
                     </div>
                 </div>
 
-                {/* Items */}
-                {filtered.length === 0 ? (
-                    <div style={{ ...S.card, textAlign: 'center', padding: '60px 0', borderStyle: 'dashed' }}>
-                        <Package size={48} color="rgba(255,255,255,0.05)" />
-                        <div style={{ color: 'rgba(255,255,255,0.2)', marginTop: 15, fontWeight: '600' }}>Bu bo'limda mahsulot topilmadi</div>
-                    </div>
-                ) : (
-                    <div style={{ display: 'grid', gap: 15 }}>
-                        {filtered.map(item => {
-                            const isLow = item.quantity < (item.min_quantity || 10);
-                            return (
-                                <motion.div key={item.id} initial={{ x: -10, opacity: 0 }} animate={{ x: 0, opacity: 1 }} style={{ ...S.card, padding: 18, marginBottom: 0 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
-                                            <div style={{ width: 45, height: 45, background: 'rgba(186,104,200,0.1)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <Layers size={20} color="#BA68C8" />
-                                            </div>
-                                            <div>
-                                                <div style={{ fontWeight: '800', fontSize: 17, color: '#fff' }}>{item.name}</div>
-                                                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', display: 'flex', gap: 10 }}>
-                                                    <span>{item.category}</span>
-                                                    <span>•</span>
-                                                    <span>ID: {item.id.split('-')[0].toUpperCase()}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{ fontSize: 22, fontWeight: '900', color: isLow ? '#ff5252' : '#00e676' }}>
-                                                {item.quantity} <span style={{ fontSize: 12, fontWeight: '500', opacity: 0.6 }}>{item.unit}</span>
-                                            </div>
-                                            {isLow && <div style={{ fontSize: 9, color: '#ff5252', fontWeight: '900', textTransform: 'uppercase' }}>Kam qolgan!</div>}
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            );
-                        })}
-                    </div>
-                )}
-
-                {/* Expected */}
-                {selDept === 'HAMMASI' && expected.length > 0 && (
-                    <div style={{ marginTop: 40 }}>
-                        <h3 style={{ fontSize: 14, color: '#FFAB40', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-                            <Clock size={16} /> KUTILAYOTGAN BUYURTMALAR
+                {/* Expected & Low Stock Alerts */}
+                {expected.length > 0 && (
+                    <div style={{ marginTop: 40, padding: 25, background: 'rgba(255,171,64,0.05)', borderRadius: 25, border: '1px solid rgba(255,171,64,0.1)' }}>
+                        <h3 style={{ fontSize: 14, color: '#FFAB40', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, margin: 0 }}>
+                            <Clock size={16} /> KUTILAYOTGAN YUKLAR
                         </h3>
-                        <div style={{ display: 'grid', gap: 12 }}>
+                        <div style={{ display: 'grid', gap: 15, marginTop: 20 }}>
                             {expected.map(it => (
-                                <div key={it.id} style={{ ...S.card, padding: 16, border: '1px solid rgba(255,171,64,0.2)', background: 'rgba(255,171,64,0.05)', marginBottom: 0 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div>
-                                            <div style={{ fontWeight: '700', color: '#fff' }}>{it.name}</div>
-                                            <div style={{ fontSize: 10, color: 'rgba(255,171,64,0.6)' }}>{it.target_dept} uchun kutilmoqda</div>
-                                        </div>
-                                        <div style={{ fontSize: 18, fontWeight: '900', color: '#FFAB40' }}>{it.quantity} {it.unit}</div>
+                                <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,171,64,0.1)', paddingBottom: 10 }}>
+                                    <div>
+                                        <div style={{ fontSize: 14, fontWeight: '700' }}>{it.name}</div>
+                                        <div style={{ fontSize: 10, color: 'rgba(255,171,64,0.6)' }}>Keladi: {it.expected_date || "Noma'lum"}</div>
                                     </div>
+                                    <div style={{ fontSize: 16, fontWeight: '900', color: '#FFAB40' }}>{it.quantity} {it.unit}</div>
                                 </div>
                             ))}
                         </div>
