@@ -112,7 +112,8 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                     batch_id: newBatch.id,
                     item_name: `YANGI PARTIYA: ${f.bn}`,
                     quantity: Number(f.eW),
-                    action_type: 'KIRIM'
+                    action_type: 'KIRIM',
+                    timestamp: new Date().toISOString()
                 });
                 if (logErr) console.error("Kirim log error:", logErr);
                 await load(true);
@@ -1388,7 +1389,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                     </div>
 
                     <div style={{ display: 'grid', gap: 10 }}>
-                        {(data.whLog || [])
+                        {[...(data.whLog || [])]
                             .filter(l => {
                                 if (histFilter === 'all') return true;
                                 if (histFilter === 'kirim') return l.action_type === 'KIRIM';
@@ -1396,6 +1397,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                 if (histFilter === 'delete') return l.action_type === 'DELETE';
                                 return true;
                             })
+                            .sort((a, b) => new Date(b.timestamp || b.created_at) - new Date(a.timestamp || a.created_at))
                             .map((l, idx) => {
                                 const date = new Date(l.timestamp || l.created_at);
                                 const actionColor =
@@ -1417,7 +1419,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                         key={l.id}
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: Math.min(idx * 0.02, 0.5) }}
+                                        transition={{ delay: Math.min(idx * 0.01, 0.4) }}
                                         style={{
                                             ...S.card,
                                             padding: '14px',
