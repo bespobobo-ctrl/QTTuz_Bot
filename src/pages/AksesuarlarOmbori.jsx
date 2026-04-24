@@ -151,7 +151,7 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
         );
     }
 
-    if (tab === 'dashboard' || tab === 'baza') {
+    if (tab === 'dashboard' || tab === 'baza' || tab === 'ombor') {
         const list = data.accessories || [];
 
         // Bo'limlar bo'yicha guruhlash
