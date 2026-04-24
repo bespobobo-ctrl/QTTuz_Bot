@@ -26,6 +26,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
     const [activeNetoBatch, setActiveNetoBatch] = useState(null);
     const [editingRoll, setEditingRoll] = useState(null);
     const [rollForm, setRollForm] = useState({ neto: '', en: '', gramaj: '' });
+    const [histFilter, setHistFilter] = useState('all'); // 'all', 'kirim', 'inspect', 'delete'
 
     // Kirim (Yangi Partiya) Formasi uchun state
     const [f, setF] = useState({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg', g: '' });
@@ -1355,92 +1356,129 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
 
             {tab === 'history' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 }}>
-                        <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 10, color: '#4FC3F7' }}>
-                            <History size={26} /> AMALLAR TARIXI
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                        <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 10, color: '#4FC3F7', fontSize: 20 }}>
+                            <History size={24} /> AMALLAR TARIXI
                         </h2>
-                        <div style={{ fontSize: 11, background: 'rgba(79,195,247,0.1)', color: '#4FC3F7', padding: '5px 12px', borderRadius: 20, fontWeight: 'bold' }}>
-                            OXIRGI 100 TA AMAL
-                        </div>
                     </div>
 
-                    <div style={{ display: 'grid', gap: 12 }}>
-                        {(data.whLog || []).map((l, idx) => {
-                            const date = new Date(l.timestamp || l.created_at);
-                            const actionColor =
-                                l.action_type === 'KIRIM' ? '#4FC3F7' :
-                                    l.action_type === 'DELETE' ? '#ff5252' :
-                                        l.action_type === 'VERDICT_CONFIRMED' ? '#81C784' :
-                                            l.action_type === 'BRAK' ? '#ff5252' :
-                                                l.action_type === 'WEIGHT_BRUTO' ? '#FFD700' :
-                                                    l.action_type === 'KONTROLDAN_OTDI' ? '#00e676' :
-                                                        l.action_type === 'INSPECTION_START' ? '#FFAB40' :
-                                                            l.action_type === 'BATCH_COMPLETED' ? '#FFD700' :
-                                                                '#FFAB40';
+                    {/* Filter Tabs */}
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 20, overflowX: 'auto', paddingBottom: 5 }}>
+                        {[
+                            { id: 'all', label: 'HAMMASI', icon: History },
+                            { id: 'kirim', label: 'KIRIM', icon: Download },
+                            { id: 'inspect', label: 'KONTROL', icon: Scale },
+                            { id: 'delete', label: 'O\'CHIRILGAN', icon: Trash2 }
+                        ].map(f => (
+                            <button
+                                key={f.id}
+                                onClick={() => setHistFilter(f.id)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 6,
+                                    padding: '8px 14px', borderRadius: 10, border: 'none',
+                                    fontSize: 10, fontWeight: 'bold', whiteSpace: 'nowrap',
+                                    background: histFilter === f.id ? '#4FC3F7' : 'rgba(255,255,255,0.05)',
+                                    color: histFilter === f.id ? '#000' : '#888',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                <f.icon size={14} /> {f.label}
+                            </button>
+                        ))}
+                    </div>
 
-                            const bId = String(l.batch_id);
-                            const b = batches.find(x => String(x.id) === bId);
+                    <div style={{ display: 'grid', gap: 10 }}>
+                        {(data.whLog || [])
+                            .filter(l => {
+                                if (histFilter === 'all') return true;
+                                if (histFilter === 'kirim') return l.action_type === 'KIRIM';
+                                if (histFilter === 'inspect') return ['INSPECTION_START', 'KONTROLDAN_OTDI', 'BRAK'].includes(l.action_type);
+                                if (histFilter === 'delete') return l.action_type === 'DELETE';
+                                return true;
+                            })
+                            .map((l, idx) => {
+                                const date = new Date(l.timestamp || l.created_at);
+                                const actionColor =
+                                    l.action_type === 'KIRIM' ? '#4FC3F7' :
+                                        l.action_type === 'DELETE' ? '#ff5252' :
+                                            l.action_type === 'VERDICT_CONFIRMED' ? '#81C784' :
+                                                l.action_type === 'BRAK' ? '#ff5252' :
+                                                    l.action_type === 'WEIGHT_BRUTO' ? '#FFD700' :
+                                                        l.action_type === 'KONTROLDAN_OTDI' ? '#00e676' :
+                                                            l.action_type === 'INSPECTION_START' ? '#FFAB40' :
+                                                                l.action_type === 'BATCH_COMPLETED' ? '#FFD700' :
+                                                                    '#FFAB40';
 
-                            return (
-                                <motion.div
-                                    key={l.id}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: idx * 0.02 }}
-                                    style={{
-                                        ...S.card,
-                                        padding: '12px 16px',
-                                        borderLeft: `3px solid ${actionColor}`,
-                                        background: 'rgba(255,255,255,0.02)',
-                                        marginBottom: 0
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                                <b style={{ color: actionColor, textTransform: 'uppercase', fontSize: 10, letterSpacing: 0.5 }}>
-                                                    {l.action_type?.replace(/_/g, ' ')}
-                                                </b>
-                                                <span style={{ fontSize: 10, color: '#555' }}>•</span>
-                                                <span style={{ fontSize: 10, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                    <Clock size={10} /> {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
+                                const bId = String(l.batch_id);
+                                const b = batches.find(x => String(x.id) === bId);
 
-                                            <div style={{ fontWeight: '600', color: '#eee', marginBottom: 2, fontSize: 13 }}>
-                                                {l.item_name}
-                                                {b && (
-                                                    <span style={{ marginLeft: 8, color: '#4FC3F7', fontSize: 10, background: 'rgba(79,195,247,0.1)', padding: '1px 5px', borderRadius: 4 }}>
-                                                        {b.batch_number}
+                                return (
+                                    <motion.div
+                                        key={l.id}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: Math.min(idx * 0.02, 0.5) }}
+                                        style={{
+                                            ...S.card,
+                                            padding: '14px',
+                                            borderLeft: `4px solid ${actionColor}`,
+                                            background: 'rgba(255,255,255,0.03)',
+                                            marginBottom: 0
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                                                    <b style={{ color: actionColor, textTransform: 'uppercase', fontSize: 9, letterSpacing: 0.5 }}>
+                                                        {l.action_type?.replace(/_/g, ' ')}
+                                                    </b>
+                                                    <span style={{ fontSize: 9, color: '#444' }}>•</span>
+                                                    <span style={{ fontSize: 10, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                        <Clock size={10} /> {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
+                                                </div>
+
+                                                <div style={{ fontWeight: 'bold', color: '#fff', marginBottom: 4, fontSize: 14 }}>
+                                                    {l.item_name}
+                                                </div>
+
+                                                {b && (
+                                                    <div style={{ fontSize: 11, color: '#888', display: 'flex', gap: 8 }}>
+                                                        <span style={{ color: '#4FC3F7' }}>#{b.batch_number}</span>
+                                                        <span>{b.fabric_name} • {b.color}</span>
+                                                    </div>
                                                 )}
                                             </div>
 
-                                            {b && (
-                                                <div style={{ fontSize: 11, color: '#555' }}>
-                                                    {b.fabric_name} • {b.color}
+                                            <div style={{ textAlign: 'right', minWidth: 70 }}>
+                                                {l.quantity && (
+                                                    <div style={{ fontWeight: '900', fontSize: 16, color: actionColor }}>
+                                                        {Number(l.quantity).toFixed(1)}
+                                                        <small style={{ fontSize: 9, marginLeft: 2, fontWeight: 'normal', color: '#666' }}>
+                                                            {b?.color_code === 'meter' ? 'm' : 'kg'}
+                                                        </small>
+                                                    </div>
+                                                )}
+                                                <div style={{ fontSize: 9, color: '#444', marginTop: 4 }}>
+                                                    {date.toLocaleDateString()}
                                                 </div>
-                                            )}
-                                        </div>
-
-                                        <div style={{ textAlign: 'right', minWidth: 70 }}>
-                                            {l.quantity && (
-                                                <div style={{ fontWeight: '800', fontSize: 15, color: actionColor }}>
-                                                    {Number(l.quantity).toFixed(1)}
-                                                    <small style={{ fontSize: 9, marginLeft: 2, fontWeight: 'normal', color: '#444' }}>
-                                                        {b?.color_code === 'meter' ? 'm' : 'kg'}
-                                                    </small>
-                                                </div>
-                                            )}
-                                            <div style={{ fontSize: 9, color: '#333', marginTop: 2 }}>
-                                                {date.toLocaleDateString()}
                                             </div>
                                         </div>
-                                    </div>
-                                </motion.div>
-                            );
-                        })}
-                        {(data.whLog || []).length === 0 && <div style={{ textAlign: 'center', padding: 40, opacity: 0.3 }}>Hali hech qanday amal yo'q</div>}
+                                    </motion.div>
+                                );
+                            })}
+                        {((data.whLog || []).filter(l => {
+                            if (histFilter === 'all') return true;
+                            if (histFilter === 'kirim') return l.action_type === 'KIRIM';
+                            if (histFilter === 'inspect') return ['INSPECTION_START', 'KONTROLDAN_OTDI', 'BRAK'].includes(l.action_type);
+                            if (histFilter === 'delete') return l.action_type === 'DELETE';
+                            return true;
+                        })).length === 0 && (
+                                <div style={{ textAlign: 'center', padding: 60, background: 'rgba(255,255,255,0.01)', borderRadius: 20 }}>
+                                    <History size={40} color="#222" style={{ marginBottom: 15 }} />
+                                    <div style={{ color: '#555', fontSize: 14 }}>Ushbu turdagi amallar topilmadi</div>
+                                </div>
+                            )}
                     </div>
                 </motion.div>
             )}
