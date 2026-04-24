@@ -120,7 +120,10 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
             setF({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg', g: '' });
             setIsEdit(false);
             setEditID(null);
-        } catch (e) { showMsg('Xato yuz berdi', 'err'); }
+        } catch (e) {
+            console.error("Kirim error:", e);
+            showMsg('Xato: ' + (e.message || 'Baza bilan ulanishda xato'), 'err');
+        }
     };
 
     const handleDeleteBatch = async (id, bn) => {
