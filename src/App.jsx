@@ -52,7 +52,7 @@ export default function App() {
       const [wb, wr, wl, dl, wo, settings] = await Promise.all([
         supabase.from('warehouse_batches').select('*').order('id', { ascending: false }),
         supabase.from('warehouse_rolls').select('*').order('created_at', { ascending: false }),
-        supabase.from('warehouse_log').select('*').order('created_at', { ascending: false }).limit(100),
+        supabase.from('warehouse_log').select('*').order('created_at', { ascending: false }).limit(300),
         supabase.from('department_logins').select('*'),
         supabase.from('warehouse_orders').select('*').order('created_at', { ascending: false }),
         supabase.from('system_config').select('value').eq('key', 'app_version').single()

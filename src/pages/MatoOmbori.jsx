@@ -1391,11 +1391,12 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                     <div style={{ display: 'grid', gap: 10 }}>
                         {(data.whLog || [])
                             .filter(l => {
-                                if (!l) return false;
+                                if (!l || !l.action_type) return false;
+                                const type = l.action_type.toUpperCase();
                                 if (histFilter === 'all') return true;
-                                if (histFilter === 'kirim') return l.action_type === 'KIRIM';
-                                if (histFilter === 'inspect') return ['INSPECTION_START', 'KONTROLDAN_OTDI', 'BRAK'].includes(l.action_type);
-                                if (histFilter === 'delete') return l.action_type === 'DELETE';
+                                if (histFilter === 'kirim') return type === 'KIRIM';
+                                if (histFilter === 'inspect') return ['INSPECTION_START', 'KONTROLDAN_OTDI', 'BRAK', 'WEIGHT_NETO'].includes(type);
+                                if (histFilter === 'delete') return type === 'DELETE';
                                 return true;
                             })
                             .map((l, idx) => {
