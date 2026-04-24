@@ -289,8 +289,8 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                                                         {isLow && <div style={{ background: '#ff5252', color: '#fff', fontSize: 9, padding: '2px 8px', borderRadius: 20, fontWeight: '900' }}>KAM QOLDI!</div>}
                                                     </div>
                                                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                                                        <span style={{ fontSize: 10, background: 'rgba(186,104,200,0.1)', color: '#BA68C8', padding: '3px 8px', borderRadius: 6, fontWeight: '800' }}>{it.target_dept.toUpperCase()}</span>
-                                                        <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', padding: '3px 8px', borderRadius: 6, fontWeight: '800' }}>{it.category || 'Boshqa'}</span>
+                                                        <span style={{ fontSize: 10, background: 'rgba(186,104,200,0.1)', color: '#BA68C8', padding: '3px 8px', borderRadius: 6, fontWeight: '800' }}>{(it.target_dept || 'Boshqa').toUpperCase()}</span>
+                                                        <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', padding: '3px 8px', borderRadius: 6, fontWeight: '800' }}>{it.category || 'Aksesuar'}</span>
                                                     </div>
                                                 </div>
                                                 <div style={{ textAlign: 'right' }}>
