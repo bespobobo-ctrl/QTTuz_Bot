@@ -367,6 +367,88 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
         }
     };
 
+    // activeRoll — GLOBAL tekshiruv formasi, barcha tablardan oldin ko'rinadi
+    if (activeRoll) {
+        return (
+            <div style={{ position: 'fixed', inset: 0, background: '#0a0a14', zIndex: 10000, padding: 20, overflowY: 'auto' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                    <h2 style={{ margin: 0 }}>Rulon Tekshiruvi</h2>
+                    <button onClick={() => setActiveRoll(null)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: 16 }}>YOPISH</button>
+                </div>
+
+                <div style={S.card}>
+                    <h2 style={{ marginTop: 0, color: '#00e676' }}>{activeRoll.color_code === 'meter' ? 'Metirni Tekshiring 📏' : 'Rulonni Taroziga Qo\'ying ⚖️'}</h2>
+                    <p style={{ fontSize: 14, color: '#888' }}>Partiya: <b>{activeRoll.batch_number || activeBatch?.batch_number}</b> | {activeRoll.color_code === 'meter' ? 'Kelgan metir' : 'Bruto'}: <b style={{ color: '#fff' }}>{activeRoll.bruto} {activeRoll.color_code || 'kg'}</b></p>
+
+                    <p style={{ color: '#888', fontSize: 11, fontWeight: 'bold', marginTop: 20, textTransform: 'uppercase' }}>{activeRoll.color_code === 'meter' ? 'HAQIQIY METIR' : 'O\'LCHAMLAR VA NETO VAZN'}</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 10 }}>
+                        <div>
+                            <span style={{ fontSize: 11, color: '#00e676', fontWeight: 'bold' }}>{activeRoll.color_code === 'meter' ? 'Haqiqiy metir' : 'Neto vazn (KG)'}</span>
+                            <input style={{ ...S.input, borderColor: '#00e676' }} type="number" placeholder={activeRoll.color_code === 'meter' ? "Metitni kiriting" : "Neto kg"} value={inspectForm.neto} onChange={e => setInspectForm({ ...inspectForm, neto: e.target.value })} />
+                        </div>
+                        <div>
+                            <span style={{ fontSize: 11, color: '#555' }}>Eni (sm)</span>
+                            <input style={S.input} type="number" placeholder="180" value={inspectForm.en} onChange={e => setInspectForm({ ...inspectForm, en: e.target.value })} />
+                        </div>
+                    </div>
+
+                    <div>
+                        <span style={{ fontSize: 11, color: '#555' }}>Gramaj</span>
+                        <input style={S.input} placeholder="160-170" value={inspectForm.gramaj} onChange={e => setInspectForm({ ...inspectForm, gramaj: e.target.value })} />
+                    </div>
+
+                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                        <span style={{ fontSize: 11, color: '#888' }}>{activeRoll.color_code === 'meter' ? 'FARQ:' : 'AVTOMATIK TARA:'}</span>
+                        <b style={{ color: '#ff9800' }}>{(activeRoll.bruto - Number(inspectForm.neto)).toFixed(2)} {activeRoll.color_code || 'kg'}</b>
+                    </div>
+
+                    <p style={{ color: '#888', fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' }}>NUQSONLARNI SANASH (Limit: 12)</p>
+                    <div style={{ display: 'grid', gap: 8 }}>
+                        {Object.entries(inspectForm.defects).map(([d, count]) => (
+                            <div key={d} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: 12 }}>
+                                <span style={{ fontSize: 14 }}>{d}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <button onClick={() => updateDefect(d, -1)} style={S.counterBtn}><Minus size={14} /></button>
+                                    <b style={{ minWidth: 20, textAlign: 'center', color: count > 0 ? '#E57373' : '#fff' }}>{count}</b>
+                                    <button onClick={() => updateDefect(d, 1)} style={S.counterBtn}><Plus size={14} /></button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div style={{ marginTop: 20, padding: 12, background: 'rgba(229, 115, 115, 0.1)', borderRadius: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, fontWeight: 'bold' }}>JAMI AYBLAR:</span>
+                        <b style={{ fontSize: 18, color: '#E57373' }}>{Object.values(inspectForm.defects).reduce((a, b) => a + b, 0)} / 12</b>
+                    </div>
+
+                    <p style={{ color: '#888', fontSize: 11, fontWeight: 'bold', marginTop: 20, textTransform: 'uppercase' }}>FOTO TASDIQ</p>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
+                        {images.map((img, i) => (
+                            <img key={i} src={img} style={{ width: 60, height: 60, borderRadius: 10, objectFit: 'cover' }} alt="Defect" />
+                        ))}
+                        <label style={{ width: 60, height: 60, background: '#1a1a2e', border: '1px dashed #2a2a40', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                            <Camera size={20} color="#555" />
+                            <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleImage} />
+                        </label>
+                    </div>
+
+                    <button
+                        disabled={isSaving}
+                        onClick={handleInspect}
+                        style={{
+                            ...S.btn,
+                            background: isSaving ? '#555' : (Object.values(inspectForm.defects).reduce((a, b) => a + b, 0) >= 12 ? '#E57373' : '#00e676'),
+                            color: '#000',
+                            opacity: isSaving ? 0.7 : 1
+                        }}
+                    >
+                        {isSaving ? 'SAQLANMOQDA...' : (Object.values(inspectForm.defects).reduce((a, b) => a + b, 0) >= 12 ? 'BRAK SIFATIDA SAQLASH ❌' : 'TEKSHIRUVDAN O\'TKAZISH ✅')}
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     if (tab === 'scan') {
         return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -575,86 +657,6 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                         })
                     )}
                 </motion.div>
-            )}
-
-            {activeRoll && (
-                <div style={{ position: 'fixed', inset: 0, background: '#0a0a14', zIndex: 10000, padding: 20, overflowY: 'auto' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                        <h2 style={{ margin: 0 }}>Rulon Tekshiruvi</h2>
-                        <button onClick={() => setActiveRoll(null)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: 16 }}>YOPISH</button>
-                    </div>
-
-                    <div style={S.card}>
-                        <h2 style={{ marginTop: 0, color: '#00e676' }}>{activeRoll.color_code === 'meter' ? 'Metirni Tekshiring 📏' : 'Rulonni Taroziga Qo\'ying ⚖️'}</h2>
-                        <p style={{ fontSize: 14, color: '#888' }}>Partiya: <b>{activeBatch?.batch_number}</b> | {activeRoll.color_code === 'meter' ? 'Kelgan metir' : 'Bruto'}: <b style={{ color: '#fff' }}>{activeRoll.bruto} {activeRoll.color_code || 'kg'}</b></p>
-
-                        <p style={{ color: '#888', fontSize: 11, fontWeight: 'bold', marginTop: 20, textTransform: 'uppercase' }}>{activeRoll.color_code === 'meter' ? 'HAQIQIY METIR' : 'O\'LCHAMLAR VA NETO VAZN'}</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 10 }}>
-                            <div>
-                                <span style={{ fontSize: 11, color: '#00e676', fontWeight: 'bold' }}>{activeRoll.color_code === 'meter' ? 'Haqiqiy metir' : 'Neto vazn (KG)'}</span>
-                                <input style={{ ...S.input, borderColor: '#00e676' }} type="number" placeholder={activeRoll.color_code === 'meter' ? "Metitni kiriting" : "Neto kg"} value={inspectForm.neto} onChange={e => setInspectForm({ ...inspectForm, neto: e.target.value })} />
-                            </div>
-                            <div>
-                                <span style={{ fontSize: 11, color: '#555' }}>Eni (sm)</span>
-                                <input style={S.input} type="number" placeholder="180" value={inspectForm.en} onChange={e => setInspectForm({ ...inspectForm, en: e.target.value })} />
-                            </div>
-                        </div>
-
-                        <div>
-                            <span style={{ fontSize: 11, color: '#555' }}>Gramaj</span>
-                            <input style={S.input} placeholder="160-170" value={inspectForm.gramaj} onChange={e => setInspectForm({ ...inspectForm, gramaj: e.target.value })} />
-                        </div>
-
-                        <div style={{ background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                            <span style={{ fontSize: 11, color: '#888' }}>{activeRoll.color_code === 'meter' ? 'FARQ:' : 'AVTOMATIK TARA:'}</span>
-                            <b style={{ color: '#ff9800' }}>{(activeRoll.bruto - Number(inspectForm.neto)).toFixed(2)} {activeRoll.color_code || 'kg'}</b>
-                        </div>
-
-                        <p style={{ color: '#888', fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' }}>NUQSONLARNI SANASH (Limit: 12)</p>
-                        <div style={{ display: 'grid', gap: 8 }}>
-                            {Object.entries(inspectForm.defects).map(([d, count]) => (
-                                <div key={d} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: 12 }}>
-                                    <span style={{ fontSize: 14 }}>{d}</span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <button onClick={() => updateDefect(d, -1)} style={S.counterBtn}><Minus size={14} /></button>
-                                        <b style={{ minWidth: 20, textAlign: 'center', color: count > 0 ? '#E57373' : '#fff' }}>{count}</b>
-                                        <button onClick={() => updateDefect(d, 1)} style={S.counterBtn}><Plus size={14} /></button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div style={{ marginTop: 20, padding: 12, background: 'rgba(229, 115, 115, 0.1)', borderRadius: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: 12, fontWeight: 'bold' }}>JAMI AYBLAR:</span>
-                            <b style={{ fontSize: 18, color: '#E57373' }}>{Object.values(inspectForm.defects).reduce((a, b) => a + b, 0)} / 12</b>
-                        </div>
-
-                        <p style={{ color: '#888', fontSize: 11, fontWeight: 'bold', marginTop: 20, textTransform: 'uppercase' }}>FOTO TASDIQ</p>
-                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
-                            {images.map((img, i) => (
-                                <img key={i} src={img} style={{ width: 60, height: 60, borderRadius: 10, objectFit: 'cover' }} alt="Defect" />
-                            ))}
-                            <label style={{ width: 60, height: 60, background: '#1a1a2e', border: '1px dashed #2a2a40', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                <Camera size={20} color="#555" />
-                                <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleImage} />
-                            </label>
-                        </div>
-
-                        <button
-                            disabled={isSaving}
-                            onClick={handleInspect}
-                            style={{
-                                ...S.btn,
-                                background: isSaving ? '#555' : (Object.values(inspectForm.defects).reduce((a, b) => a + b, 0) >= 12 ? '#E57373' : '#00e676'),
-                                color: '#000',
-                                opacity: isSaving ? 0.7 : 1
-                            }}
-                        >
-                            {isSaving ? 'SAQLANMOQDA...' : (Object.values(inspectForm.defects).reduce((a, b) => a + b, 0) >= 12 ? 'BRAK SIFATIDA SAQLASH ❌' : 'TEKSHIRUVDAN O\'TKAZISH ✅')}
-                        </button>
-                        <div style={{ textAlign: 'center', marginTop: 10, fontSize: 10, color: '#333' }}>v1.0.5 - Database Fixed</div>
-                    </div>
-                </div>
             )}
 
             {qrRoll && (
