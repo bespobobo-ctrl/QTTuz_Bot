@@ -89,7 +89,6 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
             }
 
             const { error: logErr } = await supabase.from('warehouse_log').insert({
-                batch_id: activeRoll.batch_id,
                 item_name: finalStatus === 'BRAK'
                     ? `BRAK ANIQLANDI: ${activeRoll.fabric_name} (ROLL-${activeRoll.id})`
                     : `NETO (TAYYOR): ${activeRoll.fabric_name} (ROLL-${activeRoll.id})`,
@@ -510,7 +509,6 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                                         `Bu rulonni tekshiruvga (Kontrolga) kiritasizmi?`,
                                         async () => {
                                             await supabase.from('warehouse_log').insert({
-                                                batch_id: roll.batch_id,
                                                 item_name: `TEKSHIRUV: Rulon #${roll.id} kontrolga olindi`,
                                                 quantity: roll.bruto,
                                                 action_type: 'INSPECTION_START'

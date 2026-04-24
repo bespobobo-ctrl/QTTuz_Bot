@@ -101,7 +101,6 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                 }).eq('id', editID);
                 if (err1) throw err1;
                 await supabase.from('warehouse_log').insert({
-                    batch_id: editID,
                     item_name: `PARTIYA TAHRIRLANDI: #${f.bn} (${f.type} | ${f.c})`,
                     quantity: Number(f.eW),
                     action_type: 'EDIT'
@@ -118,7 +117,6 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                 if (err2) throw err2;
 
                 const { error: logErr } = await supabase.from('warehouse_log').insert({
-                    batch_id: newBatch.id,
                     item_name: `YANGI PARTIYA KIRIM QILINDI: #${f.bn}`,
                     quantity: Number(f.eW),
                     action_type: 'KIRIM'
@@ -174,7 +172,6 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
             }).eq('id', editingRoll.id);
             if (error) throw error;
             await supabase.from('warehouse_log').insert({
-                batch_id: editingRoll.batch_id,
                 item_name: `RULON TAHRIRLANDI: ROLL-${editingRoll.id} (Neto: ${rollForm.neto})`,
                 quantity: Number(rollForm.neto),
                 action_type: 'ROLL_EDIT'
@@ -210,7 +207,6 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
             const isJustFinished = totalBruto >= activeBatch.expected_weight;
 
             await supabase.from('warehouse_log').insert({
-                batch_id: activeBatch.id,
                 item_name: isJustFinished
                     ? `PARTIYA TO'LIQ QABUL QILINDI: ${activeBatch.batch_number}`
                     : `RULON BRUTO: ${activeBatch.batch_number} (#${currentRolls.length + 1})`,
@@ -708,7 +704,6 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     </div>
                                     <button onClick={async () => {
                                         await supabase.from('warehouse_log').insert([{
-                                            batch_id: r.batch_id,
                                             item_name: `BRAK XABAR: ${batch?.supplier_name} - ${r.fabric_name} (${r.color})`,
                                             quantity: r.bruto,
                                             action_type: 'BRAK_REPORT',
@@ -997,7 +992,6 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                                         const { error } = await supabase.from('warehouse_batches').update({ status: 'VERDICT_OMBOR' }).eq('id', activeBatch.id);
                                                         if (error) throw error;
                                                         await supabase.from('warehouse_log').insert({
-                                                            batch_id: activeBatch.id,
                                                             item_name: `VERDICT: OMBOR VAZNI (${totalBrutoKg})`,
                                                             quantity: totalBrutoKg,
                                                             action_type: 'VERDICT_CONFIRMED'
@@ -1016,7 +1010,6 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                                         const { error } = await supabase.from('warehouse_batches').update({ status: 'VERDICT_SUPPLIER' }).eq('id', activeBatch.id);
                                                         if (error) throw error;
                                                         await supabase.from('warehouse_log').insert({
-                                                            batch_id: activeBatch.id,
                                                             item_name: `VERDICT: TAMINOTCHI VAZNI (${activeBatch.expected_weight})`,
                                                             quantity: activeBatch.expected_weight,
                                                             action_type: 'VERDICT_CONFIRMED'
