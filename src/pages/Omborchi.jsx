@@ -256,20 +256,22 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
         );
     };
 
+    const [scanConfirm, setScanConfirm] = useState(null); // {roll, batch} — kontrolga olish so'rovi
+
     const handleScanSuccess = async (decodedText) => {
         let rollId = null;
 
-        // Format 1: ROLL-{id}
+        // Format 1: ROLL-{id} yoki NETO-{id}
         if (decodedText.startsWith('ROLL-')) {
             rollId = decodedText.replace('ROLL-', '');
+        } else if (decodedText.startsWith('NETO-')) {
+            rollId = decodedText.replace('NETO-', '');
         } else {
             // Format 2: JSON {"id":"...","batch":"..."}
             try {
                 const parsed = JSON.parse(decodedText);
                 if (parsed.id) rollId = String(parsed.id);
-            } catch (e) {
-                // JSON emas — noma'lum format
-            }
+            } catch (e) { }
         }
 
         if (!rollId) {
@@ -281,22 +283,34 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
         let found = rolls.find(r => String(r.id) === String(rollId));
 
         if (!found) {
-            // 2. Bazadan qidirish (agar localda hali yo'q bo'lsa)
-            const { data, error } = await supabase
+            // 2. Bazadan qidirish
+            const { data } = await supabase
                 .from('warehouse_rolls')
                 .select('*')
                 .eq('id', rollId)
                 .single();
-
             if (data) found = data;
         }
 
-        if (found) {
-            const b = batches.find(x => String(x.id) === String(found.batch_id));
-            setQrRoll({ ...found, batch_number: b?.batch_number || found.batch_number });
-            showMsg("Rulon aniqlandi ✅");
-        } else {
+        if (!found) {
             showMsg("Rulon topilmadi!", "err");
+            return;
+        }
+
+        const b = batches.find(x => String(x.id) === String(found.batch_id));
+        const fullRoll = { ...found, batch_number: b?.batch_number || found.batch_number };
+
+        if (found.status === 'BRUTO') {
+            // BRUTO rulon — kontrolga olishni so'rash
+            setScanConfirm({ roll: fullRoll, batch: b });
+            showMsg("BRUTO rulon aniqlandi ⚖️");
+        } else if (found.status === 'KONTROLDAN_OTDI' || found.status === 'BRAK') {
+            // NETO yoki BRAK rulon — to'liq pasport ko'rsatish
+            setQrRoll(fullRoll);
+            showMsg("Neto pasport aniqlandi ✅");
+        } else {
+            setQrRoll(fullRoll);
+            showMsg("Rulon aniqlandi ✅");
         }
     };
 
@@ -363,20 +377,131 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
 
                     {!scannerActive ? (
                         <div style={{ display: 'grid', gap: 12 }}>
-                            <button onClick={startScanner} style={{ ...S.btn, background: '#00e676', color: '#000', padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                            <button onClick={startScanner} style={{ ...S.btn, background: '#00e676', color: '#000', padding: 16 }}>
                                 <Camera size={20} /> KAMERANI OCHISH
                             </button>
-                            <label style={{ ...S.btn, background: '#4FC3F7', color: '#000', padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer' }}>
+                            <label style={{ ...S.btn, background: '#4FC3F7', color: '#000', padding: 16, cursor: 'pointer' }}>
                                 <ImageIcon size={20} /> RASMDAN SKANERLASH
                                 <input type="file" accept="image/*" onChange={handleFileScan} style={{ display: 'none' }} />
                             </label>
                         </div>
                     ) : (
-                        <button onClick={stopScanner} style={{ ...S.btn, background: '#ff5252', color: '#fff', marginTop: 15, padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                        <button onClick={stopScanner} style={{ ...S.btn, background: '#ff5252', color: '#fff', marginTop: 15, padding: 16 }}>
                             <X size={20} /> SKAYNERNI TO'XTATISH
                         </button>
                     )}
                 </div>
+
+                {/* BRUTO rulon — Kontrolga olish */}
+                {scanConfirm && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 12000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                        <div style={{ ...S.card, maxWidth: 400, width: '100%', textAlign: 'center', padding: 30 }}>
+                            <Scale size={48} color="#FFD700" style={{ marginBottom: 15 }} />
+                            <h2 style={{ margin: '0 0 10px 0', color: '#FFD700' }}>BRUTO Rulon Aniqlandi!</h2>
+                            <div style={{ background: 'rgba(255,215,0,0.1)', padding: 15, borderRadius: 12, marginBottom: 20, textAlign: 'left' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                                    <span style={{ color: '#888' }}>Partiya:</span>
+                                    <b>{scanConfirm.roll.batch_number}</b>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                                    <span style={{ color: '#888' }}>Mato:</span>
+                                    <b>{scanConfirm.roll.fabric_name} ({scanConfirm.roll.color})</b>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: '#888' }}>Bruto:</span>
+                                    <b style={{ color: '#FFD700', fontSize: 18 }}>{scanConfirm.roll.bruto} {scanConfirm.roll.color_code || 'kg'}</b>
+                                </div>
+                            </div>
+                            <p style={{ color: '#aaa', fontSize: 14, margin: '0 0 20px 0' }}>
+                                Bu matoni <b style={{ color: '#00e676' }}>KONTROLGA</b> olasizmi?
+                            </p>
+                            <div style={{ display: 'grid', gap: 10 }}>
+                                <button onClick={() => {
+                                    setActiveBatch(scanConfirm.batch);
+                                    setActiveRoll(scanConfirm.roll);
+                                    setScanConfirm(null);
+                                }} style={{ ...S.btn, background: '#00e676', color: '#000', padding: 16, fontSize: 16 }}>
+                                    <CheckCircle2 size={20} /> HA, KONTROLGA OLISH
+                                </button>
+                                <button onClick={() => {
+                                    setScanConfirm(null);
+                                }} style={{ ...S.btn, background: '#333', color: '#fff', padding: 14 }}>
+                                    <X size={18} /> YO'Q, BEKOR QILISH
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* QR Neto Passport ko'rsatish */}
+                {qrRoll && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 11000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, overflowY: 'auto' }}>
+                        <div className="printable-passport" style={{ ...S.card, width: '100%', maxWidth: 400, background: '#fff', color: '#000', padding: 30, position: 'relative' }}>
+                            <button onClick={() => setQrRoll(null)} style={{ position: 'absolute', top: 15, right: 15, background: '#eee', border: 'none', borderRadius: '50%', padding: 10, cursor: 'pointer' }}>
+                                <X color="#000" size={24} />
+                            </button>
+
+                            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                                <b style={{ fontSize: 20, color: qrRoll.status === 'BRUTO' ? '#E65100' : (qrRoll.status === 'BRAK' ? '#c62828' : '#2e7d32') }}>
+                                    {qrRoll.status === 'BRUTO' ? '⚖️ BRUTO PASPORT' : (qrRoll.status === 'BRAK' ? '❌ BRAK RULON' : '✅ NETO PASPORT')}
+                                </b>
+                            </div>
+
+                            <div style={{ background: '#f5f5f5', padding: 20, borderRadius: 15, marginBottom: 20, textAlign: 'center' }} className="qr-container">
+                                <QRCodeCanvas value={qrRoll.status === 'KONTROLDAN_OTDI' ? `NETO-${qrRoll.id}` : `ROLL-${qrRoll.id}`} size={180} />
+                                <div style={{ marginTop: 10, fontWeight: 'bold', fontSize: 13 }}>
+                                    {qrRoll.status === 'KONTROLDAN_OTDI' ? `NETO-${qrRoll.id}` : `ROLL-${qrRoll.id}`}
+                                </div>
+                            </div>
+
+                            <div style={{ textAlign: 'left', display: 'grid', gap: 10, fontSize: 14 }}>
+                                <div style={P.row}><span>Partiya:</span> <b>{qrRoll.batch_number}</b></div>
+                                <div style={P.row}><span>Mato:</span> <b>{qrRoll.fabric_name}</b></div>
+                                <div style={P.row}><span>Rangi:</span> <b>{qrRoll.color}</b></div>
+                                <div style={P.row}><span>Bruto:</span> <b>{qrRoll.bruto} {qrRoll.color_code || 'kg'}</b></div>
+                                {qrRoll.neto && <div style={P.row}><span>Neto:</span> <b style={{ color: '#2e7d32' }}>{qrRoll.neto} {qrRoll.color_code || 'kg'}</b></div>}
+                                {qrRoll.tara && <div style={P.row}><span>Tara:</span> <b style={{ color: '#ff5252' }}>{qrRoll.tara} {qrRoll.color_code || 'kg'}</b></div>}
+                                {qrRoll.en && <div style={P.row}><span>Eni:</span> <b>{qrRoll.en} sm</b></div>}
+                                {qrRoll.gramaj && <div style={P.row}><span>Gramaj:</span> <b>{qrRoll.gramaj}</b></div>}
+                                {qrRoll.neto_date && <div style={P.row}><span>Sana:</span> <b>{new Date(qrRoll.neto_date).toLocaleString()}</b></div>}
+                                <div style={P.row}><span>Holat:</span>
+                                    <b style={{ color: qrRoll.status === 'KONTROLDAN_OTDI' ? '#2e7d32' : (qrRoll.status === 'BRAK' ? '#c62828' : '#E65100') }}>
+                                        {qrRoll.status === 'KONTROLDAN_OTDI' ? 'TEKSHIRILGAN ✅' : (qrRoll.status === 'BRAK' ? 'BRAK ❌' : 'BRUTO ⚖️')}
+                                    </b>
+                                </div>
+
+                                {qrRoll.defects && (() => {
+                                    const defects = typeof qrRoll.defects === 'string' ? JSON.parse(qrRoll.defects) : qrRoll.defects;
+                                    const hasDefects = Object.values(defects).some(v => v > 0);
+                                    return (
+                                        <div style={{ marginTop: 10, borderTop: '1px solid #ddd', paddingTop: 10 }}>
+                                            <span style={{ fontSize: 11, color: '#666' }}>NUQSONLAR:</span>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 5 }}>
+                                                {Object.entries(defects).map(([d, c]) => c > 0 && (
+                                                    <span key={d} style={{ background: '#ffebee', color: '#c62828', padding: '2px 8px', borderRadius: 5, fontSize: 11 }}>{d}: {c}</span>
+                                                ))}
+                                                {!hasDefects && <span style={{ color: '#2e7d32', fontSize: 12 }}>Nuqsonlar yo'q ✅</span>}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
+                            <button onClick={() => window.print()} style={{ ...S.btn, background: '#000', color: '#fff', marginTop: 20 }} className="hide-on-print">
+                                <Printer size={18} /> PASPORTNI CHOP ETISH
+                            </button>
+                        </div>
+                        <style>{`
+                            @media print {
+                                body * { visibility: hidden; }
+                                .printable-passport, .printable-passport * { visibility: visible; }
+                                .hide-on-print { display: none !important; }
+                                .printable-passport { position: absolute; left: 0; top: 0; width: 100% !important; box-shadow: none !important; border: none !important; }
+                                .qr-container { background: none !important; padding: 0 !important; }
+                            }
+                        `}</style>
+                    </div>
+                )}
             </motion.div>
         );
     }
@@ -533,56 +658,56 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
             )}
 
             {qrRoll && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 11000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-                    <div className="printable-passport" style={{ ...S.card, width: '100%', maxWidth: 400, background: '#fff', color: '#000', textAlign: 'center', padding: 30, position: 'relative' }}>
-                        <button
-                            onClick={() => setQrRoll(null)}
-                            style={{ position: 'absolute', top: 15, right: 15, background: '#eee', border: 'none', borderRadius: '50%', padding: 10, cursor: 'pointer' }}
-                        >
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 11000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, overflowY: 'auto' }}>
+                    <div className="printable-passport" style={{ ...S.card, width: '100%', maxWidth: 400, background: '#fff', color: '#000', padding: 30, position: 'relative' }}>
+                        <button onClick={() => setQrRoll(null)} style={{ position: 'absolute', top: 15, right: 15, background: '#eee', border: 'none', borderRadius: '50%', padding: 10, cursor: 'pointer' }}>
                             <X color="#000" size={24} />
                         </button>
 
-                        <div style={{ marginBottom: 20 }} className="hide-on-print">
-                            <b style={{ fontSize: 20 }}>MATO PASPORTI</b>
+                        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                            <b style={{ fontSize: 20, color: qrRoll.status === 'BRUTO' ? '#E65100' : (qrRoll.status === 'BRAK' ? '#c62828' : '#2e7d32') }}>
+                                {qrRoll.status === 'BRUTO' ? '⚖️ BRUTO PASPORT' : (qrRoll.status === 'BRAK' ? '❌ BRAK RULON' : '✅ NETO PASPORT')}
+                            </b>
                         </div>
 
-                        <div style={{ background: '#f5f5f5', padding: 20, borderRadius: 15, marginBottom: 20 }} className="qr-container">
-                            <QRCodeCanvas value={`ROLL-${qrRoll.id}`} size={180} />
-                            <div style={{ marginTop: 10, fontWeight: 'bold', fontSize: 13 }}>ID: ROLL-{qrRoll.id}</div>
-                            <div style={{ fontSize: 14, marginTop: 5 }}><b>{qrRoll.batch_number}</b> • {qrRoll.fabric_name} ({qrRoll.color})</div>
-                        </div>
-
-                        <div className="hide-on-print" style={{ textAlign: 'left', display: 'grid', gap: 10, fontSize: 14 }}>
-                            <div style={P.row}><span>{qrRoll.color_code === 'meter' ? 'Kelgan metir:' : 'Bruto vazn:'}</span> <b>{qrRoll.bruto} {qrRoll.color_code || 'kg'}</b></div>
-                            <div style={P.row}><span>{qrRoll.color_code === 'meter' ? 'Haqiqiy metir:' : 'Neto vazn:'}</span> <b style={{ color: '#2e7d32' }}>{qrRoll.neto} {qrRoll.color_code || 'kg'}</b></div>
-                            <div style={P.row}><span>En / Gramaj:</span> <b>{qrRoll.en} sm / {qrRoll.gramaj}</b></div>
-                            <div style={P.row}><span>Sana:</span> <b>{new Date(qrRoll.neto_date).toLocaleString()}</b></div>
-
-                            <div style={{ marginTop: 10, borderTop: '1px solid #ddd', paddingTop: 10 }}>
-                                <span style={{ fontSize: 11, color: '#666' }}>NUQSONLAR:</span>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 5 }}>
-                                    {Object.entries(JSON.parse(qrRoll.defects || '{}')).map(([d, c]) => c > 0 && (
-                                        <span key={d} style={{ background: '#ffebee', color: '#c62828', padding: '2px 8px', borderRadius: 5, fontSize: 11 }}>{d}: {c}</span>
-                                    ))}
-                                    {Object.values(JSON.parse(qrRoll.defects || '{}')).every(c => c === 0) && <span style={{ color: '#2e7d32', fontSize: 12 }}>Nuqsonlar yo'q ✅</span>}
-                                </div>
+                        <div style={{ background: '#f5f5f5', padding: 20, borderRadius: 15, marginBottom: 20, textAlign: 'center' }} className="qr-container">
+                            <QRCodeCanvas value={qrRoll.status === 'KONTROLDAN_OTDI' ? `NETO-${qrRoll.id}` : `ROLL-${qrRoll.id}`} size={180} />
+                            <div style={{ marginTop: 10, fontWeight: 'bold', fontSize: 13 }}>
+                                {qrRoll.status === 'KONTROLDAN_OTDI' ? `NETO-${qrRoll.id}` : `ROLL-${qrRoll.id}`}
                             </div>
                         </div>
 
-                        <button onClick={() => window.print()} style={{ ...S.btn, background: '#000', color: '#fff', marginTop: 30 }} className="hide-on-print">
-                            <Printer size={18} /> QR-KODNI CHIQARISH (PRINT)
+                        <div className="hide-on-print" style={{ textAlign: 'left', display: 'grid', gap: 10, fontSize: 14 }}>
+                            <div style={P.row}><span>Partiya:</span> <b>{qrRoll.batch_number}</b></div>
+                            <div style={P.row}><span>Mato:</span> <b>{qrRoll.fabric_name}</b></div>
+                            <div style={P.row}><span>Rangi:</span> <b>{qrRoll.color}</b></div>
+                            <div style={P.row}><span>Bruto:</span> <b>{qrRoll.bruto} {qrRoll.color_code || 'kg'}</b></div>
+                            {qrRoll.neto && <div style={P.row}><span>Neto:</span> <b style={{ color: '#2e7d32' }}>{qrRoll.neto} {qrRoll.color_code || 'kg'}</b></div>}
+                            {qrRoll.tara && <div style={P.row}><span>Tara:</span> <b style={{ color: '#ff5252' }}>{qrRoll.tara} {qrRoll.color_code || 'kg'}</b></div>}
+                            {qrRoll.en && <div style={P.row}><span>Eni:</span> <b>{qrRoll.en} sm</b></div>}
+                            {qrRoll.gramaj && <div style={P.row}><span>Gramaj:</span> <b>{qrRoll.gramaj}</b></div>}
+                            {qrRoll.neto_date && <div style={P.row}><span>Sana:</span> <b>{new Date(qrRoll.neto_date).toLocaleString()}</b></div>}
+                            <div style={P.row}><span>Holat:</span>
+                                <b style={{ color: qrRoll.status === 'KONTROLDAN_OTDI' ? '#2e7d32' : (qrRoll.status === 'BRAK' ? '#c62828' : '#E65100') }}>
+                                    {qrRoll.status === 'KONTROLDAN_OTDI' ? 'TEKSHIRILGAN ✅' : (qrRoll.status === 'BRAK' ? 'BRAK ❌' : 'BRUTO ⚖️')}
+                                </b>
+                            </div>
+                        </div>
+
+                        <button onClick={() => window.print()} style={{ ...S.btn, background: '#000', color: '#fff', marginTop: 20 }} className="hide-on-print">
+                            <Printer size={18} /> PASPORTNI CHOP ETISH
                         </button>
                     </div>
 
                     <style>{`
-              @media print {
-                body * { visibility: hidden; }
-                .printable-passport, .printable-passport * { visibility: visible; }
-                .hide-on-print { display: none !important; }
-                .printable-passport { position: absolute; left: 0; top: 0; width: 100% !important; box-shadow: none !important; border: none !important; }
-                .qr-container { background: none !important; padding: 0 !important; }
-              }
-            `}</style>
+                        @media print {
+                            body * { visibility: hidden; }
+                            .printable-passport, .printable-passport * { visibility: visible; }
+                            .hide-on-print { display: none !important; }
+                            .printable-passport { position: absolute; left: 0; top: 0; width: 100% !important; box-shadow: none !important; border: none !important; }
+                            .qr-container { background: none !important; padding: 0 !important; }
+                        }
+                    `}</style>
                 </div>
             )}
         </div>
