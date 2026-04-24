@@ -1259,19 +1259,28 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                     })}
 
                     {editingRoll && (
-                        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-                            <div style={{ ...S.card, width: '100%', maxWidth: 400 }}>
-                                <h2 style={{ color: '#4FC3F7', marginBottom: 20 }}>Rulonni Tahrirlash</h2>
-                                <label style={{ fontSize: 12, color: '#888' }}>Neto Vazn:</label>
-                                <input style={S.input} type="number" value={rollForm.neto} onChange={e => setRollForm({ ...rollForm, neto: e.target.value })} />
-                                <label style={{ fontSize: 12, color: '#888' }}>Eni (sm):</label>
-                                <input style={S.input} type="number" value={rollForm.en} onChange={e => setRollForm({ ...rollForm, en: e.target.value })} />
-                                <label style={{ fontSize: 12, color: '#888' }}>Gramaj:</label>
-                                <input style={S.input} value={rollForm.gramaj} onChange={e => setRollForm({ ...rollForm, gramaj: e.target.value })} />
-
-                                <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-                                    <button onClick={handleSaveRollEdit} style={S.primaryBtn}>SAQLASH</button>
-                                    <button onClick={() => setEditingRoll(null)} style={{ ...S.primaryBtn, background: '#333' }}>YOPISH</button>
+                        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                            <div style={{ ...S.card, width: '100%', maxWidth: 400, marginBottom: 0 }}>
+                                <h2 style={{ color: '#4FC3F7', marginBottom: 20, textAlign: 'center' }}>Rulonni Tahrirlash</h2>
+                                <div style={{ display: 'grid', gap: 15 }}>
+                                    <div>
+                                        <label style={{ fontSize: 11, color: '#888', marginBottom: 5, display: 'block' }}>Neto Vazn:</label>
+                                        <input style={{ ...S.input, marginBottom: 0 }} type="number" value={rollForm.neto} onChange={e => setRollForm({ ...rollForm, neto: e.target.value })} />
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                        <div>
+                                            <label style={{ fontSize: 11, color: '#888', marginBottom: 5, display: 'block' }}>Eni (sm):</label>
+                                            <input style={{ ...S.input, marginBottom: 0 }} type="number" value={rollForm.en} onChange={e => setRollForm({ ...rollForm, en: e.target.value })} />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: 11, color: '#888', marginBottom: 5, display: 'block' }}>Gramaj:</label>
+                                            <input style={{ ...S.input, marginBottom: 0 }} value={rollForm.gramaj} onChange={e => setRollForm({ ...rollForm, gramaj: e.target.value })} />
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+                                        <button onClick={() => setEditingRoll(null)} style={{ ...S.primaryBtn, background: '#333', flex: 1 }}>BEKOR</button>
+                                        <button onClick={handleSaveRollEdit} style={{ ...S.primaryBtn, flex: 2 }}>SAQLASH</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
