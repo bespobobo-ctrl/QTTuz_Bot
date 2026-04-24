@@ -394,24 +394,60 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                 );
             case 'scan':
                 return (
-                    <div style={S.page}>
-                        <div style={S.card}>
-                            <ScanUI onScan={(id) => {
-                                const item = (data.accessories || []).find(it => it.id === id);
-                                if (item) setScanRes(item); else showMsg("Topilmadi", "err");
-                            }} />
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={S.page}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 25 }}>
+                            <div style={{ width: 45, height: 45, background: 'rgba(186,104,200,0.1)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Scan size={22} color="#BA68C8" /></div>
+                            <h2 style={{ margin: 0, fontSize: 24, fontWeight: '900' }}>QR Skaner</h2>
                         </div>
-                        {scanRes && (
-                            <div style={S.card}>
-                                <h3>{scanRes.name}</h3>
-                                <div style={{ fontSize: 32, fontWeight: '900' }}>{scanRes.quantity} {scanRes.unit}</div>
-                                <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-                                    <button onClick={() => setAdjModal({ type: 'add', item: scanRes })} style={{ ...S.btn, background: '#00e676' }}>+ QO'SHISH</button>
-                                    <button onClick={() => setAdjModal({ type: 'sub', item: scanRes })} style={{ ...S.btn, background: '#ff5252' }}>- CHIQIM</button>
+
+                        {!scanRes ? (
+                            <div style={{ position: 'relative', borderRadius: 30, overflow: 'hidden', border: '2px solid rgba(186,104,200,0.3)', background: '#12121e' }}>
+                                <ScanUI onScan={(id) => {
+                                    const item = (data.accessories || []).find(it => String(it.id) === String(id));
+                                    if (item) {
+                                        setScanRes(item);
+                                        if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                                    } else {
+                                        showMsg("Mahsulot topilmadi", "err");
+                                    }
+                                }} />
+                                <div style={{ position: 'absolute', bottom: 20, left: 0, right: 0, textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '700' }}>
+                                    MAHSULOT PASPORTIDAGI QR CODNI KO'RSATING
                                 </div>
                             </div>
+                        ) : (
+                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                                <div style={{ ...S.card, textAlign: 'center', padding: '40px 25px', position: 'relative', overflow: 'hidden' }}>
+                                    <div style={{ position: 'absolute', top: -50, right: -50, width: 150, height: 150, background: 'rgba(186,104,200,0.05)', borderRadius: '50%' }}></div>
+                                    <div style={{ width: 80, height: 80, background: 'rgba(0,230,118,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                                        <Package size={40} color="#00e676" />
+                                    </div>
+                                    <h3 style={{ fontSize: 24, fontWeight: '900', margin: '0 0 5px' }}>{scanRes.name}</h3>
+                                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 20 }}>{scanRes.category} | {scanRes.target_dept}</div>
+
+                                    <div style={{ display: 'flex', justifyContent: 'center', gap: 30, marginBottom: 35 }}>
+                                        <div>
+                                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: '800' }}>HOZIRGI QOLDIQ</div>
+                                            <div style={{ fontSize: 32, fontWeight: '1000', color: '#00e676' }}>{scanRes.quantity} <span style={{ fontSize: 14 }}>{scanRes.unit}</span></div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+                                        <button onClick={() => setAdjModal({ type: 'add', item: scanRes })} style={{ ...S.btn, background: '#00e676', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 60, fontSize: 13 }}>
+                                            <PlusCircle size={20} /> KIRIM
+                                        </button>
+                                        <button onClick={() => setAdjModal({ type: 'sub', item: scanRes })} style={{ ...S.btn, background: '#ff5252', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 60, fontSize: 13 }}>
+                                            <MinusCircle size={20} /> CHIQIM
+                                        </button>
+                                    </div>
+
+                                    <button onClick={() => setScanRes(null)} style={{ marginTop: 20, background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: 12, fontWeight: '800', cursor: 'pointer' }}>
+                                        QAYTA SKANERLASH
+                                    </button>
+                                </div>
+                            </motion.div>
                         )}
-                    </div>
+                    </motion.div>
                 );
             case 'history':
                 const logs = data.accessoryLog || [];
@@ -686,26 +722,65 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
 
 function ScanUI({ onScan }) {
     const [scanned, setScanned] = React.useState(false);
+
     React.useEffect(() => {
         let scanner = null;
         const start = async () => {
-            const { Html5QrcodeScanner } = await import('html5-qrcode');
-            scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
-            scanner.render((text) => {
-                if (text.startsWith('AKSESUAR:')) {
-                    onScan(text.split(':')[1]);
-                    setScanned(true);
-                }
-            }, (err) => { });
+            try {
+                const { Html5QrcodeScanner } = await import('html5-qrcode');
+                scanner = new Html5QrcodeScanner("reader", {
+                    fps: 20,
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0
+                }, false);
+
+                scanner.render((text) => {
+                    if (text.startsWith('AKSESUAR:')) {
+                        const id = text.split(':')[1];
+                        onScan(id);
+                        setScanned(true);
+                        if (scanner) scanner.clear().catch(e => { });
+                    }
+                }, (err) => { });
+            } catch (e) {
+                console.error("Scanner error:", e);
+            }
         };
         start();
         return () => { if (scanner) scanner.clear().catch(e => { }); };
     }, [onScan]);
 
     return (
-        <div>
-            <div id="reader" style={{ borderRadius: 20 }}></div>
-            {scanned && <button onClick={() => setScanned(false)}>Qayta skanerlash</button>}
+        <div style={{ position: 'relative', width: '100%', minHeight: 350, background: '#000' }}>
+            <div id="reader" style={{ border: 'none' }}></div>
+
+            {/* Lazer animatsiyasi */}
+            {!scanned && (
+                <motion.div
+                    animate={{ top: ['10%', '90%', '10%'] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                    style={{
+                        position: 'absolute', left: '10%', right: '10%', height: 2,
+                        background: 'linear-gradient(90deg, transparent, #BA68C8, transparent)',
+                        boxShadow: '0 0 15px #BA68C8', zIndex: 10
+                    }}
+                />
+            )}
+
+            {/* Burchak ramkalari */}
+            <div style={{ position: 'absolute', top: 20, left: 20, width: 30, height: 30, borderTop: '4px solid #BA68C8', borderLeft: '4px solid #BA68C8', borderRadius: '8px 0 0 0', zIndex: 11 }}></div>
+            <div style={{ position: 'absolute', top: 20, right: 20, width: 30, height: 30, borderTop: '4px solid #BA68C8', borderRight: '4px solid #BA68C8', borderRadius: '0 8px 0 0', zIndex: 11 }}></div>
+            <div style={{ position: 'absolute', bottom: 20, left: 20, width: 30, height: 30, borderBottom: '4px solid #BA68C8', borderLeft: '4px solid #BA68C8', borderRadius: '0 0 0 8px', zIndex: 11 }}></div>
+            <div style={{ position: 'absolute', bottom: 20, right: 20, width: 30, height: 30, borderBottom: '4px solid #BA68C8', borderRight: '4px solid #BA68C8', borderRadius: '0 0 8px 0', zIndex: 11 }}></div>
+
+            {scanned && (
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}>
+                    <div style={{ width: 60, height: 60, background: '#00e676', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                        <CheckCircle2 color="#fff" size={32} />
+                    </div>
+                    <div style={{ color: '#fff', fontWeight: '900' }}>MUDDATOV ARALASHDI!</div>
+                </div>
+            )}
         </div>
     );
 }
