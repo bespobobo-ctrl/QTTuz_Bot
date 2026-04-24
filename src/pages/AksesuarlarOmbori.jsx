@@ -14,13 +14,10 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
         order_date: new Date().toISOString().split('T')[0], expected_date: ''
     });
     const [kStep, setKStep] = useState('dept'); // dept, mode, form
-    const [kMode, setKMode] = useState('new'); // new, existing
-    const [qrData, setQrData] = useState(null);
-    const [scanRes, setScanRes] = useState(null);
-    const [adjModal, setAdjModal] = useState(null);
-    const [adjVal, setAdjVal] = useState('');
-    const [loading, setLoading] = useState(false);
     const [selDept, setSelDept] = useState('HAMMASI');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [editItem, setEditItem] = useState(null);
+    const [confirmDelete, setConfirmDelete] = useState(null); // ID of item to delete
 
     const DEPTS = [
         'Ombor bo\'limi', 'Bichuv bo\'limi', 'Tasnif', 'Taqsimot',
@@ -116,15 +113,36 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
         setLoading(false);
     };
 
-    const onScan = (code) => {
-        if (!code.startsWith('AKSESUAR:')) return;
-        const id = code.split(':')[1];
-        const item = (data.accessories || []).find(it => it.id === id);
-        if (item) {
-            setScanRes(item);
-        } else {
-            showMsg("Mahsulot topilmadi!", "err");
-        }
+    const handleDelete = async (id) => {
+        setLoading(true);
+        try {
+            const { error } = await supabase.from('accessories').delete().eq('id', id);
+            if (error) throw error;
+            showMsg("Muvaffaqiyatli o'chirildi!");
+            setConfirmDelete(null);
+            load(true);
+        } catch (e) { showMsg(e.message, "err"); }
+        setLoading(false);
+    };
+
+    const handleUpdate = async () => {
+        setLoading(true);
+        try {
+            const { error } = await supabase.from('accessories').update({
+                name: editItem.name,
+                category: editItem.category,
+                unit: editItem.unit,
+                target_dept: editItem.target_dept,
+                color: editItem.color,
+                size: editItem.size,
+                min_quantity: Number(editItem.min_quantity)
+            }).eq('id', editItem.id);
+            if (error) throw error;
+            showMsg("Ma'lumotlar yangilandi!");
+            setEditItem(null);
+            load(true);
+        } catch (e) { showMsg(e.message, "err"); }
+        setLoading(false);
     };
 
     const S = {
@@ -416,7 +434,7 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
         );
     }
 
-    if (tab === 'dashboard' || tab === 'baza' || tab === 'ombor') {
+    if (tab === 'dashboard') {
         const list = data.accessories || [];
         const lowStock = list.filter(i => i.quantity > 0 && i.quantity < (i.min_quantity || 15));
         const critical = list.filter(i => i.quantity > 0 && i.quantity < 5);
@@ -428,8 +446,6 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
             const items = available.filter(it => it.target_dept === d);
             return { name: d, count: items.length, totalQty: items.reduce((a, b) => a + (b.quantity || 0), 0) };
         }).filter(d => d.count > 0);
-
-        const filtered = selDept === 'HAMMASI' ? available : available.filter(i => i.target_dept === selDept);
 
         return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={S.page}>
@@ -526,6 +542,113 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
         );
     }
 
+    if (tab === 'ombor' || tab === 'baza') {
+        const available = (data.accessories || []).filter(i => i.status === 'OMBORDA');
+        const filtered = available.filter(it => {
+            const matchesDept = selDept === 'HAMMASI' || it.target_dept === selDept;
+            const matchesSearch = it.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                it.category?.toLowerCase().includes(searchTerm.toLowerCase());
+            return matchesDept && matchesSearch;
+        });
+
+        return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={S.page}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 25 }}>
+                    <div style={{ width: 45, height: 45, background: 'rgba(186,104,200,0.1)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Package size={22} color="#BA68C8" />
+                    </div>
+                    <h2 style={{ margin: 0, fontSize: 24, fontWeight: '900' }}>Ombor Ro'yxati</h2>
+                </div>
+
+                <div style={{ marginBottom: 20, display: 'grid', gap: 12 }}>
+                    <div style={{ position: 'relative' }}>
+                        <Search style={{ position: 'absolute', left: 15, top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} size={18} />
+                        <input style={{ ...S.input, paddingLeft: 45 }} placeholder="Mahsulot nomi yoki toifasi..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 10, scrollbarWidth: 'none' }}>
+                        {['HAMMASI', ...DEPTS].map(d => (
+                            <button key={d} onClick={() => setSelDept(d)} style={{
+                                padding: '10px 16px',
+                                background: selDept === d ? '#BA68C8' : 'rgba(255,255,255,0.05)',
+                                color: selDept === d ? '#fff' : 'rgba(255,255,255,0.4)',
+                                borderRadius: 12, border: 'none', fontSize: 11, fontWeight: '800', whiteSpace: 'nowrap'
+                            }}>{d}</button>
+                        ))}
+                    </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: 15 }}>
+                    {filtered.length === 0 ? <div style={S.card}>Mahsulot topilmadi</div> : filtered.map(it => (
+                        <motion.div key={it.id} style={{ ...S.card, padding: 20, marginBottom: 0 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 15 }}>
+                                <div>
+                                    <div style={{ fontWeight: '900', fontSize: 18 }}>{it.name}</div>
+                                    <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>{it.target_dept} • {it.category}</div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ fontSize: 22, fontWeight: '1000', color: '#00e676' }}>{it.quantity} <span style={{ fontSize: 12, fontWeight: '500' }}>{it.unit}</span></div>
+                                    {it.color && <div style={{ fontSize: 10, color: '#BA68C8', fontWeight: '800' }}>{it.color.toUpperCase()}</div>}
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 10, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 15 }}>
+                                <button onClick={() => setEditItem(it)} style={{ ...S.btn, height: 40, padding: '0 15px', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 12, flex: 1 }}><Edit3 size={14} /> TAHRIR</button>
+                                <button onClick={() => setConfirmDelete(it.id)} style={{ ...S.btn, height: 40, padding: '0 15px', background: 'rgba(255,82,82,0.1)', color: '#ff5252', fontSize: 12, flex: 1 }}><Trash2 size={14} /> O'CHIRISH</button>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+
+                {/* Edit Modal */}
+                <AnimatePresence>
+                    {editItem && (
+                        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, overflowY: 'auto' }}>
+                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ ...S.card, width: '100%', maxWidth: 500, border: '1.5px solid #BA68C8' }}>
+                                <h3 style={{ margin: '0 0 25px 0', textAlign: 'center', color: '#BA68C8' }}>MAHSULOTNI TAHRIRLASH</h3>
+                                <div style={{ display: 'grid', gap: 15 }}>
+                                    <div><label style={S.label}>Nomi</label><input style={S.input} value={editItem.name} onChange={e => setEditItem({ ...editItem, name: e.target.value })} /></div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                        <div><label style={S.label}>Rangi</label><input style={S.input} value={editItem.color || ''} onChange={e => setEditItem({ ...editItem, color: e.target.value })} /></div>
+                                        <div><label style={S.label}>Hajmi</label><input style={S.input} value={editItem.size || ''} onChange={e => setEditItem({ ...editItem, size: e.target.value })} /></div>
+                                    </div>
+                                    <div>
+                                        <label style={S.label}>Bo'lim</label>
+                                        <select style={S.input} value={editItem.target_dept} onChange={e => setEditItem({ ...editItem, target_dept: e.target.value })}>
+                                            {DEPTS.map(d => <option key={d} value={d}>{d}</option>)}
+                                        </select>
+                                    </div>
+                                    <div><label style={S.label}>Minimal Limit (Alert uchun)</label><input style={S.input} type="number" value={editItem.min_quantity || ''} onChange={e => setEditItem({ ...editItem, min_quantity: e.target.value })} /></div>
+
+                                    <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
+                                        <button onClick={() => setEditItem(null)} style={{ ...S.btn, background: '#333', flex: 1 }}>BEKOR</button>
+                                        <button onClick={handleUpdate} disabled={loading} style={{ ...S.btn, flex: 2 }}>{loading ? 'SAQLANMOQDA...' : 'YANGILASH'}</button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+
+                {/* Delete Confirmation */}
+                {confirmDelete && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                        <div style={{ ...S.card, maxWidth: 350, textAlign: 'center', border: '1.5px solid #ff5252' }}>
+                            <div style={{ width: 60, height: 60, background: 'rgba(255,82,82,0.1)', borderRadius: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                                <Trash2 size={30} color="#ff5252" />
+                            </div>
+                            <h3 style={{ margin: 0 }}>Rostdan o'chirasizmi?</h3>
+                            <p style={{ fontSize: 13, color: '#888', margin: '15px 0 25px' }}>Bu amalni qaytarib bo'lmaydi!</p>
+                            <div style={{ display: 'flex', gap: 12 }}>
+                                <button onClick={() => setConfirmDelete(null)} style={{ ...S.btn, background: '#333', flex: 1 }}>YO'Q</button>
+                                <button onClick={() => handleDelete(confirmDelete)} disabled={loading} style={{ ...S.btn, background: '#ff5252', flex: 1 }}>HA, O'CHIRISH</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </motion.div>
+        );
+    }
     if (tab === 'history') {
         const logs = data.accessoryLog || [];
         return (
