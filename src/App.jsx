@@ -14,7 +14,7 @@ import OmborchiPanel from './pages/Omborchi';
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const VERSION = "17.6 SUPER PRO";
+const VERSION = "17.7 SUPER PRO";
 
 const DEPARTMENTS = [
   { id: 'rahbar', name: 'Rahbar', icon: Shield, color: '#FFD700' },
@@ -50,7 +50,7 @@ export default function App() {
     if (!isSilent) setLoading(true);
     try {
       const [wb, wr, wl, dl, wo, settings] = await Promise.all([
-        supabase.from('warehouse_batches').select('*').order('created_at', { ascending: false }),
+        supabase.from('warehouse_batches').select('*').order('id', { ascending: false }),
         supabase.from('warehouse_rolls').select('*').order('created_at', { ascending: false }),
         supabase.from('warehouse_log').select('*').order('created_at', { ascending: false }).limit(100),
         supabase.from('department_logins').select('*'),
