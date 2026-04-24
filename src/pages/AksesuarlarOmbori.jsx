@@ -8,10 +8,15 @@ import {
 } from 'lucide-react';
 
 export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
-    const [f, setF] = useState({ name: '', cat: 'Tugma', unit: 'dona', qty: '', dept: 'Ombor bo\'limi', status: 'OMBORDA', supplier: '' });
+    const [f, setF] = useState({
+        name: '', cat: 'Tugma', unit: 'dona', qty: '', dept: '', status: 'OMBORDA', supplier: '',
+        color: '', size: '', description: ''
+    });
+    const [kStep, setKStep] = useState('dept'); // dept, mode, form
+    const [kMode, setKMode] = useState('new'); // new, existing
     const [qrData, setQrData] = useState(null);
-    const [scanRes, setScanRes] = useState(null); // Skanerlangan mahsulot
-    const [adjModal, setAdjModal] = useState(null); // { type: 'add'|'sub', item: obj }
+    const [scanRes, setScanRes] = useState(null);
+    const [adjModal, setAdjModal] = useState(null);
     const [adjVal, setAdjVal] = useState('');
     const [loading, setLoading] = useState(false);
     const [selDept, setSelDept] = useState('HAMMASI');
@@ -25,32 +30,55 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
     const CATS_SUGGEST = ['Tugma', 'Zamok', 'Ip', 'Yorliq (Etiketka)', 'Frezilin', 'Qadoq xaltasi', 'Boshqa'];
 
     const handleKirim = async () => {
-        if (!f.name || !f.qty) return showMsg("Barcha maydonlarni to'ldiring", "err");
+        if (kMode === 'new' && (!f.name || !f.qty)) return showMsg("Barcha maydonlarni to'ldiring", "err");
+        if (kMode === 'existing' && (!f.qty)) return showMsg("Miqdorni kiriting", "err");
+
         setLoading(true);
         try {
-            const { data: inserted, error } = await supabase.from('accessories').insert({
-                name: f.name,
-                category: f.cat,
-                unit: f.unit,
-                quantity: Number(f.qty),
-                status: f.status
-            }).select().single();
+            if (kMode === 'existing') {
+                const newQty = (kItem.quantity || 0) + Number(f.qty);
+                const { error: updErr } = await supabase.from('accessories').update({ quantity: newQty }).eq('id', kItem.id);
+                if (updErr) throw updErr;
 
-            if (error) throw error;
+                await supabase.from('accessory_log').insert({
+                    accessory_id: kItem.id,
+                    action_type: 'KIRIM',
+                    quantity: Number(f.qty),
+                    party_number: f.supplier,
+                    notes: `Mavjud mahsulot to'ldirildi: ${kItem.name} (${f.supplier})`
+                });
 
-            await supabase.from('accessories').update({ target_dept: f.dept }).eq('id', inserted.id);
+                showMsg("Muvaffaqiyatli yangilandi!");
+                setQrData({ ...kItem, quantity: f.qty, supplier: f.supplier }); // Show passport for this batch
+            } else {
+                const { data: inserted, error } = await supabase.from('accessories').insert({
+                    name: f.name,
+                    category: f.cat,
+                    unit: f.unit,
+                    quantity: Number(f.qty),
+                    status: f.status,
+                    target_dept: f.dept,
+                    color: f.color,
+                    size: f.size,
+                    description: f.description
+                }).select().single();
 
-            await supabase.from('accessory_log').insert({
-                accessory_id: inserted.id,
-                action_type: f.status === 'KUTILMOQDA' ? 'ORDER' : 'KIRIM',
-                quantity: Number(f.qty),
-                party_number: f.supplier,
-                notes: `${f.status === 'KUTILMOQDA' ? 'Buyurtma' : 'Kirim'}: ${f.name} - ${f.supplier} (${f.dept})`
-            });
+                if (error) throw error;
 
-            showMsg("Muvaffaqiyatli saqlandi!");
-            if (f.status === 'OMBORDA') setQrData({ ...inserted, target_dept: f.dept, supplier: f.supplier });
-            setF(p => ({ ...p, name: '', qty: '', status: 'OMBORDA', supplier: '' }));
+                await supabase.from('accessory_log').insert({
+                    accessory_id: inserted.id,
+                    action_type: f.status === 'KUTILMOQDA' ? 'ORDER' : 'KIRIM',
+                    quantity: Number(f.qty),
+                    party_number: f.supplier,
+                    notes: `Yangi kirim: ${f.name} - ${f.supplier} (${f.dept})`
+                });
+
+                showMsg("Yangi mahsulot saqlandi!");
+                if (f.status === 'OMBORDA') setQrData({ ...inserted, supplier: f.supplier });
+            }
+
+            setF(p => ({ ...p, name: '', qty: '', supplier: '', color: '', size: '', description: '' }));
+            setKStep('dept');
             load(true);
         } catch (e) { showMsg("Xato: " + e.message, "err"); }
         setLoading(false);
@@ -145,99 +173,159 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
         overlay: { position: 'fixed', inset: 0, background: '#fff', zIndex: 99999, overflow: 'auto', padding: 25, color: '#000' }
     };
 
+    const [kItem, setKItem] = useState(null);
+
     if (tab === 'kirim') {
-        return (
-            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} style={S.page}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 30 }}>
-                    <div style={{ width: 56, height: 56, background: 'linear-gradient(135deg, rgba(186,104,200,0.2), rgba(186,104,200,0.05))', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Download size={28} color="#BA68C8" />
+        const renderStep = () => {
+            if (kStep === 'dept') {
+                return (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+                        <h2 style={{ gridColumn: '1/-1', fontSize: 16, color: '#BA68C8', marginBottom: 10 }}>1. BO'LIMNI TANLANG</h2>
+                        {DEPTS.map(d => (
+                            <motion.button key={d} whileTap={{ scale: 0.95 }} onClick={() => { setF({ ...f, dept: d }); setKStep('mode'); }}
+                                style={{ ...S.card, marginBottom: 0, padding: 20, textAlign: 'center', border: '1px solid rgba(186,104,200,0.2)', cursor: 'pointer' }}>
+                                <div style={{ fontSize: 13, fontWeight: '800' }}>{d.toUpperCase()}</div>
+                            </motion.button>
+                        ))}
                     </div>
-                    <div>
-                        <h1 style={{ fontSize: 26, margin: 0, color: '#fff', fontWeight: '900' }}>Kirim Bo'limi</h1>
-                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', fontWeight: '500' }}>Yangi aksesuarlar va buyurtmalarni ro'yxatga olish</div>
-                    </div>
-                </div>
+                );
+            }
 
+            if (kStep === 'mode') {
+                const existingItems = (data.accessories || []).filter(it => it.target_dept === f.dept);
+                return (
+                    <div style={{ display: 'grid', gap: 20 }}>
+                        <h2 style={{ fontSize: 16, color: '#BA68C8' }}>2. MAHSULOT TURINI TANLANG ({f.dept})</h2>
+
+                        <div style={{ display: 'grid', gap: 12 }}>
+                            <motion.button whileTap={{ scale: 0.98 }} onClick={() => { setKMode('new'); setKStep('form'); }}
+                                style={{ ...S.btn, background: 'linear-gradient(90deg, #BA68C8, #9C27B0)' }}>
+                                <PlusCircle size={20} /> YANGI MAHSULOT QO'SHISH
+                            </motion.button>
+
+                            {existingItems.length > 0 && (
+                                <>
+                                    <div style={{ textAlign: 'center', color: '#555', fontSize: 12, margin: '10px 0' }}>YOKI MAHSULOTNI TANLANG</div>
+                                    <div style={{ display: 'grid', gap: 10, maxHeight: 300, overflowY: 'auto' }}>
+                                        {existingItems.map(it => (
+                                            <div key={it.id} onClick={() => { setKItem(it); setKMode('existing'); setKStep('form'); }}
+                                                style={{ ...S.card, marginBottom: 0, padding: 15, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <div style={{ fontWeight: 'bold' }}>{it.name}</div>
+                                                <div style={{ fontSize: 11, color: '#888' }}>Qoldiq: {it.quantity} {it.unit}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        <button onClick={() => setKStep('dept')} style={{ background: 'none', border: 'none', color: '#555', fontSize: 12 }}>← BO'LIMLARGA QAYTISH</button>
+                    </div>
+                );
+            }
+
+            return (
                 <div style={S.card}>
+                    <h2 style={{ fontSize: 18, marginBottom: 25, color: '#00e676', textAlign: 'center' }}>
+                        {kMode === 'new' ? 'YANGI MAHSULOT REGISTRATSIYASI' : `KIRIM: ${kItem.name}`}
+                    </h2>
+
                     <div style={{ display: 'grid', gap: 24 }}>
-                        {/* Row 1: Name & Status */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 18 }}>
-                            <div>
-                                <label style={S.label}><Box size={14} color="#BA68C8" /> Mahsulot Nomi</label>
-                                <input style={S.input} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} placeholder="Masalan: Ip 40/2 Qizil" />
-                            </div>
-                            <div>
-                                <label style={S.label}><Clock size={14} color="#FFAB40" /> Status</label>
-                                <select style={{ ...S.input, color: f.status === 'KUTILMOQDA' ? '#FFAB40' : '#00e676' }} value={f.status} onChange={e => setF({ ...f, status: e.target.value })}>
-                                    <option value="OMBORDA">OMBORDA ✅</option>
-                                    <option value="KUTILMOQDA">KUTILMOQDA ⏳</option>
-                                </select>
-                            </div>
-                        </div>
+                        {kMode === 'new' && (
+                            <>
+                                <div>
+                                    <label style={S.label}><Box size={14} color="#BA68C8" /> Mahsulot Nomi</label>
+                                    <input style={S.input} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} placeholder="Masalan: Ip 40/2" />
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                                    <div>
+                                        <label style={S.label}><Tag size={14} color="#BA68C8" /> Toifasi</label>
+                                        <input list="cats" style={S.input} value={f.cat} onChange={e => setF({ ...f, cat: e.target.value })} placeholder="Toifa..." />
+                                    </div>
+                                    <div>
+                                        <label style={S.label}><Hash size={14} color="#BA68C8" /> O'lchov Birligi</label>
+                                        <select style={S.input} value={f.unit} onChange={e => setF({ ...f, unit: e.target.value })}>
+                                            {UNITS.map(u => <option key={u} value={u}>{u.toUpperCase()}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                                    <div>
+                                        <label style={S.label}><Edit3 size={14} color="#BA68C8" /> Rangi</label>
+                                        <input style={S.input} value={f.color} onChange={e => setF({ ...f, color: e.target.value })} placeholder="Qora, oq..." />
+                                    </div>
+                                    <div>
+                                        <label style={S.label}><Layers size={14} color="#BA68C8" /> Hajmi / Size</label>
+                                        <input style={S.input} value={f.size} onChange={e => setF({ ...f, size: e.target.value })} placeholder="XL, 40/2..." />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={S.label}><History size={14} color="#BA68C8" /> Batafsil Tasnif</label>
+                                    <textarea style={{ ...S.input, height: 80, resize: 'none' }} value={f.description} onChange={e => setF({ ...f, description: e.target.value })} placeholder="Mahsulot haqida qo'shimcha ma'lumot..." />
+                                </div>
+                            </>
+                        )}
 
-                        {/* Row 2: Category & Unit */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 18 }}>
                             <div>
-                                <label style={S.label}><Tag size={14} color="#BA68C8" /> Mahsulot Toifasi</label>
-                                <input list="cats" style={S.input} value={f.cat} onChange={e => setF({ ...f, cat: e.target.value })} placeholder="Toifani yozing..." />
-                                <datalist id="cats">
-                                    {CATS_SUGGEST.map(c => <option key={c} value={c} />)}
-                                </datalist>
-                            </div>
-                            <div>
-                                <label style={S.label}><Hash size={14} color="#BA68C8" /> O'lchov Birligi</label>
-                                <select style={S.input} value={f.unit} onChange={e => setF({ ...f, unit: e.target.value })}>
-                                    {UNITS.map(u => <option key={u} value={u}>{u.toUpperCase()}</option>)}
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* Row 3: Supplier (Taminochi) - NEW */}
-                        <div>
-                            <label style={S.label}><MapPin size={14} color="#BA68C8" /> Taminochi (Yetkazib beruvchi)</label>
-                            <input style={S.input} value={f.supplier} onChange={e => setF({ ...f, supplier: e.target.value })} placeholder="Kompaniya yoki shaxs nomi..." />
-                        </div>
-
-                        {/* Row 4: Qty & Dept */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: 18 }}>
-                            <div>
-                                <label style={S.label}><Package size={14} color="#BA68C8" /> Miqdori</label>
+                                <label style={S.label}><Package size={14} color="#00e676" /> Miqdori</label>
                                 <input style={S.input} type="number" value={f.qty} onChange={e => setF({ ...f, qty: e.target.value })} placeholder="0" />
                             </div>
                             <div>
-                                <label style={S.label}><ChevronRight size={14} color="#BA68C8" /> Qaysi Bo'limga?</label>
-                                <select style={S.input} value={f.dept} onChange={e => setF({ ...f, dept: e.target.value })}>
-                                    {DEPTS.map(d => <option key={d} value={d}>{d}</option>)}
-                                </select>
+                                <label style={S.label}><MapPin size={14} color="#BA68C8" /> Taminochi</label>
+                                <input style={S.input} value={f.supplier} onChange={e => setF({ ...f, supplier: e.target.value })} placeholder="Taminochi nomi..." />
                             </div>
                         </div>
 
-                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleKirim} disabled={loading}
-                            style={{
-                                ...S.btn, background: f.status === 'KUTILMOQDA' ? 'linear-gradient(135deg, #FF9100, #F57C00)' : S.btn.background,
-                                boxShadow: f.status === 'KUTILMOQDA' ? '0 10px 30px rgba(255, 145, 0, 0.3)' : S.btn.boxShadow
-                            }}>
-                            {loading ? 'YUKLANMOQDA...' : f.status === 'KUTILMOQDA' ? 'BUYURTMANI RO\'YXATGA OLISH' : 'KIRIM QILISH VA PASPORT'}
-                        </motion.button>
+                        <div>
+                            <label style={S.label}><Clock size={14} color="#FFAB40" /> Status</label>
+                            <select style={{ ...S.input, color: f.status === 'KUTILMOQDA' ? '#FFAB40' : '#00e676' }} value={f.status} onChange={e => setF({ ...f, status: e.target.value })}>
+                                <option value="OMBORDA">OMBORDA ✅</option>
+                                <option value="KUTILMOQDA">KUTILMOQDA ⏳</option>
+                            </select>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 12 }}>
+                            <button onClick={() => setKStep('mode')} style={{ ...S.btn, background: '#333', flex: 1 }}>BEKOR</button>
+                            <button onClick={handleKirim} disabled={loading} style={{ ...S.btn, background: '#00e676', flex: 2 }}>
+                                {loading ? 'YUKLANMOQDA...' : 'SAQLASH VA QR'}
+                            </button>
+                        </div>
                     </div>
                 </div>
+            );
+        };
+
+        return (
+            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} style={S.page}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 30 }}>
+                    <div style={{ width: 56, height: 56, background: 'linear-gradient(135deg, rgba(82,255,118,0.2), rgba(82,255,118,0.05))', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Download size={28} color="#00e676" />
+                    </div>
+                    <div>
+                        <h1 style={{ fontSize: 26, margin: 0, color: '#fff', fontWeight: '900' }}>Kirim Qilish</h1>
+                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', fontWeight: '500' }}>Bo'lim va mahsulotni tanlash orqali kirim</div>
+                    </div>
+                </div>
+
+                {renderStep()}
 
                 <AnimatePresence>
                     {qrData && (
                         <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 100 }} style={S.overlay}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40, background: '#fff', padding: 20, borderRadius: 20 }}>
                                 <motion.button whileTap={{ scale: 0.95 }} onClick={() => window.print()} style={{ ...S.btn, width: 'auto', background: '#111', padding: '16px 32px' }}><Printer size={22} /> CHOP ETISH</motion.button>
-                                <motion.button whileTap={{ scale: 0.95 }} onClick={() => setQrData(null)} style={{ background: '#f0f0f0', border: 'none', width: 50, height: 50, borderRadius: 25, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={28} color="#000" /></motion.button>
+                                <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setQrData(null); setKStep('dept'); }} style={{ background: '#f0f0f0', border: 'none', width: 50, height: 50, borderRadius: 25, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={28} color="#000" /></motion.button>
                             </div>
                             <div className="printable-passport" style={{ border: '4px solid #000', padding: 50, borderRadius: 40, textAlign: 'center', maxWidth: 450, margin: '0 auto', background: '#fff' }}>
                                 <div style={{ fontSize: 36, fontWeight: '1000', letterSpacing: 4, marginBottom: 5 }}>AKSESUAR</div>
-                                <div style={{ fontSize: 16, color: '#000', borderBottom: '3px solid #000', display: 'inline-block', paddingBottom: 5, marginBottom: 35, fontWeight: '800' }}>PASPORTI</div>
+                                <div style={{ fontSize: 16, color: '#000', borderBottom: '3px solid #000', display: 'inline-block', paddingBottom: 5, marginBottom: 35, fontWeight: '800' }}>{kMode === 'new' ? 'YANGI PASPORT' : 'KIRIM PASPORTI'}</div>
 
                                 <div style={{ textAlign: 'left', background: '#f5f5f5', padding: 30, borderRadius: 25, marginBottom: 40, border: '1px solid #ddd' }}>
                                     <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}><b>NOMI:</b> <span>{qrData.name}</span></div>
                                     <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}><b>TAMINOCHI:</b> <span>{qrData.supplier || '-'}</span></div>
+                                    {qrData.color && <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}><b>RANGI:</b> <span>{qrData.color}</span></div>}
                                     <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}><b>MIQDORI:</b> <span style={{ fontSize: 28, fontWeight: '900' }}>{qrData.quantity} {qrData.unit}</span></div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#d32f2f', borderTop: '2px dashed #ccc', paddingTop: 15, marginTop: 10 }}><b>MANZIL:</b> <b style={{ fontSize: 18 }}>{qrData.target_dept}</b></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#d32f2f', borderTop: '2px dashed #ccc', paddingTop: 15, marginTop: 10 }}><b>BO'LIM:</b> <b style={{ fontSize: 18 }}>{f.dept}</b></div>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                                     <QRCodeCanvas value={`AKSESUAR:${qrData.id}`} size={240} level="H" includeMargin={true} />
