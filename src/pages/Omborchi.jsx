@@ -257,12 +257,25 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
     };
 
     const handleScanSuccess = async (decodedText) => {
-        if (!decodedText.startsWith('ROLL-')) {
+        let rollId = null;
+
+        // Format 1: ROLL-{id}
+        if (decodedText.startsWith('ROLL-')) {
+            rollId = decodedText.replace('ROLL-', '');
+        } else {
+            // Format 2: JSON {"id":"...","batch":"..."}
+            try {
+                const parsed = JSON.parse(decodedText);
+                if (parsed.id) rollId = String(parsed.id);
+            } catch (e) {
+                // JSON emas — noma'lum format
+            }
+        }
+
+        if (!rollId) {
             showMsg("Noma'lum QR kod!", "err");
             return;
         }
-
-        const rollId = decodedText.replace('ROLL-', '');
 
         // 1. Local ro'yxatdan qidirish
         let found = rolls.find(r => String(r.id) === String(rollId));
