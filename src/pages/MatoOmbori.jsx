@@ -551,7 +551,9 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
                                                 <div style={{ fontSize: 18, fontWeight: 'bold', color: '#81C784' }}>{s.neto.toFixed(1)} {s.unit}</div>
-                                                <div style={{ fontSize: 11, color: '#555' }}>Neto Jami</div>
+                                                <div style={{ fontSize: 10, color: '#ff5252', fontWeight: 'bold' }}>
+                                                    Mato ombori • 17.8 SUPER PRO ⚡
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
