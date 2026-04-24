@@ -12,7 +12,11 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
     const [qrData, setQrData] = useState(null); // qachonki generatsiya bo'lsa
     const [loading, setLoading] = useState(false);
 
-    const DEPTS = ['Bichuv bo\'limi', 'Tikuv bo\'limi', 'Taqsimot', 'Dazmol', 'Qadoqlov'];
+    const DEPTS = [
+        'Ombor bo\'limi', 'Bichuv bo\'limi', 'Tasnif', 'Taqsimot',
+        'Kraska', 'Vishivka', 'Pechat', 'Tikuv bo\'limi',
+        'Eksperimental', 'Dizayn', 'Kadrlar bo\'limi', 'Xo\'jalik bo\'limi'
+    ];
     const UNITS = ['dona', 'pachka', 'kg', 'metr', 'rulon', 'quti'];
     const CATS = ['Tugma', 'Zamok', 'Ip', 'Yorliq (Etiketka)', 'Frezilin', 'Qadoq xaltasi', 'Boshqa'];
 
