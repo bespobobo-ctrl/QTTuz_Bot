@@ -55,23 +55,14 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                 showMsg("Muvaffaqiyatli yangilandi!");
                 setQrData({ ...kItem, quantity: f.qty, supplier: f.supplier });
             } else {
-                const insertData = {
+                const { data: inserted, error } = await supabase.from('accessories').insert({
                     name: f.name,
                     category: f.cat,
                     unit: f.unit,
                     quantity: Number(f.qty),
                     status: f.status,
-                    target_dept: f.dept,
-                    description: f.description,
-                    order_date: f.order_date,
-                    expected_date: f.expected_date
-                };
-
-                // Faqat bazada bo'lsa qo'shamiz (yoki hozircha olib tashlaymiz)
-                // if (f.color) insertData.color = f.color;
-                // if (f.size) insertData.size = f.size;
-
-                const { data: inserted, error } = await supabase.from('accessories').insert(insertData).select().single();
+                    target_dept: f.dept
+                }).select().single();
 
                 if (error) throw error;
 
