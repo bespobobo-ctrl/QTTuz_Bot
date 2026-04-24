@@ -58,48 +58,42 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
     const S = {
         page: { paddingBottom: 80 },
         card: {
-            background: 'rgba(30, 31, 55, 0.7)',
-            backdropFilter: 'blur(16px)',
-            padding: '28px 24px',
-            borderRadius: 28,
-            border: '1px solid rgba(255,255,255,0.1)',
-            boxShadow: '0 15px 45px rgba(0,0,0,0.45)',
-            marginBottom: 24,
-            overflow: 'hidden'
+            background: '#1a1a2e',
+            padding: '24px 20px',
+            borderRadius: 22,
+            border: '1px solid #2a2a40',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            marginBottom: 20
         },
         input: {
             width: '100%',
-            padding: '16px 18px',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 18,
+            padding: '14px 16px',
+            background: '#12121e',
+            border: '1px solid #2a2a40',
+            borderRadius: 14,
             color: '#fff',
             outline: 'none',
             fontSize: 15,
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             boxSizing: 'border-box'
         },
-        label: { fontSize: 11, color: 'rgba(255,255,255,0.45)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 7, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' },
+        label: { fontSize: 11, color: '#888', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, fontWeight: '700', textTransform: 'uppercase' },
         btn: {
-            padding: '18px 24px',
-            background: 'linear-gradient(135deg, #BA68C8 0%, #8E24AA 100%)',
+            padding: '16px 20px',
+            background: '#BA68C8',
             color: '#fff',
-            borderRadius: 20,
+            borderRadius: 14,
             border: 'none',
             fontWeight: '900',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 12,
+            gap: 10,
             cursor: 'pointer',
-            boxShadow: '0 10px 30px rgba(186, 104, 200, 0.35)',
             width: '100%',
-            fontSize: 16,
-            textTransform: 'uppercase',
-            letterSpacing: '1px'
+            fontSize: 15
         },
-        overlay: { position: 'fixed', inset: 0, background: '#fff', zIndex: 100000, overflow: 'auto', padding: 25, color: '#000' }
-    }; // v18.0 ULTRA PREMIUM DEPLOYMENT MARKER
+        overlay: { position: 'fixed', inset: 0, background: '#fff', zIndex: 99999, overflow: 'auto', padding: 25, color: '#000' }
+    };
 
     if (tab === 'kirim') {
         return (
