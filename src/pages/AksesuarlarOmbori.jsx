@@ -13,6 +13,7 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
         color: '', size: '', description: '',
         order_date: new Date().toISOString().split('T')[0], expected_date: ''
     });
+    const [anaTime, setAnaTime] = useState('day'); // day, week, month, year
     const [kStep, setKStep] = useState('dept'); // dept, mode, form
     const [kMode, setKMode] = useState('new'); // new, existing
     const [kItem, setKItem] = useState(null);
@@ -449,101 +450,129 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                         )}
                     </motion.div>
                 );
-            case 'history':
-                const logs = data.accessoryLog || [];
-                const filteredLogs = logs.filter(l => hFilter === 'HAMMASI' || l.action_type === hFilter);
+            case 'orders':
+                // Bu yerda accessories jadvalidagi KUTILMOQDA statusidagi buyurtmalar yoki so'rovlar ko'rinadi
+                const activeOrders = (data.accessories || []).filter(i => i.status === 'KUTILMOQDA');
+                return (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={S.page}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 25 }}>
+                            <div style={{ width: 45, height: 45, background: 'rgba(255,171,64,0.1)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Clock size={22} color="#FFAB40" /></div>
+                            <h2 style={{ margin: 0, fontSize: 24, fontWeight: '900' }}>Kutilayotgan Buyurtmalar</h2>
+                        </div>
 
-                const stats = {
-                    kirim: logs.filter(l => l.action_type === 'KIRIM').reduce((a, b) => a + (b.quantity || 0), 0),
-                    chiqim: logs.filter(l => l.action_type === 'ADJUSTMENT' && l.quantity < 0).reduce((a, b) => a + Math.abs(b.quantity || 0), 0)
+                        {activeOrders.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '60px 0', opacity: 0.3 }}>Foyol buyurtmalar yo'q</div>
+                        ) : (
+                            <div style={{ display: 'grid', gap: 15 }}>
+                                {activeOrders.map(it => (
+                                    <div key={it.id} style={{ ...S.card, marginBottom: 0, border: '1px solid rgba(255,171,64,0.2)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}>
+                                            <div>
+                                                <div style={{ fontSize: 18, fontWeight: '900' }}>{it.name}</div>
+                                                <div style={{ fontSize: 11, color: '#FFAB40' }}>Kutilayotgan sana: {it.expected_date}</div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: 20, fontWeight: '900' }}>{it.quantity} {it.unit}</div>
+                                                <div style={{ fontSize: 10, opacity: 0.5 }}>{it.target_dept}</div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={async () => {
+                                                setLoading(true);
+                                                try {
+                                                    await supabase.from('accessories').update({ status: 'OMBORDA' }).eq('id', it.id);
+                                                    await supabase.from('accessory_log').insert({
+                                                        accessory_id: it.id, action_type: 'KIRIM', quantity: it.quantity,
+                                                        notes: `Buyurtma qabul qilindi: ${it.name} (${it.target_dept} uchun)`
+                                                    });
+                                                    load(true); showMsg("Qabul qilindi!");
+                                                } catch (e) { showMsg(e.message, "err"); }
+                                                setLoading(false);
+                                            }}
+                                            style={{ ...S.btn, background: '#00e676', fontSize: 13 }}
+                                        >
+                                            QABUL QILINDI (OMBORGA KIRIM)
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </motion.div>
+                );
+            case 'analytics':
+                const history = data.accessoryLog || [];
+                const now = new Date();
+
+                const getFilteredLogs = () => {
+                    return history.filter(l => {
+                        const date = new Date(l.created_at);
+                        if (anaTime === 'day') return date.toDateString() === now.toDateString();
+                        if (anaTime === 'week') return (now - date) < 7 * 24 * 60 * 60 * 1000;
+                        if (anaTime === 'month') return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+                        if (anaTime === 'year') return date.getFullYear() === now.getFullYear();
+                        return true;
+                    });
                 };
 
-                const getActionStyle = (type) => {
-                    switch (type) {
-                        case 'KIRIM': return { color: '#00e676', bg: 'rgba(0,230,118,0.1)', icon: <Download size={16} /> };
-                        case 'UPDATE': return { color: '#2575FC', bg: 'rgba(37,117,252,0.1)', icon: <RefreshCcw size={16} /> };
-                        case 'DELETE': return { color: '#ff5252', bg: 'rgba(255,82,82,0.1)', icon: <Trash2 size={16} /> };
-                        case 'ADJUSTMENT': return { color: '#FFAB40', bg: 'rgba(255,171,64,0.1)', icon: <TrendingUp size={16} /> };
-                        default: return { color: '#888', bg: 'rgba(255,255,255,0.05)', icon: <History size={16} /> };
-                    }
-                };
+                const aLogs = getFilteredLogs();
+                const totalOut = aLogs.filter(l => l.action_type === 'ADJUSTMENT' && l.quantity < 0).reduce((a, b) => a + Math.abs(b.quantity), 0);
+                const totalIn = aLogs.filter(l => l.action_type === 'KIRIM' || l.action_type === 'ORDER').reduce((a, b) => a + b.quantity, 0);
+
+                // Bo'limlar bo'yicha sarf (Chiqim)
+                const usageByDept = {};
+                aLogs.filter(l => l.action_type === 'ADJUSTMENT' && l.quantity < 0).forEach(l => {
+                    const dept = l.notes?.includes('uchun') ? l.notes.split(' uchun')[0].split('(').pop() : 'Boshqa';
+                    usageByDept[dept] = (usageByDept[dept] || 0) + Math.abs(l.quantity);
+                });
 
                 return (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={S.page}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 25 }}>
-                            <div style={{ width: 45, height: 45, background: 'rgba(186,104,200,0.1)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><History size={22} color="#BA68C8" /></div>
-                            <h2 style={{ margin: 0, fontSize: 24, fontWeight: '900' }}>Amallar Tarixi</h2>
+                            <div style={{ width: 45, height: 45, background: 'rgba(37,117,252,0.1)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><TrendingUp size={22} color="#2575FC" /></div>
+                            <h2 style={{ margin: 0, fontSize: 24, fontWeight: '900' }}>Tahlil (Analitika)</h2>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 25 }}>
-                            <div style={{ ...S.card, marginBottom: 0, padding: '15px 20px', border: '1px solid rgba(0,230,118,0.2)', background: 'rgba(0,230,118,0.02)' }}>
-                                <div style={{ fontSize: 10, color: '#00e676', fontWeight: '800', marginBottom: 5 }}>JAMI KIRIM</div>
-                                <div style={{ fontSize: 20, fontWeight: '900', color: '#fff' }}>+{stats.kirim} <span style={{ fontSize: 11, opacity: 0.5 }}>dona</span></div>
-                            </div>
-                            <div style={{ ...S.card, marginBottom: 0, padding: '15px 20px', border: '1px solid rgba(255,82,82,0.2)', background: 'rgba(255,82,82,0.02)' }}>
-                                <div style={{ fontSize: 10, color: '#ff5252', fontWeight: '800', marginBottom: 5 }}>JAMI CHIQUV</div>
-                                <div style={{ fontSize: 20, fontWeight: '900', color: '#fff' }}>-{stats.chiqim} <span style={{ fontSize: 11, opacity: 0.5 }}>dona</span></div>
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 20, paddingBottom: 5 }}>
-                            {['HAMMASI', 'KIRIM', 'ADJUSTMENT', 'UPDATE', 'DELETE'].map(type => (
-                                <button
-                                    key={type}
-                                    onClick={() => setHFilter(type)}
-                                    style={{
-                                        padding: '10px 16px',
-                                        borderRadius: 12,
-                                        border: 'none',
-                                        background: hFilter === type ? '#BA68C8' : '#1a1a2e',
-                                        color: hFilter === type ? '#fff' : '#888',
-                                        whiteSpace: 'nowrap',
-                                        fontSize: 11,
-                                        fontWeight: '800',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    {type === 'ADJUSTMENT' ? 'O\'ZGARISH' : type}
-                                </button>
+                        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 25 }}>
+                            {[
+                                { k: 'day', n: 'BUNUG' }, { k: 'week', n: 'HAFTALIK' }, { k: 'month', n: 'OYLIK' }, { k: 'year', n: 'YILLIK' }
+                            ].map(t => (
+                                <button key={t.k} onClick={() => setAnaTime(t.k)} style={{
+                                    padding: '10px 16px', borderRadius: 12, border: 'none', background: anaTime === t.k ? '#2575FC' : '#1a1a2e', color: anaTime === t.k ? '#fff' : '#888', whiteSpace: 'nowrap', fontSize: 11, fontWeight: '800'
+                                }}>{t.n}</button>
                             ))}
                         </div>
 
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 25 }}>
+                            <div style={{ ...S.card, marginBottom: 0, background: 'rgba(0,230,118,0.05)', border: '1px solid rgba(0,230,118,0.2)' }}>
+                                <div style={{ fontSize: 10, opacity: 0.5, fontWeight: '800' }}>JAMI KIRIM</div>
+                                <div style={{ fontSize: 24, fontWeight: '900', color: '#00e676', marginTop: 5 }}>+{totalIn}</div>
+                            </div>
+                            <div style={{ ...S.card, marginBottom: 0, background: 'rgba(255,82,82,0.05)', border: '1px solid rgba(255,82,82,0.2)' }}>
+                                <div style={{ fontSize: 10, opacity: 0.5, fontWeight: '800' }}>JAMI SARF</div>
+                                <div style={{ fontSize: 24, fontWeight: '900', color: '#ff5252', marginTop: 5 }}>-{totalOut}</div>
+                            </div>
+                        </div>
+
+                        <h3 style={{ fontSize: 15, fontWeight: '900', color: 'rgba(255,255,255,0.4)', marginBottom: 20 }}>📊 BO'LIMLAR SARFI</h3>
                         <div style={{ display: 'grid', gap: 12 }}>
-                            {filteredLogs.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.3 }}>
-                                    <Clock size={40} style={{ marginBottom: 10 }} />
-                                    <div>Hozircha ma'lumot yo'q</div>
-                                </div>
+                            {Object.entries(usageByDept).length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '30px', opacity: 0.2 }}>Ma'lumot mavjud emas</div>
                             ) : (
-                                filteredLogs.map(l => {
-                                    const style = getActionStyle(l.action_type);
-                                    return (
-                                        <div key={l.id} style={{ ...S.card, marginBottom: 0, padding: 18, border: `1px solid ${style.bg}` }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                    <div style={{ width: 32, height: 32, borderRadius: 10, background: style.bg, color: style.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                        {style.icon}
-                                                    </div>
-                                                    <div>
-                                                        <div style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>{l.action_type}</div>
-                                                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                            <Clock size={10} /> {new Date(l.created_at).toLocaleString('uz-UZ', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <div style={{ fontSize: 18, fontWeight: '900', color: style.color }}>
-                                                        {l.quantity > 0 ? `+${l.quantity}` : l.quantity}
-                                                    </div>
-                                                    <div style={{ fontSize: 9, opacity: 0.5, fontWeight: '800' }}>MIQDOR</div>
-                                                </div>
-                                            </div>
-                                            <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: 10, fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: '1.4', borderLeft: `3px solid ${style.color}` }}>
-                                                {l.notes}
-                                            </div>
+                                Object.entries(usageByDept).sort((a, b) => b[1] - a[1]).map(([dept, qty]) => (
+                                    <div key={dept} style={{ ...S.card, marginBottom: 0 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ fontWeight: '800' }}>{dept}</div>
+                                            <div style={{ fontSize: 18, fontWeight: '900', color: '#2575FC' }}>{qty} <span style={{ fontSize: 11 }}>ta</span></div>
                                         </div>
-                                    );
-                                })
+                                        <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 10, marginTop: 10, overflow: 'hidden' }}>
+                                            <motion.div
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${(qty / totalOut) * 100}%` }}
+                                                style={{ height: '100%', background: 'linear-gradient(90deg, #2575FC, #6A11CB)', borderRadius: 10 }}
+                                            />
+                                        </div>
+                                    </div>
+                                ))
                             )}
                         </div>
                     </motion.div>

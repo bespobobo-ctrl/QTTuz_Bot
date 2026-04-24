@@ -143,13 +143,15 @@ export default function App() {
         <nav style={S.nav}>
           {[
             { id: 'dashboard', icon: LayoutDashboard, l: user.role === 'omborchi' ? 'Bruto Partiyalar' : 'Asosiy' },
+            ...(user.role === 'aksesuvar_ombori' ? [{ id: 'orders', icon: ShoppingCart, l: 'Buyurtma' }] : []),
             { id: 'scan', icon: Scan, l: 'Skayner' },
             ...(user.role !== 'omborchi' ? [{ id: 'kirim', icon: Download, l: 'Kirim' }] : []),
             { id: 'ombor', icon: Package, l: user.role === 'omborchi' ? 'Tayyor (Dam)' : user.role === 'aksesuvar_ombori' ? 'Ombor' : 'Bruto' },
             ...(user.role === 'mato_ombori' ? [{ id: 'neto', icon: CheckCircle2, l: 'Neto' }] : []),
-            ...(user.role === 'mato_ombori' || user.role === 'aksesuvar_ombori' ? [{ id: 'history', icon: History, l: 'Istoriya' }] : [])
+            ...(user.role === 'mato_ombori' ? [{ id: 'history', icon: History, l: 'Istoriya' }] : []),
+            ...(user.role === 'aksesuvar_ombori' ? [{ id: 'analytics', icon: TrendingUp, l: 'Tahlil' }] : [])
           ].map(x => (
-            <button key={x.id} onClick={() => setTab(x.id)} style={{ ...S.nb, color: tab === x.id ? '#00e676' : '#555' }}>
+            <button key={x.id} onClick={() => setTab(x.id)} style={{ ...S.nb, color: tab === x.id ? (user.role === 'aksesuvar_ombori' ? '#BA68C8' : '#00e676') : '#555' }}>
               <x.icon size={22} /><span style={{ fontSize: 9 }}>{x.l}</span>
             </button>
           ))}
