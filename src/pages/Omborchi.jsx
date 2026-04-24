@@ -513,8 +513,7 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                                                 batch_id: roll.batch_id,
                                                 item_name: `TEKSHIRUV: Rulon #${roll.id} kontrolga olindi`,
                                                 quantity: roll.bruto,
-                                                action_type: 'INSPECTION_START',
-                                                timestamp: new Date().toISOString()
+                                                action_type: 'INSPECTION_START'
                                             });
                                         }
                                     );

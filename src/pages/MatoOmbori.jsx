@@ -104,8 +104,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                     batch_id: editID,
                     item_name: `PARTIYA TAHRIRLANDI: #${f.bn} (${f.type} | ${f.c})`,
                     quantity: Number(f.eW),
-                    action_type: 'EDIT',
-                    timestamp: new Date().toISOString()
+                    action_type: 'EDIT'
                 });
                 showMsg('Partiya muvaffaqiyatli tahrirlandi!');
             } else {
@@ -122,8 +121,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                     batch_id: newBatch.id,
                     item_name: `YANGI PARTIYA KIRIM QILINDI: #${f.bn}`,
                     quantity: Number(f.eW),
-                    action_type: 'KIRIM',
-                    timestamp: new Date().toISOString()
+                    action_type: 'KIRIM'
                 });
                 if (logErr) console.error("Kirim log error:", logErr);
                 await load(true);
@@ -179,8 +177,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                 batch_id: editingRoll.batch_id,
                 item_name: `RULON TAHRIRLANDI: ROLL-${editingRoll.id} (Neto: ${rollForm.neto})`,
                 quantity: Number(rollForm.neto),
-                action_type: 'ROLL_EDIT',
-                timestamp: new Date().toISOString()
+                action_type: 'ROLL_EDIT'
             });
             showMsg("Rulon o'zgartirildi!");
             setEditingRoll(null);
@@ -715,8 +712,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                             item_name: `BRAK XABAR: ${batch?.supplier_name} - ${r.fabric_name} (${r.color})`,
                                             quantity: r.bruto,
                                             action_type: 'BRAK_REPORT',
-                                            user_name: 'Omborchi',
-                                            timestamp: new Date().toISOString()
+                                            user_name: 'Omborchi'
                                         }]);
                                         showMsg('Rahbarga xabar yuborildi!');
                                     }} style={{ ...S.primaryBtn, background: '#ff5252', color: '#fff', marginTop: 15, fontSize: 12 }}>
