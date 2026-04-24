@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeCanvas } from 'qrcode.react';
 import MatoOmboriPanel from './pages/MatoOmbori';
 import OmborchiPanel from './pages/Omborchi';
+import AksesuarlarOmbori from './pages/AksesuarlarOmbori';
 
 const SUPABASE_URL = "https://woonyxwygwwnhnghqihu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvb255eHd5Z3d3bmhuZ2hxaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTk3NTUsImV4cCI6MjA5MjIzNTc1NX0.JmxloO9JSLkrJXY_S1WmWlIecSHqCzq1idygtHhlxwU";
@@ -104,6 +105,7 @@ export default function App() {
       case 'rahbar': return <RahbarPanel data={data} load={load} showMsg={showMsg} />;
       case 'mato_ombori': return <MatoOmboriPanel tab={tab} data={data} load={load} showMsg={showMsg} />;
       case 'omborchi': return <OmborchiPanel tab={tab} data={data} load={load} showMsg={showMsg} />;
+      case 'aksesuvar_ombori': return <AksesuarlarOmbori tab={tab} data={data} load={load} showMsg={showMsg} />;
       default: return <DepartmentPlaceholder name={user.deptName} />;
     }
   };
@@ -137,13 +139,13 @@ export default function App() {
         <nav style={S.nav}>
           {[
             { id: 'dashboard', icon: LayoutDashboard, l: user.role === 'omborchi' ? 'Bruto Partiyalar' : 'Asosiy' },
-            { id: 'scan', icon: Scan, l: 'Skayner' },
+            ...(user.role !== 'aksesuvar_ombori' ? [{ id: 'scan', icon: Scan, l: 'Skayner' }] : []),
             ...(user.role !== 'omborchi' ? [{ id: 'kirim', icon: Download, l: 'Kirim' }] : []),
-            { id: 'ombor', icon: Package, l: user.role === 'omborchi' ? 'Tayyor (Dam)' : 'Bruto' },
-            ...(user.role === 'mato_ombori' ? [
-              { id: 'neto', icon: CheckCircle2, l: 'Neto' },
-              { id: 'history', icon: History, l: 'Istoriya' }
-            ] : [])
+            ...(user.role !== 'aksesuvar_ombori' ? [
+              { id: 'ombor', icon: Package, l: user.role === 'omborchi' ? 'Tayyor (Dam)' : 'Bruto' }
+            ] : []),
+            ...(user.role === 'mato_ombori' ? [{ id: 'neto', icon: CheckCircle2, l: 'Neto' }] : []),
+            ...(user.role === 'mato_ombori' || user.role === 'aksesuvar_ombori' ? [{ id: 'history', icon: History, l: 'Istoriya' }] : [])
           ].map(x => (
             <button key={x.id} onClick={() => setTab(x.id)} style={{ ...S.nb, color: tab === x.id ? '#00e676' : '#555' }}>
               <x.icon size={22} /><span style={{ fontSize: 9 }}>{x.l}</span>
