@@ -4,7 +4,8 @@ import { supabase } from '../lib/supabase';
 import { QRCodeCanvas } from 'qrcode.react';
 import {
     Box, PlusCircle, MinusCircle, Search, History, ChevronRight, Edit3, Trash2, Scan,
-    Calendar, CheckCircle2, Download, Package, Layers, MapPin, Tag, Hash, Printer, X, TrendingUp, AlertTriangle, Clock
+    Calendar, CheckCircle2, Download, Package, Layers, MapPin, Tag, Hash, Printer, X, TrendingUp, AlertTriangle, Clock,
+    RefreshCcw, ShoppingCart
 } from 'lucide-react';
 
 export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {

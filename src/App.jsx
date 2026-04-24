@@ -3,7 +3,7 @@ import {
   Plus, Minus, Scale, Search, CheckCircle2, AlertTriangle, Printer, Layers, Scan,
   ArrowDown, RefreshCcw, LogOut, Package, Download, Upload, LayoutDashboard, X, Trash2,
   Shield, Users, Box, Scissors, Filter, GitBranch, Shirt, CheckCircle, Zap, Archive,
-  Warehouse, ShoppingCart, HardHat, ChevronRight, Lock, Key, Settings, Edit3, History
+  Warehouse, ShoppingCart, HardHat, ChevronRight, Lock, Key, Settings, Edit3, History, TrendingUp
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
