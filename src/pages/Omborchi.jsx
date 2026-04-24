@@ -248,11 +248,32 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
         );
     };
 
-    const handleScanSuccess = (decodedText) => {
+    const handleScanSuccess = async (decodedText) => {
+        if (!decodedText.startsWith('ROLL-')) {
+            showMsg("Noma'lum QR kod!", "err");
+            return;
+        }
+
         const rollId = decodedText.replace('ROLL-', '');
-        const foundRoll = rolls.find(r => r.id === rollId || r.id.toString() === rollId);
-        if (foundRoll) {
-            setQrRoll(foundRoll);
+
+        // 1. Local ro'yxatdan qidirish
+        let found = rolls.find(r => String(r.id) === String(rollId));
+
+        if (!found) {
+            // 2. Bazadan qidirish (agar localda hali yo'q bo'lsa)
+            const { data, error } = await supabase
+                .from('warehouse_rolls')
+                .select('*')
+                .eq('id', rollId)
+                .single();
+
+            if (data) found = data;
+        }
+
+        if (found) {
+            const b = batches.find(x => String(x.id) === String(found.batch_id));
+            setQrRoll({ ...found, batch_number: b?.batch_number || found.batch_number });
+            showMsg("Rulon aniqlandi ✅");
         } else {
             showMsg("Rulon topilmadi!", "err");
         }
