@@ -9,7 +9,7 @@ import {
 
 export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
     const [f, setF] = useState({
-        name: '', cat: 'Tugma', unit: 'dona', qty: '', dept: '', status: 'OMBORDA', supplier: '',
+        name: '', cat: 'Tugma', unit: 'dona', qty: '', dept: '', status: 'OMBORDA', supplier: '', supplier_phone: '',
         color: '', size: '', description: ''
     });
     const [kStep, setKStep] = useState('dept'); // dept, mode, form
@@ -45,7 +45,7 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                     action_type: 'KIRIM',
                     quantity: Number(f.qty),
                     party_number: f.supplier,
-                    notes: `Mavjud mahsulot to'ldirildi: ${kItem.name} (${f.supplier})`
+                    notes: `Mavjud mahsulot to'ldirildi: ${kItem.name} (${f.supplier} tel: ${f.supplier_phone})`
                 });
 
                 showMsg("Muvaffaqiyatli yangilandi!");
@@ -70,14 +70,14 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                     action_type: f.status === 'KUTILMOQDA' ? 'ORDER' : 'KIRIM',
                     quantity: Number(f.qty),
                     party_number: f.supplier,
-                    notes: `Yangi kirim: ${f.name} - ${f.supplier} (${f.dept})`
+                    notes: `Yangi kirim: ${f.name} - ${f.supplier} (${f.supplier_phone}) (${f.dept})`
                 });
 
                 showMsg("Yangi mahsulot saqlandi!");
                 if (f.status === 'OMBORDA') setQrData({ ...inserted, supplier: f.supplier });
             }
 
-            setF(p => ({ ...p, name: '', qty: '', supplier: '', color: '', size: '', description: '' }));
+            setF(p => ({ ...p, name: '', qty: '', supplier: '', supplier_phone: '', color: '', size: '', description: '' }));
             setKStep('dept');
             load(true);
         } catch (e) { showMsg("Xato: " + e.message, "err"); }
@@ -265,15 +265,20 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                             </>
                         )}
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 18 }}>
-                            <div>
-                                <label style={S.label}><Package size={14} color="#00e676" /> Miqdori</label>
-                                <input style={S.input} type="number" value={f.qty} onChange={e => setF({ ...f, qty: e.target.value })} placeholder="0" />
-                            </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
                             <div>
                                 <label style={S.label}><MapPin size={14} color="#BA68C8" /> Taminochi</label>
-                                <input style={S.input} value={f.supplier} onChange={e => setF({ ...f, supplier: e.target.value })} placeholder="Taminochi nomi..." />
+                                <input style={S.input} value={f.supplier} onChange={e => setF({ ...f, supplier: e.target.value })} placeholder="Nomi..." />
                             </div>
+                            <div>
+                                <label style={S.label}><Clock size={14} color="#BA68C8" /> Taminotchi Tel</label>
+                                <input style={S.input} type="tel" value={f.supplier_phone} onChange={e => setF({ ...f, supplier_phone: e.target.value })} placeholder="+998..." />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style={S.label}><Package size={14} color="#00e676" /> Miqdori</label>
+                            <input style={S.input} type="number" value={f.qty} onChange={e => setF({ ...f, qty: e.target.value })} placeholder="0" />
                         </div>
 
                         <div>
@@ -322,7 +327,7 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
 
                                 <div style={{ textAlign: 'left', background: '#f5f5f5', padding: 30, borderRadius: 25, marginBottom: 40, border: '1px solid #ddd' }}>
                                     <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}><b>NOMI:</b> <span>{qrData.name}</span></div>
-                                    <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}><b>TAMINOCHI:</b> <span>{qrData.supplier || '-'}</span></div>
+                                    <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}><b>TAMINOCHI:</b> <span>{qrData.supplier || '-'} {f.supplier_phone && `(${f.supplier_phone})`}</span></div>
                                     {qrData.color && <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}><b>RANGI:</b> <span>{qrData.color}</span></div>}
                                     <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}><b>MIQDORI:</b> <span style={{ fontSize: 28, fontWeight: '900' }}>{qrData.quantity} {qrData.unit}</span></div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', color: '#d32f2f', borderTop: '2px dashed #ccc', paddingTop: 15, marginTop: 10 }}><b>BO'LIM:</b> <b style={{ fontSize: 18 }}>{f.dept}</b></div>
