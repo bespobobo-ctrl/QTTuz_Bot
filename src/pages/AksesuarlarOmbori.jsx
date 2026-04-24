@@ -233,30 +233,117 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                             <div style={{ width: 45, height: 45, background: 'rgba(186,104,200,0.1)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Package size={22} color="#BA68C8" /></div>
                             <h2 style={{ margin: 0, fontSize: 24, fontWeight: '900' }}>Ombor Ro'yxati</h2>
                         </div>
-                        <div style={{ position: 'relative', marginBottom: 15 }}>
+
+                        <div style={{ position: 'relative', marginBottom: 20 }}>
                             <Search style={{ position: 'absolute', left: 15, top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} size={18} />
-                            <input style={{ ...S.input, paddingLeft: 45 }} placeholder="Qidiruv..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                            <input
+                                style={{ ...S.input, paddingLeft: 45, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+                                placeholder="Mahsulot qidirish..."
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                            />
                         </div>
-                        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 25, paddingBottom: 5 }}>
+
+                        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', marginBottom: 25, paddingBottom: 5, paddingLeft: 2 }}>
                             {['HAMMASI', ...DEPTS].map(d => (
                                 <button key={d} onClick={() => setSelDept(d)} style={{
-                                    padding: '10px 16px', borderRadius: 12, border: 'none', background: selDept === d ? '#BA68C8' : '#1a1a2e', color: selDept === d ? '#fff' : '#888', whiteSpace: 'nowrap', fontSize: 11, fontWeight: '800'
-                                }}>{d}</button>
+                                    padding: '12px 20px',
+                                    borderRadius: 14,
+                                    border: 'none',
+                                    background: selDept === d ? '#BA68C8' : 'rgba(255,255,255,0.05)',
+                                    color: selDept === d ? '#fff' : 'rgba(255,255,255,0.4)',
+                                    whiteSpace: 'nowrap',
+                                    fontSize: 12,
+                                    fontWeight: '900',
+                                    boxShadow: selDept === d ? '0 8px 20px rgba(186,104,200,0.3)' : 'none',
+                                    transition: 'all 0.3s'
+                                }}>{d === 'HAMMASI' ? 'BARCHASI' : d.toUpperCase()}</button>
                             ))}
                         </div>
-                        <div style={{ display: 'grid', gap: 15 }}>
-                            {filt.map(it => (
-                                <div key={it.id} style={{ ...S.card, marginBottom: 0 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div><div style={{ fontWeight: '900', fontSize: 18 }}>{it.name}</div><div style={{ fontSize: 11, color: '#888' }}>{it.target_dept}</div></div>
-                                        <div style={{ fontSize: 22, fontWeight: '1000', color: '#00e676' }}>{it.quantity} <span style={{ fontSize: 12 }}>{it.unit}</span></div>
-                                    </div>
-                                    <div style={{ display: 'flex', gap: 10, marginTop: 15, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 15 }}>
-                                        <button onClick={() => setEditItem(it)} style={{ ...S.btn, height: 40, background: '#1a1a2e', border: '1px solid #2a2a40', fontSize: 12, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><Edit3 size={14} /> TAHRIR</button>
-                                        <button onClick={() => setConfirmDelete(it)} style={{ ...S.btn, height: 40, background: 'rgba(255,82,82,0.1)', color: '#ff5252', fontSize: 12, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><Trash2 size={14} /> O'CHIRISH</button>
-                                    </div>
-                                </div>
-                            ))}
+
+                        <div style={{ display: 'grid', gap: 18 }}>
+                            {filt.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '50px 0', opacity: 0.3 }}>Mahsulot topilmadi</div>
+                            ) : (
+                                filt.map((it, idx) => {
+                                    const isLow = it.quantity <= (it.min_quantity || 10);
+                                    return (
+                                        <motion.div
+                                            key={it.id}
+                                            initial={{ opacity: 0, y: 15 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: idx * 0.05 }}
+                                            style={{
+                                                ...S.card,
+                                                marginBottom: 0,
+                                                position: 'relative',
+                                                overflow: 'hidden',
+                                                border: isLow ? '1px solid rgba(255,82,82,0.3)' : S.card.border,
+                                                background: isLow ? 'linear-gradient(135deg, #12121e 0%, rgba(255,82,82,0.05) 100%)' : S.card.background
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                                                        <div style={{ fontWeight: '900', fontSize: 20, color: '#fff' }}>{it.name}</div>
+                                                        {isLow && <div style={{ background: '#ff5252', color: '#fff', fontSize: 9, padding: '2px 8px', borderRadius: 20, fontWeight: '900' }}>KAM QOLDI!</div>}
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                                        <span style={{ fontSize: 10, background: 'rgba(186,104,200,0.1)', color: '#BA68C8', padding: '3px 8px', borderRadius: 6, fontWeight: '800' }}>{it.target_dept.toUpperCase()}</span>
+                                                        <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', padding: '3px 8px', borderRadius: 6, fontWeight: '800' }}>{it.category || 'Boshqa'}</span>
+                                                    </div>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ fontSize: 26, fontWeight: '1000', color: isLow ? '#ff5252' : '#00e676' }}>
+                                                        {it.quantity} <span style={{ fontSize: 12, opacity: 0.6 }}>{it.unit}</span>
+                                                    </div>
+                                                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: '800', marginTop: 2 }}>OMBORDA MAVJUD</div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 20, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 15 }}>
+                                                <button
+                                                    onClick={() => setEditItem(it)}
+                                                    style={{
+                                                        ...S.btn,
+                                                        height: 44,
+                                                        background: 'rgba(255,255,255,0.03)',
+                                                        border: '1px solid rgba(255,255,255,0.08)',
+                                                        color: '#fff',
+                                                        fontSize: 12,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: 6,
+                                                        borderRadius: 12
+                                                    }}
+                                                >
+                                                    <Edit3 size={16} color="#BA68C8" /> TAHRIRLASH
+                                                </button>
+                                                <button
+                                                    onClick={() => setConfirmDelete(it)}
+                                                    style={{
+                                                        ...S.btn,
+                                                        height: 44,
+                                                        background: 'rgba(255,82,82,0.08)',
+                                                        border: 'none',
+                                                        color: '#ff5252',
+                                                        fontSize: 12,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: 6,
+                                                        borderRadius: 12,
+                                                        fontWeight: '900'
+                                                    }}
+                                                >
+                                                    <Trash2 size={16} /> O'CHIRISH
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })
+                            )}
                         </div>
                     </motion.div>
                 );
