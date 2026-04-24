@@ -114,12 +114,12 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                     action_type: 'KIRIM'
                 });
                 if (logErr) console.error("Kirim log error:", logErr);
+                await load(true);
                 showMsg('Yangi partiya muvaffaqiyatli qo\'shildi!');
             }
             setF({ bn: '', eC: '', eW: '', sup: '', c: '', type: '2 IPPL', unit: 'kg', g: '' });
             setIsEdit(false);
             setEditID(null);
-            load(true);
         } catch (e) { showMsg('Xato yuz berdi', 'err'); }
     };
 
@@ -780,8 +780,9 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
             {batches.filter(batch => {
                 const batchRolls = rolls.filter(r => String(r.batch_id) === String(batch.id));
                 const hasBruto = batchRolls.some(r => r.status === 'BRUTO');
-                const isUnfinished = batchRolls.length < (batch.expected_count || 1);
-                return hasBruto || isUnfinished;
+                // Yangi partiya bo'lsa (rulon = 0) yoki tugallanmagan bo'lsa ko'rsatish
+                const isUnfinished = batch.expected_count === 0 || batchRolls.length < (batch.expected_count || 1);
+                return batchRolls.length === 0 || hasBruto || isUnfinished;
             }).map(batch => {
                 const batchRolls = rolls.filter(r => String(r.batch_id) === String(batch.id));
                 const doneCount = batchRolls.length;
