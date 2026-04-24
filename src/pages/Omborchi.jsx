@@ -90,9 +90,11 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
 
             const { error: logErr } = await supabase.from('warehouse_log').insert({
                 batch_id: activeRoll.batch_id,
-                item_name: `INSPEKSIYA: ${finalStatus === 'BRAK' ? 'BRAK' : 'TAYYOR'} (ROLL-${activeRoll.id})`,
+                item_name: finalStatus === 'BRAK'
+                    ? `BRAK ANIQLANDI: ${activeRoll.fabric_name} (ROLL-${activeRoll.id})`
+                    : `NETO (TAYYOR): ${activeRoll.fabric_name} (ROLL-${activeRoll.id})`,
                 quantity: netoValue,
-                action_type: finalStatus
+                action_type: finalStatus === 'BRAK' ? 'BRAK' : 'KONTROLDAN_OTDI'
             });
 
             alert('Muvaffaqiyatli saqlandi! ✅');
@@ -498,10 +500,19 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                                 Bu matoni <b style={{ color: '#00e676' }}>KONTROLGA</b> olasizmi?
                             </p>
                             <div style={{ display: 'grid', gap: 10 }}>
-                                <button onClick={() => {
-                                    setActiveBatch(scanConfirm.batch);
-                                    setActiveRoll(scanConfirm.roll);
+                                <button onClick={async () => {
+                                    const { roll, batch } = scanConfirm;
+                                    setActiveBatch(batch);
+                                    setActiveRoll(roll);
                                     setScanConfirm(null);
+
+                                    // Tarixga yozish
+                                    await supabase.from('warehouse_log').insert({
+                                        batch_id: roll.batch_id,
+                                        item_name: `TEKSHIRUV BOSHLANDI: ${roll.fabric_name}`,
+                                        quantity: roll.bruto,
+                                        action_type: 'INSPECTION_START'
+                                    });
                                 }} style={{ ...S.btn, background: '#00e676', color: '#000', padding: 16, fontSize: 16 }}>
                                     <CheckCircle2 size={20} /> HA, KONTROLGA OLISH
                                 </button>

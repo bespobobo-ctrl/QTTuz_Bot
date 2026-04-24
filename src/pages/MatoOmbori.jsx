@@ -188,11 +188,18 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
             const { data: nr, error } = await supabase.from('warehouse_rolls').insert([payload]).select().single();
             if (error) throw error;
 
+            // Hozirgi partiyadagi barcha rulonlar vazni
+            const currentRolls = rolls.filter(r => String(r.batch_id) === String(activeBatch.id));
+            const totalBruto = currentRolls.reduce((s, r) => s + (Number(r.bruto) || 0), 0) + Number(newRollWeight);
+            const isJustFinished = totalBruto >= activeBatch.expected_weight;
+
             await supabase.from('warehouse_log').insert({
                 batch_id: activeBatch.id,
-                item_name: `RULON BRUTO: ${activeBatch.batch_number}`,
+                item_name: isJustFinished
+                    ? `PARTIYA TO'LIQ QABUL QILINDI: ${activeBatch.batch_number}`
+                    : `RULON BRUTO: ${activeBatch.batch_number} (#${currentRolls.length + 1})`,
                 quantity: Number(newRollWeight),
-                action_type: 'WEIGHT_BRUTO'
+                action_type: isJustFinished ? 'BATCH_COMPLETED' : 'WEIGHT_BRUTO'
             });
 
             setNewRollWeight('');
@@ -1357,7 +1364,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                         </div>
                     </div>
 
-                    <div style={{ display: 'grid', gap: 15 }}>
+                    <div style={{ display: 'grid', gap: 12 }}>
                         {(data.whLog || []).map((l, idx) => {
                             const date = new Date(l.timestamp || l.created_at);
                             const actionColor =
@@ -1365,69 +1372,73 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     l.action_type === 'DELETE' ? '#ff5252' :
                                         l.action_type === 'VERDICT_CONFIRMED' ? '#81C784' :
                                             l.action_type === 'BRAK' ? '#ff5252' :
-                                                l.action_type === 'WEIGHT_BRUTO' ? '#FFAB40' :
+                                                l.action_type === 'WEIGHT_BRUTO' ? '#FFD700' :
                                                     l.action_type === 'KONTROLDAN_OTDI' ? '#00e676' :
-                                                        '#FFAB40';
+                                                        l.action_type === 'INSPECTION_START' ? '#FFAB40' :
+                                                            '#FFAB40';
+
+                            const batch = batches.find(b => String(b.id) === String(l.batch_id));
 
                             return (
                                 <motion.div
                                     key={l.id}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: idx * 0.03 }}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: idx * 0.02 }}
                                     style={{
                                         ...S.card,
-                                        padding: '18px 20px',
-                                        borderLeft: `5px solid ${actionColor}`,
-                                        background: 'linear-gradient(90deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0) 100%)',
-                                        marginBottom: 0
+                                        padding: '12px 16px',
+                                        borderLeft: `3px solid ${actionColor}`,
+                                        background: 'rgba(255,255,255,0.02)',
+                                        marginBottom: 0,
+                                        fontSize: 13
                                     }}
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                        <div style={{ display: 'flex', gap: 15 }}>
-                                            <div style={{
-                                                width: 40, height: 40, borderRadius: 12,
-                                                background: `${actionColor}15`,
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                color: actionColor
-                                            }}>
-                                                {l.action_type === 'KIRIM' ? <Download size={20} /> :
-                                                    l.action_type === 'DELETE' ? <Trash2 size={20} /> :
-                                                        l.action_type === 'VERDICT_CONFIRMED' ? <CheckCircle2 size={20} /> :
-                                                            l.action_type === 'BRAK' ? <AlertCircle size={20} /> :
-                                                                l.action_type === 'WEIGHT_BRUTO' ? <Scale size={20} /> :
-                                                                    l.action_type === 'KONTROLDAN_OTDI' ? <Package size={20} /> :
-                                                                        <Clock size={20} />}
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                                <b style={{ color: actionColor, textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.5 }}>
+                                                    {l.action_type?.replace(/_/g, ' ')}
+                                                </b>
+                                                <span style={{ fontSize: 10, color: '#555' }}>•</span>
+                                                <span style={{ fontSize: 11, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    <Clock size={10} /> {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
                                             </div>
-                                            <div>
-                                                <div style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>{l.item_name}</div>
-                                                <div style={{ fontSize: 12, color: '#888', display: 'flex', alignItems: 'center', gap: 15 }}>
-                                                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={12} /> {date.toLocaleTimeString()}</span>
-                                                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={12} /> {date.toLocaleDateString()}</span>
-                                                </div>
+
+                                            <div style={{ fontWeight: '600', color: '#eee', marginBottom: 4 }}>
+                                                {l.item_name}
+                                                {batch && (
+                                                    <span style={{ marginLeft: 8, color: '#4FC3F7', fontSize: 11, background: 'rgba(79,195,247,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                                                        {batch.batch_number}
+                                                    </span>
+                                                )}
                                             </div>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            {l.quantity && (
-                                                <div style={{ fontWeight: '900', fontSize: 18, color: actionColor }}>
-                                                    {l.quantity} <small style={{ fontSize: 10, fontWeight: 'normal', opacity: 0.7 }}>kg/m</small>
+
+                                            {batch && (
+                                                <div style={{ fontSize: 11, color: '#888' }}>
+                                                    {batch.fabric_name} • {batch.color}
                                                 </div>
                                             )}
-                                            <div style={{ fontSize: 9, fontWeight: 'bold', textTransform: 'uppercase', color: actionColor, opacity: 0.8, marginTop: 4 }}>
-                                                {l.action_type?.replace(/_/g, ' ')}
+                                        </div>
+
+                                        <div style={{ textAlign: 'right', minWidth: 80 }}>
+                                            {l.quantity && (
+                                                <div style={{ fontWeight: '800', fontSize: 16, color: actionColor }}>
+                                                    {Number(l.quantity).toFixed(1)}
+                                                    <small style={{ fontSize: 9, marginLeft: 2, fontWeight: 'normal', color: '#666' }}>
+                                                        {batch?.color_code === 'meter' ? 'm' : 'kg'}
+                                                    </small>
+                                                </div>
+                                            )}
+                                            <div style={{ fontSize: 10, color: '#444', marginTop: 4 }}>
+                                                {date.toLocaleDateString()}
                                             </div>
                                         </div>
                                     </div>
                                 </motion.div>
                             );
                         })}
-                        {(data.whLog || []).length === 0 && (
-                            <div style={{ textAlign: 'center', padding: '60px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: 20 }}>
-                                <History size={48} color="#2a2a40" style={{ marginBottom: 15 }} />
-                                <div style={{ color: '#555', fontSize: 16 }}>Hali hech qanday amal bajarilmagan</div>
-                                <div style={{ color: '#333', fontSize: 12, marginTop: 5 }}>Tizimdagi barcha harakatlar shu yerda aks etadi</div>
-                            </div>
-                        )}
                     </div>
                 </motion.div>
             )}
