@@ -268,8 +268,8 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                                 <h2 style={{ gridColumn: '1/-1', fontSize: 16, color: '#BA68C8', marginBottom: 10 }}>1. BO'LIMNI TANLANG</h2>
                                 {DEPTS.map(d => (
                                     <motion.button key={d} whileTap={{ scale: 0.95 }} onClick={() => { setF({ ...f, dept: d }); setKStep('mode'); }}
-                                        style={{ ...S.card, marginBottom: 0, padding: 20, textAlign: 'center', border: '1px solid rgba(186,104,200,0.2)', cursor: 'pointer' }}>
-                                        <div style={{ fontSize: 13, fontWeight: '800' }}>{d.toUpperCase()}</div>
+                                        style={{ ...S.card, marginBottom: 0, padding: '25px 15px', textAlign: 'center', border: '1px solid rgba(186,104,200,0.3)', cursor: 'pointer', background: 'rgba(186,104,200,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div style={{ fontSize: 13, fontWeight: '900', color: '#fff', letterSpacing: '0.5px' }}>{d.toUpperCase()}</div>
                                     </motion.button>
                                 ))}
                             </div>
