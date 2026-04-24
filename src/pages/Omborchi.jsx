@@ -14,6 +14,11 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
     const [activeBatch, setActiveBatch] = useState(null);
     const [activeRoll, setActiveRoll] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        setActiveBatch(null);
+        setActiveRoll(null);
+    }, [tab]);
     const [qrRoll, setQrRoll] = useState(null);
     const [images, setImages] = useState([]);
     const [inspectForm, setInspectForm] = useState({
@@ -113,32 +118,81 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
 
     const renderRestingMatos = () => {
         const restingRolls = rolls.filter(r => r.status === 'KONTROLDAN_OTDI');
+
+        if (activeBatch && tab === 'ombor') {
+            const batchRolls = restingRolls.filter(r => r.batch_id === activeBatch.id);
+            return (
+                <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
+                    <button onClick={() => setActiveBatch(null)} style={{ background: 'none', border: 'none', color: '#00e676', fontWeight: 'bold', marginBottom: 15, cursor: 'pointer' }}>← TAYYOR PARTIYALAR</button>
+                    <div style={S.card}>
+                        <h2 style={{ color: '#00e676', margin: 0 }}>{activeBatch.batch_number} (Trayyor)</h2>
+                        <div style={{ padding: '10px 0', marginTop: 15 }}>
+                            {batchRolls.map((r, i) => {
+                                const insDate = new Date(r.neto_date);
+                                const diffMs = new Date() - insDate;
+                                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                                const remainingHours = 48 - diffHours;
+                                const isReady = remainingHours <= 0;
+                                const displayUnit = r.color_code === 'meter' ? 'meter' : 'kg';
+
+                                return (
+                                    <div key={r.id} style={{ ...S.card, marginBottom: 10, borderLeft: `6px solid ${isReady ? '#00e676' : '#ff3b30'}` }} onClick={() => setQrRoll(r)}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <b>Rulon #{i + 1}</b>
+                                            <span style={{ fontSize: 12, fontWeight: 'bold', color: isReady ? '#00e676' : '#ff3b30' }}>
+                                                {isReady ? 'BICHUVGA TAYYOR ✅' : `${remainingHours}s qoldi ⏳`}
+                                            </span>
+                                        </div>
+                                        <div style={{ fontSize: 13, marginTop: 5, opacity: 0.8 }}>
+                                            {r.fabric_name} • {r.neto} {displayUnit}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {batchRolls.length === 0 && <div style={{ textAlign: 'center', opacity: 0.5, padding: 20 }}>Ushbu partiyada dam olayotgan matolar yo'q</div>}
+                        </div>
+                    </div>
+                </motion.div>
+            );
+        }
+
+        const groups = restingRolls.reduce((acc, r) => {
+            if (!acc[r.batch_id]) {
+                const b = batches.find(x => x.id === r.batch_id) || { batch_number: r.batch_number, supplier_name: '?' };
+                acc[r.batch_id] = { ...b, items: [] };
+            }
+            acc[r.batch_id].items.push(r);
+            return acc;
+        }, {});
+        const groupedList = Object.values(groups);
+
         return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <h2 style={{ marginBottom: 20 }}>Tayyor (Dam olishdagi) matolar</h2>
-                {restingRolls.length === 0 ? (
+                {groupedList.length === 0 ? (
                     <div style={{ ...S.card, textAlign: 'center', opacity: 0.5 }}>Hali dam olgan matolar yo'q</div>
                 ) : (
-                    restingRolls.map(r => {
-                        const insDate = new Date(r.neto_date);
-                        const diffMs = new Date() - insDate;
-                        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                        const remainingHours = 48 - diffHours;
-                        const isReady = remainingHours <= 0;
-                        const { unit } = parseColor(r.color_code === 'meter' ? ' | | meter' : ' | | kg');
-                        // Note: r.color_code might contain the unit now
-                        const displayUnit = r.color_code === 'meter' ? 'meter' : 'kg';
+                    groupedList.map(b => {
+                        const totalNeto = b.items.reduce((s, r) => s + (Number(r.neto) || 0), 0);
+                        const unit = b.items[0]?.color_code === 'meter' ? 'meter' : 'kg';
+                        const allReady = b.items.every(r => (new Date() - new Date(r.neto_date)) >= (48 * 3600000));
 
                         return (
-                            <div key={r.id} style={{ ...S.card, borderLeft: `6px solid ${isReady ? '#00e676' : '#ff3b30'}` }} onClick={() => setQrRoll(r)}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <b>{r.batch_number}</b>
-                                    <span style={{ fontSize: 13, fontWeight: 'bold', color: isReady ? '#00e676' : '#ff3b30' }}>
-                                        {isReady ? 'BICHUVGA TAYYOR ✅' : `${remainingHours} soat dam olishi kerak ⏳`}
-                                    </span>
+                            <div key={b.id} style={{ ...S.card, borderLeft: `6px solid ${allReady ? '#00e676' : '#ff3b30'}`, cursor: 'pointer' }} onClick={() => setActiveBatch(b)}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <h3 style={{ fontSize: 20, margin: 0 }}>{b.batch_number}</h3>
+                                        <div style={{ color: '#888', fontSize: 12, marginTop: 4 }}>
+                                            {b.supplier_name} • {b.items.length} rulon
+                                        </div>
+                                    </div>
+                                    <ChevronRight />
                                 </div>
-                                <div style={{ fontSize: 13, marginTop: 10, opacity: 0.8 }}>
-                                    {r.fabric_name} • {r.neto} {displayUnit} / {r.bruto} {displayUnit} (Neto/Bruto)
+                                <div style={{ marginTop: 15, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: 13, fontWeight: 'bold', color: allReady ? '#00e676' : '#ff3b30' }}>
+                                        {allReady ? 'BICHUVGA TAYYOR ✅' : 'DAM OLMOQDA ⏳'}
+                                    </span>
+                                    <b style={{ fontSize: 14 }}>{totalNeto.toFixed(1)} {unit}</b>
                                 </div>
                             </div>
                         );
