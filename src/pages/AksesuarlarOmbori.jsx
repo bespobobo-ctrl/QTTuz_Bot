@@ -25,6 +25,7 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
     const [adjVal, setAdjVal] = useState('');
     const [qrData, setQrData] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [hFilter, setHFilter] = useState('HAMMASI'); // HAMMASI, KIRIM, UPDATE, DELETE, ADJUSTMENT
 
     const DEPTS = [
         'Ombor bo\'limi', 'Bichuv bo\'limi', 'Tasnif', 'Taqsimot',
@@ -416,17 +417,102 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                 );
             case 'history':
                 const logs = data.accessoryLog || [];
+                const filteredLogs = logs.filter(l => hFilter === 'HAMMASI' || l.action_type === hFilter);
+
+                const stats = {
+                    kirim: logs.filter(l => l.action_type === 'KIRIM').reduce((a, b) => a + (b.quantity || 0), 0),
+                    chiqim: logs.filter(l => l.action_type === 'ADJUSTMENT' && l.quantity < 0).reduce((a, b) => a + Math.abs(b.quantity || 0), 0)
+                };
+
+                const getActionStyle = (type) => {
+                    switch (type) {
+                        case 'KIRIM': return { color: '#00e676', bg: 'rgba(0,230,118,0.1)', icon: <Download size={16} /> };
+                        case 'UPDATE': return { color: '#2575FC', bg: 'rgba(37,117,252,0.1)', icon: <RefreshCcw size={16} /> };
+                        case 'DELETE': return { color: '#ff5252', bg: 'rgba(255,82,82,0.1)', icon: <Trash2 size={16} /> };
+                        case 'ADJUSTMENT': return { color: '#FFAB40', bg: 'rgba(255,171,64,0.1)', icon: <TrendingUp size={16} /> };
+                        default: return { color: '#888', bg: 'rgba(255,255,255,0.05)', icon: <History size={16} /> };
+                    }
+                };
+
                 return (
-                    <div style={S.page}>
-                        <h2 style={{ fontSize: 24, fontWeight: '900', marginBottom: 20 }}>📜 Tarix</h2>
-                        {logs.map(l => (
-                            <div key={l.id} style={S.card}>
-                                <div style={{ fontSize: 11, opacity: 0.5 }}>{new Date(l.created_at).toLocaleString()}</div>
-                                <div style={{ fontWeight: '700' }}>{l.notes}</div>
-                                <div style={{ textAlign: 'right', fontSize: 18, color: '#BA68C8' }}>{l.quantity} dona</div>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={S.page}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 25 }}>
+                            <div style={{ width: 45, height: 45, background: 'rgba(186,104,200,0.1)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><History size={22} color="#BA68C8" /></div>
+                            <h2 style={{ margin: 0, fontSize: 24, fontWeight: '900' }}>Amallar Tarixi</h2>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 25 }}>
+                            <div style={{ ...S.card, marginBottom: 0, padding: '15px 20px', border: '1px solid rgba(0,230,118,0.2)', background: 'rgba(0,230,118,0.02)' }}>
+                                <div style={{ fontSize: 10, color: '#00e676', fontWeight: '800', marginBottom: 5 }}>JAMI KIRIM</div>
+                                <div style={{ fontSize: 20, fontWeight: '900', color: '#fff' }}>+{stats.kirim} <span style={{ fontSize: 11, opacity: 0.5 }}>dona</span></div>
                             </div>
-                        ))}
-                    </div>
+                            <div style={{ ...S.card, marginBottom: 0, padding: '15px 20px', border: '1px solid rgba(255,82,82,0.2)', background: 'rgba(255,82,82,0.02)' }}>
+                                <div style={{ fontSize: 10, color: '#ff5252', fontWeight: '800', marginBottom: 5 }}>JAMI CHIQUV</div>
+                                <div style={{ fontSize: 20, fontWeight: '900', color: '#fff' }}>-{stats.chiqim} <span style={{ fontSize: 11, opacity: 0.5 }}>dona</span></div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 20, paddingBottom: 5 }}>
+                            {['HAMMASI', 'KIRIM', 'ADJUSTMENT', 'UPDATE', 'DELETE'].map(type => (
+                                <button
+                                    key={type}
+                                    onClick={() => setHFilter(type)}
+                                    style={{
+                                        padding: '10px 16px',
+                                        borderRadius: 12,
+                                        border: 'none',
+                                        background: hFilter === type ? '#BA68C8' : '#1a1a2e',
+                                        color: hFilter === type ? '#fff' : '#888',
+                                        whiteSpace: 'nowrap',
+                                        fontSize: 11,
+                                        fontWeight: '800',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {type === 'ADJUSTMENT' ? 'O\'ZGARISH' : type}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div style={{ display: 'grid', gap: 12 }}>
+                            {filteredLogs.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.3 }}>
+                                    <Clock size={40} style={{ marginBottom: 10 }} />
+                                    <div>Hozircha ma'lumot yo'q</div>
+                                </div>
+                            ) : (
+                                filteredLogs.map(l => {
+                                    const style = getActionStyle(l.action_type);
+                                    return (
+                                        <div key={l.id} style={{ ...S.card, marginBottom: 0, padding: 18, border: `1px solid ${style.bg}` }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    <div style={{ width: 32, height: 32, borderRadius: 10, background: style.bg, color: style.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        {style.icon}
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>{l.action_type}</div>
+                                                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                            <Clock size={10} /> {new Date(l.created_at).toLocaleString('uz-UZ', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ fontSize: 18, fontWeight: '900', color: style.color }}>
+                                                        {l.quantity > 0 ? `+${l.quantity}` : l.quantity}
+                                                    </div>
+                                                    <div style={{ fontSize: 9, opacity: 0.5, fontWeight: '800' }}>MIQDOR</div>
+                                                </div>
+                                            </div>
+                                            <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: 10, fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: '1.4', borderLeft: `3px solid ${style.color}` }}>
+                                                {l.notes}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </motion.div>
                 );
             default: return null;
         }
