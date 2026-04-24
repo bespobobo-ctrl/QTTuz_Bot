@@ -55,19 +55,23 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                 showMsg("Muvaffaqiyatli yangilandi!");
                 setQrData({ ...kItem, quantity: f.qty, supplier: f.supplier });
             } else {
-                const { data: inserted, error } = await supabase.from('accessories').insert({
+                const insertData = {
                     name: f.name,
                     category: f.cat,
                     unit: f.unit,
                     quantity: Number(f.qty),
                     status: f.status,
                     target_dept: f.dept,
-                    color: f.color,
-                    size: f.size,
                     description: f.description,
                     order_date: f.order_date,
                     expected_date: f.expected_date
-                }).select().single();
+                };
+
+                // Faqat bazada bo'lsa qo'shamiz (yoki hozircha olib tashlaymiz)
+                // if (f.color) insertData.color = f.color;
+                // if (f.size) insertData.size = f.size;
+
+                const { data: inserted, error } = await supabase.from('accessories').insert(insertData).select().single();
 
                 if (error) throw error;
 
@@ -94,15 +98,18 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
     const handleUpdate = async () => {
         setLoading(true);
         try {
-            const { error } = await supabase.from('accessories').update({
+            const updateData = {
                 name: editItem.name,
                 category: editItem.category,
                 unit: editItem.unit,
                 quantity: Number(editItem.quantity),
-                target_dept: editItem.target_dept,
-                color: editItem.color || '',
-                size: editItem.size || ''
-            }).eq('id', editItem.id);
+                target_dept: editItem.target_dept
+            };
+
+            // if (editItem.color) updateData.color = editItem.color;
+            // if (editItem.size) updateData.size = editItem.size;
+
+            const { error } = await supabase.from('accessories').update(updateData).eq('id', editItem.id);
 
             if (error) throw error;
 
