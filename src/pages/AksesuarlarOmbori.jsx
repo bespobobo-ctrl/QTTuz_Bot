@@ -98,8 +98,8 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
             textTransform: 'uppercase',
             letterSpacing: '1px'
         },
-        overlay: { position: 'fixed', inset: 0, background: '#fff', zIndex: 9999, overflow: 'auto', padding: 25, color: '#000' }
-    };
+        overlay: { position: 'fixed', inset: 0, background: '#fff', zIndex: 100000, overflow: 'auto', padding: 25, color: '#000' }
+    }; // v18.0 ULTRA PREMIUM DEPLOYMENT MARKER
 
     if (tab === 'kirim') {
         return (
