@@ -148,20 +148,73 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
     }
 
     if (tab === 'dashboard' || tab === 'baza') {
-        const list = data.accessories || []; // assuming load will put it here
+        const list = data.accessories || [];
+
+        // Bo'limlar bo'yicha guruhlash
+        const grouped = list.reduce((acc, curr) => {
+            const d = curr.target_dept || "Noma'lum";
+            if (!acc[d]) acc[d] = [];
+            acc[d].push(curr);
+            return acc;
+        }, {});
+
+        // Noma'lum eng oxirida turishi uchun sort
+        const keys = Object.keys(grouped).sort((a, b) => a === "Noma'lum" ? 1 : b === "Noma'lum" ? -1 : a.localeCompare(b));
+
         return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 }}>
                     <h2 style={{ margin: 0, color: '#BA68C8', display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Box size={28} /> Aksesuarlar (Baza)
+                        <Box size={28} /> Ombor Qoldiqlari
                     </h2>
                 </div>
 
-                <div style={S.card}>
-                    <p style={{ color: '#888', textAlign: 'center', padding: '40px 0' }}>
-                        Bu yerda barcha qabul qilingan aksesuarlar turadi (Kirim qilinganlar).
-                    </p>
-                </div>
+                {keys.length === 0 ? (
+                    <div style={S.card}>
+                        <p style={{ color: '#888', textAlign: 'center', padding: '40px 0' }}>Omborda hali aksesuarlar yo'q.</p>
+                    </div>
+                ) : (
+                    keys.map(dept => (
+                        <div key={dept} style={{ marginBottom: 30 }}>
+                            <h3 style={{ color: '#fff', borderBottom: '1px solid #2a2a40', paddingBottom: 10, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <MapPin size={20} color="#BA68C8" />
+                                {dept.toUpperCase()} UCHUN AJRATILGANLAR
+                                <span style={{ background: '#2a2a40', padding: '2px 8px', borderRadius: 10, fontSize: 12 }}>{grouped[dept].length} ta</span>
+                            </h3>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 15 }}>
+                                {grouped[dept].map(item => (
+                                    <div key={item.id} style={{ ...S.card, marginBottom: 0, padding: 15, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                        <div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                <div style={{ fontWeight: 'bold', fontSize: 16, color: '#fff', marginBottom: 5 }}>{item.name}</div>
+                                                <div style={{ padding: '3px 8px', background: 'rgba(186, 104, 200, 0.1)', color: '#BA68C8', borderRadius: 8, fontSize: 10, fontWeight: 'bold' }}>
+                                                    {item.status || 'OMBORDA'}
+                                                </div>
+                                            </div>
+                                            <div style={{ color: '#888', fontSize: 12, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                                <Tag size={12} /> {item.category}
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', borderTop: '1px dashed #2a2a40', paddingTop: 10 }}>
+                                            <div>
+                                                <div style={{ fontSize: 10, color: '#888' }}>QR KOD / ID:</div>
+                                                <div style={{ fontSize: 10, fontFamily: 'monospace', color: '#BA68C8' }}>{item.id.split('-')[0].toUpperCase()}</div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: 10, color: '#888' }}>QOLDIQ:</div>
+                                                <div style={{ fontSize: 18, fontWeight: 'bold', color: '#fff' }}>
+                                                    {item.quantity} <span style={{ fontSize: 12, fontWeight: 'normal', color: '#888' }}>{item.unit}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))
+                )}
             </motion.div>
         );
     }

@@ -50,13 +50,15 @@ export default function App() {
   const load = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
     try {
-      const [wb, wr, wl, dl, wo, settings] = await Promise.all([
+      const [wb, wr, wl, dl, wo, settings, acc, acclog] = await Promise.all([
         supabase.from('warehouse_batches').select('*').order('id', { ascending: false }),
         supabase.from('warehouse_rolls').select('*').order('created_at', { ascending: false }),
         supabase.from('warehouse_log').select('*').order('created_at', { ascending: false }).limit(1000),
         supabase.from('department_logins').select('*'),
         supabase.from('warehouse_orders').select('*').order('created_at', { ascending: false }),
-        supabase.from('system_config').select('value').eq('key', 'app_version').single()
+        supabase.from('system_config').select('value').eq('key', 'app_version').single(),
+        supabase.from('accessories').select('*').order('created_at', { ascending: false }),
+        supabase.from('accessory_log').select('*').order('created_at', { ascending: false }).limit(1000)
       ]);
 
       if (wb.error) console.error("Batches error:", wb.error);
@@ -68,7 +70,9 @@ export default function App() {
         whRolls: wr.data || [],
         whLog: wl.data || [],
         deptLogins: dl.data || [],
-        whOrders: wo.data || []
+        whOrders: wo.data || [],
+        accessories: acc?.data || [],
+        accessoryLog: acclog?.data || []
       });
       if (settings.data) setDbVer(settings.data.value);
     } catch (e) {
