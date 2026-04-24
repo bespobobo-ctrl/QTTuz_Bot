@@ -57,6 +57,17 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
 
     const S = {
         page: { paddingBottom: 80 },
+        statBox: (color) => ({
+            flex: 1,
+            padding: '20px 15px',
+            background: color + '11',
+            borderRadius: 22,
+            border: `1px solid ${color}33`,
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 5
+        }),
         card: {
             background: '#1a1a2e',
             padding: '24px 20px',
