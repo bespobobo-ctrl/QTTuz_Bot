@@ -125,8 +125,18 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                 <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
                     <button onClick={() => setActiveBatch(null)} style={{ background: 'none', border: 'none', color: '#00e676', fontWeight: 'bold', marginBottom: 15, cursor: 'pointer' }}>← TAYYOR PARTIYALAR</button>
                     <div style={S.card}>
-                        <h2 style={{ color: '#00e676', margin: 0 }}>{activeBatch.batch_number} (Trayyor)</h2>
-                        <div style={{ padding: '10px 0', marginTop: 15 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 }}>
+                            <div>
+                                <h2 style={{ color: '#00e676', margin: 0 }}>{activeBatch.batch_number}</h2>
+                                <p style={{ fontSize: 13, color: '#888', margin: '4px 0' }}>{activeBatch.fabric_name} • {activeBatch.color}</p>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: 11, color: '#555' }}>JAMI RULON</div>
+                                <b style={{ fontSize: 18 }}>{batchRolls.length}</b>
+                            </div>
+                        </div>
+
+                        <div style={{ padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                             {batchRolls.map((r, i) => {
                                 const insDate = new Date(r.neto_date);
                                 const diffMs = new Date() - insDate;
@@ -136,20 +146,20 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                                 const displayUnit = r.color_code === 'meter' ? 'meter' : 'kg';
 
                                 return (
-                                    <div key={r.id} style={{ ...S.card, marginBottom: 10, borderLeft: `6px solid ${isReady ? '#00e676' : '#ff3b30'}` }} onClick={() => setQrRoll(r)}>
+                                    <div key={r.id} style={{ ...S.card, marginBottom: 10, background: '#1a1a2e', borderLeft: `6px solid ${isReady ? '#00e676' : '#ff3b30'}` }} onClick={() => setQrRoll(r)}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                             <b>Rulon #{i + 1}</b>
                                             <span style={{ fontSize: 12, fontWeight: 'bold', color: isReady ? '#00e676' : '#ff3b30' }}>
-                                                {isReady ? 'BICHUVGA TAYYOR ✅' : `${remainingHours}s qoldi ⏳`}
+                                                {isReady ? 'TAYYOR ✅' : `${remainingHours}s qoldi ⏳`}
                                             </span>
                                         </div>
-                                        <div style={{ fontSize: 13, marginTop: 5, opacity: 0.8 }}>
-                                            {r.fabric_name} • {r.neto} {displayUnit}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 8, opacity: 0.8 }}>
+                                            <span>Neto: <b>{r.neto} {displayUnit}</b></span>
+                                            <span>Eni: <b>{r.en} sm</b></span>
                                         </div>
                                     </div>
                                 );
                             })}
-                            {batchRolls.length === 0 && <div style={{ textAlign: 'center', opacity: 0.5, padding: 20 }}>Ushbu partiyada dam olayotgan matolar yo'q</div>}
                         </div>
                     </div>
                 </motion.div>
@@ -157,11 +167,19 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
         }
 
         const groups = restingRolls.reduce((acc, r) => {
-            if (!acc[r.batch_id]) {
-                const b = batches.find(x => x.id === r.batch_id) || { batch_number: r.batch_number, supplier_name: '?' };
-                acc[r.batch_id] = { ...b, items: [] };
+            const bid = r.batch_id;
+            if (!acc[bid]) {
+                const b = batches.find(x => String(x.id) === String(bid)) || {};
+                acc[bid] = {
+                    id: bid,
+                    batch_number: r.batch_number || b.batch_number || '?',
+                    supplier_name: b.supplier_name || '?',
+                    fabric_name: r.fabric_name || parseColor(b.color).type || '?',
+                    color: r.color || parseColor(b.color).col || '?',
+                    items: []
+                };
             }
-            acc[r.batch_id].items.push(r);
+            acc[bid].items.push(r);
             return acc;
         }, {});
         const groupedList = Object.values(groups);
@@ -174,25 +192,53 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                 ) : (
                     groupedList.map(b => {
                         const totalNeto = b.items.reduce((s, r) => s + (Number(r.neto) || 0), 0);
+                        const totalBruto = b.items.reduce((s, r) => s + (Number(r.bruto) || 0), 0);
                         const unit = b.items[0]?.color_code === 'meter' ? 'meter' : 'kg';
-                        const allReady = b.items.every(r => (new Date() - new Date(r.neto_date)) >= (48 * 3600000));
+
+                        const first = b.items[0];
+                        const eni = first.en;
+                        const gramaj = first.gramaj;
+
+                        const waitHours = b.items.map(r => {
+                            const diffMs = new Date() - new Date(r.neto_date);
+                            const h = 48 - Math.floor(diffMs / (1000 * 60 * 60));
+                            return h > 0 ? h : 0;
+                        });
+                        const maxWait = Math.max(...waitHours);
+                        const allReady = maxWait <= 0;
 
                         return (
                             <div key={b.id} style={{ ...S.card, borderLeft: `6px solid ${allReady ? '#00e676' : '#ff3b30'}`, cursor: 'pointer' }} onClick={() => setActiveBatch(b)}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
                                         <h3 style={{ fontSize: 20, margin: 0 }}>{b.batch_number}</h3>
-                                        <div style={{ color: '#888', fontSize: 12, marginTop: 4 }}>
-                                            {b.supplier_name} • {b.items.length} rulon
+                                        <div style={{ color: '#888', fontSize: 13, marginTop: 4 }}>
+                                            <b>{b.fabric_name}</b> • {b.color}
                                         </div>
                                     </div>
-                                    <ChevronRight />
+                                    <ChevronRight color="#555" />
                                 </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 15, padding: '12px 0', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <div>
+                                        <div style={{ fontSize: 10, color: '#555', fontWeight: 'bold' }}>NETO / BRUTO</div>
+                                        <b style={{ fontSize: 14 }}>{totalNeto.toFixed(1)} / {totalBruto.toFixed(1)} <small>{unit}</small></b>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontSize: 10, color: '#555', fontWeight: 'bold' }}>ENI / GRAMAJ</div>
+                                        <b style={{ fontSize: 14 }}>{eni} sm / {gramaj}</b>
+                                    </div>
+                                </div>
+
                                 <div style={{ marginTop: 15, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: 13, fontWeight: 'bold', color: allReady ? '#00e676' : '#ff3b30' }}>
-                                        {allReady ? 'BICHUVGA TAYYOR ✅' : 'DAM OLMOQDA ⏳'}
+                                    <span style={{ fontSize: 12, fontWeight: 'bold', color: allReady ? '#00e676' : '#ff3b30', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                        {allReady ? (
+                                            <><CheckCircle2 size={16} /> BICHUVGA TAYYOR </>
+                                        ) : (
+                                            <><Clock size={16} /> DAM OLMOQDA ({maxWait}s qoldi)</>
+                                        )}
                                     </span>
-                                    <b style={{ fontSize: 14 }}>{totalNeto.toFixed(1)} {unit}</b>
+                                    <span style={{ fontSize: 11, color: '#888' }}>{b.items.length} ta rulon</span>
                                 </div>
                             </div>
                         );
