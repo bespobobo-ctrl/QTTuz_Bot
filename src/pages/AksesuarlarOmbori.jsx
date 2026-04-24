@@ -3,13 +3,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { QRCodeCanvas } from 'qrcode.react';
 import {
-    Box, PlusCircle, Search, History, ChevronRight, Edit3, Trash2,
+    Box, PlusCircle, MinusCircle, Search, History, ChevronRight, Edit3, Trash2, Scan,
     Calendar, CheckCircle2, Download, Package, Layers, MapPin, Tag, Hash, Printer, X, TrendingUp, AlertTriangle, Clock
 } from 'lucide-react';
 
 export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
     const [f, setF] = useState({ name: '', cat: 'Tugma', unit: 'dona', qty: '', dept: 'Ombor bo\'limi', status: 'OMBORDA', supplier: '' });
     const [qrData, setQrData] = useState(null);
+    const [scanRes, setScanRes] = useState(null); // Skanerlangan mahsulot
+    const [adjModal, setAdjModal] = useState(null); // { type: 'add'|'sub', item: obj }
+    const [adjVal, setAdjVal] = useState('');
     const [loading, setLoading] = useState(false);
     const [selDept, setSelDept] = useState('HAMMASI');
 
@@ -41,7 +44,7 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                 accessory_id: inserted.id,
                 action_type: f.status === 'KUTILMOQDA' ? 'ORDER' : 'KIRIM',
                 quantity: Number(f.qty),
-                party_number: f.supplier, // Taminochi sifatida party_number ishlatamiz
+                party_number: f.supplier,
                 notes: `${f.status === 'KUTILMOQDA' ? 'Buyurtma' : 'Kirim'}: ${f.name} - ${f.supplier} (${f.dept})`
             });
 
@@ -49,10 +52,46 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
             if (f.status === 'OMBORDA') setQrData({ ...inserted, target_dept: f.dept, supplier: f.supplier });
             setF(p => ({ ...p, name: '', qty: '', status: 'OMBORDA', supplier: '' }));
             load(true);
-        } catch (e) {
-            showMsg("Xata: " + e.message, "err");
-        }
+        } catch (e) { showMsg("Xato: " + e.message, "err"); }
         setLoading(false);
+    };
+
+    const handleAdjustment = async () => {
+        if (!adjVal || isNaN(adjVal)) return showMsg("Miqdorni kiriting", "err");
+        setLoading(true);
+        try {
+            const diff = adjModal.type === 'add' ? Number(adjVal) : -Number(adjVal);
+            const newQty = (adjModal.item.quantity || 0) + diff;
+            if (newQty < 0) throw new Error("Omborda yetarli mahsulot yo'q!");
+
+            const { error: updErr } = await supabase.from('accessories').update({ quantity: newQty }).eq('id', adjModal.item.id);
+            if (updErr) throw updErr;
+
+            await supabase.from('accessory_log').insert({
+                accessory_id: adjModal.item.id,
+                action_type: adjModal.type === 'add' ? 'REFILL' : 'CHIQIM',
+                quantity: Math.abs(diff),
+                notes: `${adjModal.type === 'add' ? 'Plyus' : 'Chiqim'}: ${adjModal.item.name} (${diff > 0 ? '+' : ''}${diff} ${adjModal.item.unit})`
+            });
+
+            showMsg("Muvaffaqiyatli yangilandi!");
+            setAdjModal(null);
+            setAdjVal('');
+            setScanRes(null);
+            load(true);
+        } catch (e) { showMsg(e.message, "err"); }
+        setLoading(false);
+    };
+
+    const onScan = (code) => {
+        if (!code.startsWith('AKSESUAR:')) return;
+        const id = code.split(':')[1];
+        const item = (data.accessories || []).find(it => it.id === id);
+        if (item) {
+            setScanRes(item);
+        } else {
+            showMsg("Mahsulot topilmadi!", "err");
+        }
     };
 
     const S = {
@@ -190,7 +229,7 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                                 <motion.button whileTap={{ scale: 0.95 }} onClick={() => window.print()} style={{ ...S.btn, width: 'auto', background: '#111', padding: '16px 32px' }}><Printer size={22} /> CHOP ETISH</motion.button>
                                 <motion.button whileTap={{ scale: 0.95 }} onClick={() => setQrData(null)} style={{ background: '#f0f0f0', border: 'none', width: 50, height: 50, borderRadius: 25, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={28} color="#000" /></motion.button>
                             </div>
-                            <div style={{ border: '4px solid #000', padding: 50, borderRadius: 40, textAlign: 'center', maxWidth: 450, margin: '0 auto', background: '#fff' }}>
+                            <div className="printable-passport" style={{ border: '4px solid #000', padding: 50, borderRadius: 40, textAlign: 'center', maxWidth: 450, margin: '0 auto', background: '#fff' }}>
                                 <div style={{ fontSize: 36, fontWeight: '1000', letterSpacing: 4, marginBottom: 5 }}>AKSESUAR</div>
                                 <div style={{ fontSize: 16, color: '#000', borderBottom: '3px solid #000', display: 'inline-block', paddingBottom: 5, marginBottom: 35, fontWeight: '800' }}>PASPORTI</div>
 
@@ -209,6 +248,60 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                     )}
                 </AnimatePresence>
             </motion.div>
+        );
+    }
+
+    if (tab === 'scan') {
+        return (
+            <div style={S.page}>
+                <div style={{ ...S.card, textAlign: 'center', minHeight: 300, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <ScanUI onScan={onScan} />
+                    {!scanRes && <div style={{ marginTop: 20, color: '#888' }}>Mahsulot QR kodini skanerlang...</div>}
+                </div>
+
+                <AnimatePresence>
+                    {scanRes && (
+                        <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={{ ...S.card, marginTop: 20, border: '1.5px solid #BA68C8' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 20 }}>
+                                <div>
+                                    <h2 style={{ margin: 0, fontSize: 20 }}>{scanRes.name}</h2>
+                                    <div style={{ fontSize: 13, color: '#888' }}>{scanRes.category} • {scanRes.target_dept}</div>
+                                </div>
+                                <button onClick={() => setScanRes(null)} style={{ background: 'none', border: 'none', color: '#888' }}><X size={24} /></button>
+                            </div>
+
+                            <div style={{ background: '#12121e', padding: 20, borderRadius: 18, textAlign: 'center', marginBottom: 25 }}>
+                                <div style={{ fontSize: 11, color: '#888', marginBottom: 5 }}>JORIY QOLDIQ</div>
+                                <div style={{ fontSize: 32, fontWeight: '900', color: '#00e676' }}>{scanRes.quantity} <span style={{ fontSize: 16, opacity: 0.6 }}>{scanRes.unit}</span></div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 12 }}>
+                                <button onClick={() => setAdjModal({ type: 'add', item: scanRes })} style={{ ...S.btn, background: '#00e676', flex: 1 }}><PlusCircle size={18} /> PLYUS</button>
+                                <button onClick={() => setAdjModal({ type: 'sub', item: scanRes })} style={{ ...S.btn, background: '#ff5252', flex: 1 }}><MinusCircle size={18} /> CHIQIM</button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {adjModal && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                        <div style={{ ...S.card, width: '100%', maxWidth: 400, border: `2px solid ${adjModal.type === 'add' ? '#00e676' : '#ff5252'}` }}>
+                            <h3 style={{ margin: '0 0 20px 0', textAlign: 'center' }}>
+                                {adjModal.type === 'add' ? 'MIQDOR QO\'SHISH' : 'CHIQIM QILISH'}
+                            </h3>
+                            <label style={S.label}>Miqdorni kiriting ({adjModal.item.unit})</label>
+                            <input autoFocus style={{ ...S.input, fontSize: 24, textAlign: 'center' }} type="number" value={adjVal} onChange={e => setAdjVal(e.target.value)} placeholder="0" />
+
+                            <div style={{ display: 'flex', gap: 12, marginTop: 25 }}>
+                                <button onClick={() => { setAdjModal(null); setAdjVal(''); }} style={{ ...S.btn, background: '#333', flex: 1 }}>BEKOR</button>
+                                <button onClick={handleAdjustment} disabled={loading} style={{ ...S.btn, background: adjModal.type === 'add' ? '#00e676' : '#ff5252', flex: 2 }}>
+                                    {loading ? 'YUKLANMOQDA...' : 'TASDIQLASH'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         );
     }
 
@@ -357,4 +450,30 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
         );
     }
     return null;
+}
+
+// Minimal Scanner Component
+function ScanUI({ onScan }) {
+    const [scanned, setScanned] = React.useState(false);
+
+    React.useEffect(() => {
+        let scanner = null;
+        const start = async () => {
+            const { Html5QrcodeScanner } = await import('html5-qrcode');
+            scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
+            scanner.render((text) => {
+                onScan(text);
+                setScanned(true);
+            }, (err) => { });
+        };
+        start();
+        return () => { if (scanner) scanner.clear().catch(e => { }); };
+    }, []);
+
+    return (
+        <div style={{ width: '100%', maxWidth: 400, margin: '0 auto', overflow: 'hidden', borderRadius: 20 }}>
+            <div id="reader" style={{ border: 'none', background: '#000' }}></div>
+            {scanned && <button onClick={() => setScanned(false)} style={{ marginTop: 15, padding: '10px 20px', background: '#333', border: 'none', borderRadius: 10, color: '#fff' }}>Qaytadan skanerlash</button>}
+        </div>
+    );
 }

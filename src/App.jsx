@@ -143,7 +143,7 @@ export default function App() {
         <nav style={S.nav}>
           {[
             { id: 'dashboard', icon: LayoutDashboard, l: user.role === 'omborchi' ? 'Bruto Partiyalar' : 'Asosiy' },
-            ...(user.role !== 'aksesuvar_ombori' ? [{ id: 'scan', icon: Scan, l: 'Skayner' }] : []),
+            { id: 'scan', icon: Scan, l: 'Skayner' },
             ...(user.role !== 'omborchi' ? [{ id: 'kirim', icon: Download, l: 'Kirim' }] : []),
             { id: 'ombor', icon: Package, l: user.role === 'omborchi' ? 'Tayyor (Dam)' : user.role === 'aksesuvar_ombori' ? 'Ombor' : 'Bruto' },
             ...(user.role === 'mato_ombori' ? [{ id: 'neto', icon: CheckCircle2, l: 'Neto' }] : []),
