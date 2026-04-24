@@ -31,10 +31,11 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
             if (error) throw error;
 
             // Qo'shimcha ma'lumotlarni update qilish (bazaga ustun qo'shilgach ishlaydi, hozircha error bermaydi)
-            await supabase.from('accessories').update({
+            const { error: updErr } = await supabase.from('accessories').update({
                 target_dept: f.dept,
                 status: 'OMBORDA'
-            }).eq('id', inserted.id).catch(e => console.log('Ustunlar endi qo\'shiladi'));
+            }).eq('id', inserted.id);
+            if (updErr) console.log('Update ustunlar xatosi (muhim emas):', updErr.message);
 
             // Logga yozish
             await supabase.from('accessory_log').insert({
