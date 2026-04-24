@@ -8,16 +8,24 @@ import {
     ClipboardCheck, Thermometer, Plus, Minus, Camera, Image as ImageIcon,
     Printer, X, Search, Scan
 } from 'lucide-react';
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 
 export default function OmborchiPanel({ tab, data, load, showMsg }) {
     const [activeBatch, setActiveBatch] = useState(null);
     const [activeRoll, setActiveRoll] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [scannerActive, setScannerActive] = useState(false);
+    const [scannerRef] = useState({ current: null });
 
     useEffect(() => {
         setActiveBatch(null);
         setActiveRoll(null);
+        // Scanner-ni to'xtatish
+        if (scannerRef.current) {
+            try { scannerRef.current.stop().catch(() => { }); } catch (e) { }
+            scannerRef.current = null;
+            setScannerActive(false);
+        }
     }, [tab]);
     const [qrRoll, setQrRoll] = useState(null);
     const [images, setImages] = useState([]);
@@ -279,9 +287,57 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
         }
     };
 
-    const startScanner = () => {
-        const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-        scanner.render(handleScanSuccess, (err) => { });
+    const startScanner = async () => {
+        try {
+            // Avval kamera ruxsatini so'rash
+            await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+
+            const html5QrCode = new Html5Qrcode("reader");
+            scannerRef.current = html5QrCode;
+
+            await html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+                (decodedText) => {
+                    // Muvaffaqiyatli skanerlash
+                    html5QrCode.stop().catch(() => { });
+                    scannerRef.current = null;
+                    setScannerActive(false);
+                    handleScanSuccess(decodedText);
+                },
+                () => { } // xatolarni ignoring
+            );
+            setScannerActive(true);
+        } catch (err) {
+            console.error("Scanner error:", err);
+            if (err.name === 'NotAllowedError') {
+                showMsg("Kameraga ruxsat berilmadi! Telegram sozlamalardan ruxsat bering.", "err");
+            } else if (err.name === 'NotReadableError') {
+                showMsg("Kamera band yoki ishlamayapti. Boshqa ilovalarni yoping.", "err");
+            } else {
+                showMsg("Kamera xatosi: " + (err.message || err.name), "err");
+            }
+        }
+    };
+
+    const stopScanner = () => {
+        if (scannerRef.current) {
+            scannerRef.current.stop().catch(() => { });
+            scannerRef.current = null;
+            setScannerActive(false);
+        }
+    };
+
+    const handleFileScan = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+            const html5QrCode = new Html5Qrcode("reader-file");
+            const result = await html5QrCode.scanFile(file, true);
+            handleScanSuccess(result);
+        } catch (err) {
+            showMsg("QR kod topilmadi yoki o'qib bo'lmadi", "err");
+        }
     };
 
     if (tab === 'scan') {
@@ -289,10 +345,24 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <h2 style={{ marginBottom: 20 }}>Rulon Skayneri (Radar)</h2>
                 <div style={S.card}>
-                    <div id="reader" style={{ width: '100%', borderRadius: 15, overflow: 'hidden' }}></div>
-                    <button onClick={startScanner} style={{ ...S.btn, background: '#FFD700', color: '#000', marginTop: 20 }}>
-                        SKAYNERNI ISHGA TUSHIRISH
-                    </button>
+                    <div id="reader" style={{ width: '100%', borderRadius: 15, overflow: 'hidden', minHeight: scannerActive ? 300 : 0 }}></div>
+                    <div id="reader-file" style={{ display: 'none' }}></div>
+
+                    {!scannerActive ? (
+                        <div style={{ display: 'grid', gap: 12 }}>
+                            <button onClick={startScanner} style={{ ...S.btn, background: '#00e676', color: '#000', padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                                <Camera size={20} /> KAMERANI OCHISH
+                            </button>
+                            <label style={{ ...S.btn, background: '#4FC3F7', color: '#000', padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer' }}>
+                                <ImageIcon size={20} /> RASMDAN SKANERLASH
+                                <input type="file" accept="image/*" onChange={handleFileScan} style={{ display: 'none' }} />
+                            </label>
+                        </div>
+                    ) : (
+                        <button onClick={stopScanner} style={{ ...S.btn, background: '#ff5252', color: '#fff', marginTop: 15, padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                            <X size={20} /> SKAYNERNI TO'XTATISH
+                        </button>
+                    )}
                 </div>
             </motion.div>
         );
