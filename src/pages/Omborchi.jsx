@@ -506,13 +506,18 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                                     setActiveRoll(roll);
                                     setScanConfirm(null);
 
-                                    // Tarixga yozish
-                                    await supabase.from('warehouse_log').insert({
-                                        batch_id: roll.batch_id,
-                                        item_name: `TEKSHIRUV BOSHLANDI: ${roll.fabric_name}`,
-                                        quantity: roll.bruto,
-                                        action_type: 'INSPECTION_START'
-                                    });
+                                    showConfirm(
+                                        `Bu rulonni tekshiruvga (Kontrolga) kiritasizmi?`,
+                                        async () => {
+                                            await supabase.from('warehouse_log').insert({
+                                                batch_id: roll.batch_id,
+                                                item_name: `TEKSHIRUV: Rulon #${roll.id} kontrolga olindi`,
+                                                quantity: roll.bruto,
+                                                action_type: 'INSPECTION_START',
+                                                timestamp: new Date().toISOString()
+                                            });
+                                        }
+                                    );
                                 }} style={{ ...S.btn, background: '#00e676', color: '#000', padding: 16, fontSize: 16 }}>
                                     <CheckCircle2 size={20} /> HA, KONTROLGA OLISH
                                 </button>
