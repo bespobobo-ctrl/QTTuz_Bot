@@ -390,7 +390,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                             <button onClick={() => { setStatusView('bruto'); setSelStatusType(null); setSelStatusColor(null); }} style={{ flex: 1, padding: 10, borderRadius: 10, border: 'none', background: statusView === 'bruto' ? (unitView === 'kg' ? '#FFAB40' : '#4FC3F7') : 'none', color: statusView === 'bruto' ? '#000' : '#888', fontWeight: 'bold', fontSize: 12 }}>{unitView.toUpperCase()} BRUTO</button>
                             <button onClick={() => { setStatusView('neto'); setSelStatusType(null); setSelStatusColor(null); }} style={{ flex: 1, padding: 10, borderRadius: 10, border: 'none', background: statusView === 'neto' ? '#81C784' : 'none', color: statusView === 'neto' ? '#000' : '#888', fontWeight: 'bold', fontSize: 12 }}>{unitView.toUpperCase()} NETO</button>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: statusView === 'neto' ? '1fr 1fr 1fr' : '1fr 1fr', gap: 10 }}>
                             <div style={{ ...S.card, textAlign: 'center', marginBottom: 0, borderColor: statusView === 'bruto' ? (unitView === 'kg' ? '#FFAB40' : '#4FC3F7') : '#81C784' }}>
                                 <div style={{ color: statusView === 'bruto' ? (unitView === 'kg' ? '#FFAB40' : '#4FC3F7') : '#81C784', fontSize: 11, fontWeight: 'bold' }}>JAMI {unitView.toUpperCase()}</div>
                                 <div style={{ fontSize: 24, fontWeight: 'bold' }}>
@@ -398,6 +398,15 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     <small style={{ fontSize: 10, opacity: 0.5 }}> {unitView === 'kg' ? 'kg' : 'm'}</small>
                                 </div>
                             </div>
+                            {statusView === 'neto' && (
+                                <div style={{ ...S.card, textAlign: 'center', marginBottom: 0, borderColor: '#ff5252' }}>
+                                    <div style={{ color: '#ff5252', fontSize: 11, fontWeight: 'bold' }}>TARA JAMI</div>
+                                    <div style={{ fontSize: 22, fontWeight: 'bold', color: '#ff5252' }}>
+                                        {rolls.filter(r => r && r.status === 'KONTROLDAN_OTDI' && (r.color_code || 'kg') === unitView).reduce((a, r) => a + ((Number(r.bruto) || 0) - (Number(r.neto) || 0)), 0).toFixed(1)}
+                                        <small style={{ fontSize: 10, opacity: 0.5 }}> {unitView === 'kg' ? 'kg' : 'm'}</small>
+                                    </div>
+                                </div>
+                            )}
                             <div style={{ ...S.card, textAlign: 'center', marginBottom: 0 }}>
                                 <div style={{ color: '#aaa', fontSize: 11, fontWeight: 'bold' }}>RULONLAR</div>
                                 <div style={{ fontSize: 24, fontWeight: 'bold' }}>{rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.color_code || 'kg') === unitView).length} <small style={{ fontSize: 10, opacity: 0.5 }}>ta</small></div>
@@ -412,9 +421,10 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     {Object.entries(
                                         rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.color_code || 'kg') === unitView)
                                             .reduce((acc, r) => {
-                                                const type = r.fabric_name || 'Noma\'lum';
-                                                if (!acc[type]) acc[type] = { weight: 0, rolls: 0, unit: unitView === 'kg' ? 'kg' : 'm' };
+                                                const type = r.fabric_name || "Noma'lum";
+                                                if (!acc[type]) acc[type] = { weight: 0, tara: 0, rolls: 0, unit: unitView === 'kg' ? 'kg' : 'm' };
                                                 acc[type].weight += (Number(statusView === 'bruto' ? r.bruto : r.neto) || 0);
+                                                if (statusView === 'neto') acc[type].tara += ((Number(r.bruto) || 0) - (Number(r.neto) || 0));
                                                 acc[type].rolls += 1;
                                                 return acc;
                                             }, {})
@@ -425,7 +435,12 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                                 <div style={{ fontSize: 11, color: '#888' }}>{s.rolls} ta rulon</div>
                                             </div>
                                             <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                <div style={{ fontSize: 16, fontWeight: 'bold', color: statusView === 'bruto' ? (unitView === 'kg' ? '#FFAB40' : '#4FC3F7') : '#81C784' }}>{s.weight.toFixed(0)} <small style={{ fontSize: 10 }}>{s.unit}</small></div>
+                                                <div>
+                                                    <div style={{ fontSize: 16, fontWeight: 'bold', color: statusView === 'bruto' ? (unitView === 'kg' ? '#FFAB40' : '#4FC3F7') : '#81C784' }}>{s.weight.toFixed(0)} <small style={{ fontSize: 10 }}>{s.unit}</small></div>
+                                                    {statusView === 'neto' && s.tara > 0 && (
+                                                        <div style={{ fontSize: 11, color: '#ff5252', fontWeight: 'bold' }}>Tara: {s.tara.toFixed(1)}</div>
+                                                    )}
+                                                </div>
                                                 <ChevronRight size={16} color="#444" />
                                             </div>
                                         </div>
@@ -441,11 +456,12 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     {Object.entries(
                                         rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType) && (r.color_code || 'kg') === unitView)
                                             .reduce((acc, r) => {
-                                                const color = r.color || 'Noma\'lum';
+                                                const color = r.color || "Noma'lum";
                                                 const gramaj = r.gramaj ? `${r.gramaj} gr` : '';
                                                 const key = `${color} ${gramaj}`.trim();
-                                                if (!acc[key]) acc[key] = { color, gramaj, weight: 0, rolls: 0, unit: unitView === 'kg' ? 'kg' : 'm' };
+                                                if (!acc[key]) acc[key] = { color, gramaj, weight: 0, tara: 0, rolls: 0, unit: unitView === 'kg' ? 'kg' : 'm' };
                                                 acc[key].weight += (Number(statusView === 'bruto' ? r.bruto : r.neto) || 0);
+                                                if (statusView === 'neto') acc[key].tara += ((Number(r.bruto) || 0) - (Number(r.neto) || 0));
                                                 acc[key].rolls += 1;
                                                 return acc;
                                             }, {})
@@ -459,7 +475,12 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                                 </div>
                                             </div>
                                             <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                <div style={{ fontSize: 14, fontWeight: 'bold' }}>{s.weight.toFixed(1)} <small style={{ fontSize: 10 }}>{s.unit}</small></div>
+                                                <div>
+                                                    <div style={{ fontSize: 14, fontWeight: 'bold' }}>{s.weight.toFixed(1)} <small style={{ fontSize: 10 }}>{s.unit}</small></div>
+                                                    {statusView === 'neto' && s.tara > 0 && (
+                                                        <div style={{ fontSize: 11, color: '#ff5252', fontWeight: 'bold' }}>Tara: {s.tara.toFixed(1)}</div>
+                                                    )}
+                                                </div>
                                                 <ChevronRight size={16} color="#444" />
                                             </div>
                                         </div>
@@ -474,11 +495,13 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     {Object.entries(
                                         rolls.filter(r => r && (statusView === 'bruto' ? r.status === 'BRUTO' : r.status === 'KONTROLDAN_OTDI') && (r.fabric_name === selStatusType) && (r.color_code || 'kg') === unitView)
                                             .reduce((acc, r) => {
-                                                const colorKey = `${r.color || 'Noma\'lum'} ${r.gramaj ? `${r.gramaj} gr` : ''}`.trim();
+                                                const colorKey = `${r.color || "Noma'lum"} ${r.gramaj ? `${r.gramaj} gr` : ''}`.trim();
                                                 if (colorKey !== selStatusColor) return acc;
-                                                const bn = r.batch_number || 'Noma\'lum';
-                                                if (!acc[bn]) acc[bn] = { weight: 0, rolls: 0, unit: unitView === 'kg' ? 'kg' : 'm' };
+                                                const bn = r.batch_number || "Noma'lum";
+                                                if (!acc[bn]) acc[bn] = { weight: 0, brutoSum: 0, tara: 0, rolls: 0, unit: unitView === 'kg' ? 'kg' : 'm' };
                                                 acc[bn].weight += (Number(statusView === 'bruto' ? r.bruto : r.neto) || 0);
+                                                acc[bn].brutoSum += (Number(r.bruto) || 0);
+                                                if (statusView === 'neto') acc[bn].tara += ((Number(r.bruto) || 0) - (Number(r.neto) || 0));
                                                 acc[bn].rolls += 1;
                                                 return acc;
                                             }, {})
@@ -493,6 +516,9 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
                                                 <div style={{ fontSize: 14, fontWeight: 'bold' }}>{s.weight.toFixed(1)} <small style={{ fontSize: 10 }}>{s.unit}</small></div>
+                                                {statusView === 'neto' && s.tara > 0 && (
+                                                    <div style={{ fontSize: 12, color: '#ff5252', fontWeight: 'bold', marginTop: 2 }}>Tara: {s.tara.toFixed(1)} {s.unit}</div>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
