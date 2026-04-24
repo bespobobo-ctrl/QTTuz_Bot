@@ -1375,9 +1375,11 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                                 l.action_type === 'WEIGHT_BRUTO' ? '#FFD700' :
                                                     l.action_type === 'KONTROLDAN_OTDI' ? '#00e676' :
                                                         l.action_type === 'INSPECTION_START' ? '#FFAB40' :
-                                                            '#FFAB40';
+                                                            l.action_type === 'BATCH_COMPLETED' ? '#FFD700' :
+                                                                '#FFAB40';
 
-                            const batch = batches.find(b => String(b.id) === String(l.batch_id));
+                            const bId = String(l.batch_id);
+                            const b = batches.find(x => String(x.id) === bId);
 
                             return (
                                 <motion.div
@@ -1390,48 +1392,47 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                         padding: '12px 16px',
                                         borderLeft: `3px solid ${actionColor}`,
                                         background: 'rgba(255,255,255,0.02)',
-                                        marginBottom: 0,
-                                        fontSize: 13
+                                        marginBottom: 0
                                     }}
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <div style={{ flex: 1 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                                <b style={{ color: actionColor, textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.5 }}>
+                                                <b style={{ color: actionColor, textTransform: 'uppercase', fontSize: 10, letterSpacing: 0.5 }}>
                                                     {l.action_type?.replace(/_/g, ' ')}
                                                 </b>
                                                 <span style={{ fontSize: 10, color: '#555' }}>•</span>
-                                                <span style={{ fontSize: 11, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <span style={{ fontSize: 10, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
                                                     <Clock size={10} /> {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
 
-                                            <div style={{ fontWeight: '600', color: '#eee', marginBottom: 4 }}>
+                                            <div style={{ fontWeight: '600', color: '#eee', marginBottom: 2, fontSize: 13 }}>
                                                 {l.item_name}
-                                                {batch && (
-                                                    <span style={{ marginLeft: 8, color: '#4FC3F7', fontSize: 11, background: 'rgba(79,195,247,0.1)', padding: '2px 6px', borderRadius: 4 }}>
-                                                        {batch.batch_number}
+                                                {b && (
+                                                    <span style={{ marginLeft: 8, color: '#4FC3F7', fontSize: 10, background: 'rgba(79,195,247,0.1)', padding: '1px 5px', borderRadius: 4 }}>
+                                                        {b.batch_number}
                                                     </span>
                                                 )}
                                             </div>
 
-                                            {batch && (
-                                                <div style={{ fontSize: 11, color: '#888' }}>
-                                                    {batch.fabric_name} • {batch.color}
+                                            {b && (
+                                                <div style={{ fontSize: 11, color: '#555' }}>
+                                                    {b.fabric_name} • {b.color}
                                                 </div>
                                             )}
                                         </div>
 
-                                        <div style={{ textAlign: 'right', minWidth: 80 }}>
+                                        <div style={{ textAlign: 'right', minWidth: 70 }}>
                                             {l.quantity && (
-                                                <div style={{ fontWeight: '800', fontSize: 16, color: actionColor }}>
+                                                <div style={{ fontWeight: '800', fontSize: 15, color: actionColor }}>
                                                     {Number(l.quantity).toFixed(1)}
-                                                    <small style={{ fontSize: 9, marginLeft: 2, fontWeight: 'normal', color: '#666' }}>
-                                                        {batch?.color_code === 'meter' ? 'm' : 'kg'}
+                                                    <small style={{ fontSize: 9, marginLeft: 2, fontWeight: 'normal', color: '#444' }}>
+                                                        {b?.color_code === 'meter' ? 'm' : 'kg'}
                                                     </small>
                                                 </div>
                                             )}
-                                            <div style={{ fontSize: 10, color: '#444', marginTop: 4 }}>
+                                            <div style={{ fontSize: 9, color: '#333', marginTop: 2 }}>
                                                 {date.toLocaleDateString()}
                                             </div>
                                         </div>
@@ -1439,6 +1440,7 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                 </motion.div>
                             );
                         })}
+                        {(data.whLog || []).length === 0 && <div style={{ textAlign: 'center', padding: 40, opacity: 0.3 }}>Hali hech qanday amal yo'q</div>}
                     </div>
                 </motion.div>
             )}
