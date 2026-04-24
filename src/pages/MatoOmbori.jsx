@@ -1391,94 +1391,90 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                     </div>
 
                     <div style={{ display: 'grid', gap: 12 }}>
-                        {(data.whLog || [])
-                            .filter(l => {
-                                if (!l || !l.action_type) return false;
-                                const type = String(l.action_type).trim().toUpperCase();
-                                if (histFilter === 'all') return true;
-                                if (histFilter === 'kirim') return type.includes('KIRIM');
-                                if (histFilter === 'inspect') return ['INSPECTION_START', 'KONTROLDAN_OTDI', 'BRAK', 'WEIGHT_NETO', 'VERDICT_CONFIRMED', 'WEIGHT_BRUTO'].includes(type);
-                                if (histFilter === 'delete') return type.includes('DELETE');
-                                return true;
-                            })
-                            .map((l, idx) => {
-                                const date = new Date(l.timestamp || l.created_at);
-                                const aType = (l.action_type || '').toUpperCase();
+                        {(!data.whLog || data.whLog.length === 0) ? (
+                            <div style={{ textAlign: 'center', padding: 100, opacity: 0.2 }}>Tarix bo'sh (Bazadan ma'lumot kelmadi)</div>
+                        ) : (
+                            data.whLog
+                                .filter(l => {
+                                    if (histFilter === 'all') return true;
+                                    const type = (l.action_type || '').toUpperCase();
+                                    if (histFilter === 'kirim') return type === 'KIRIM';
+                                    if (histFilter === 'inspect') return ['INSPECTION_START', 'KONTROLDAN_OTDI', 'BRAK', 'WEIGHT_NETO', 'VERDICT_CONFIRMED'].includes(type);
+                                    if (histFilter === 'delete') return type === 'DELETE';
+                                    return true;
+                                })
+                                .map((l, idx) => {
+                                    const date = new Date(l.timestamp || l.created_at);
+                                    const aType = (l.action_type || '').toUpperCase();
 
-                                let label = aType;
-                                let color = '#FFAB40';
-                                let icon = <History size={14} />;
+                                    let label = aType;
+                                    let color = '#FFAB40';
+                                    let icon = <History size={14} />;
 
-                                if (aType === 'KIRIM') { label = "🏢 YANGI KIRIM"; color = "#4FC3F7"; }
-                                else if (aType === 'VERDICT_CONFIRMED') { label = "⚖️ VAZN TASDIQLANDI"; color = "#81C784"; }
-                                else if (aType === 'INSPECTION_START') { label = "🔍 KONTROLGA OLINDI"; color = "#FFD700"; }
-                                else if (aType === 'KONTROLDAN_OTDI') { label = "✅ NETO TAYYOR"; color = "#00e676"; }
-                                else if (aType === 'BRAK') { label = "❌ BRAK ANIQLANDI"; color = "#ff5252"; }
-                                else if (aType === 'DELETE') { label = "🗑️ O'CHIRILDI"; color = "#ff5252"; }
-                                else if (aType === 'BATCH_COMPLETED') { label = "📦 PARTIYA TO'LDI"; color = "#FFD700"; }
+                                    if (aType === 'KIRIM') { label = "🏢 YANGI KIRIM"; color = "#4FC3F7"; }
+                                    else if (aType === 'VERDICT_CONFIRMED') { label = "⚖️ VAZN TASDIQLANDI"; color = "#81C784"; }
+                                    else if (aType === 'INSPECTION_START') { label = "🔍 KONTROLGA OLINDI"; color = "#FFD700"; }
+                                    else if (aType === 'KONTROLDAN_OTDI') { label = "✅ NETO TAYYOR"; color = "#00e676"; }
+                                    else if (aType === 'BRAK') { label = "❌ BRAK ANIQLANDI"; color = "#ff5252"; }
+                                    else if (aType === 'DELETE') { label = "🗑️ O'CHIRILDI"; color = "#ff5252"; }
+                                    else if (aType === 'BATCH_COMPLETED') { label = "📦 PARTIYA TO'LDI"; color = "#FFD700"; }
 
-                                const b = batches.find(x => String(x.id) === String(l.batch_id));
+                                    const b = batches.find(x => String(x.id) === String(l.batch_id));
 
-                                return (
-                                    <motion.div
-                                        key={l.id}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: Math.min(idx * 0.01, 0.3) }}
-                                        style={{
-                                            ...S.card,
-                                            padding: '12px 16px',
-                                            borderLeft: `4px solid ${color}`,
-                                            background: 'rgba(255,255,255,0.02)',
-                                            marginBottom: 0
-                                        }}
-                                    >
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                                    <span style={{ color: color, fontWeight: '900', fontSize: 10, letterSpacing: 0.5 }}>
-                                                        {label}
-                                                    </span>
-                                                    <span style={{ color: '#444', fontSize: 10 }}>•</span>
-                                                    <span style={{ fontSize: 10, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                        <Clock size={10} /> {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </span>
-                                                </div>
-
-                                                <div style={{ fontWeight: '600', color: '#eee', marginBottom: 2, fontSize: 13 }}>
-                                                    {l.item_name}
-                                                </div>
-
-                                                {b && (
-                                                    <div style={{ fontSize: 11, color: '#666' }}>
-                                                        <span style={{ color: '#4FC3F7' }}>#{b.batch_number}</span> • {b.fabric_name} ({b.color})
+                                    return (
+                                        <motion.div
+                                            key={l.id}
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: Math.min(idx * 0.01, 0.3) }}
+                                            style={{
+                                                ...S.card,
+                                                padding: '12px 16px',
+                                                borderLeft: `4px solid ${color}`,
+                                                background: 'rgba(255,255,255,0.02)',
+                                                marginBottom: 0
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                                        <span style={{ color: color, fontWeight: '900', fontSize: 10, letterSpacing: 0.5 }}>
+                                                            {label}
+                                                        </span>
+                                                        <span style={{ color: '#444', fontSize: 10 }}>•</span>
+                                                        <span style={{ fontSize: 10, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                            <Clock size={10} /> {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
                                                     </div>
-                                                )}
-                                            </div>
 
-                                            <div style={{ textAlign: 'right', marginLeft: 15 }}>
-                                                {l.quantity && (
-                                                    <div style={{ fontWeight: '800', fontSize: 15, color: color }}>
-                                                        {Number(l.quantity).toFixed(1)}
-                                                        <small style={{ fontSize: 9, marginLeft: 2, fontWeight: 'normal', color: '#444' }}>
-                                                            {b?.color_code === 'meter' ? 'm' : 'kg'}
-                                                        </small>
+                                                    <div style={{ fontWeight: '600', color: '#eee', marginBottom: 2, fontSize: 13 }}>
+                                                        {l.item_name}
                                                     </div>
-                                                )}
-                                                <div style={{ fontSize: 9, color: '#333', marginTop: 4 }}>
-                                                    {date.toLocaleDateString()}
+
+                                                    {b && (
+                                                        <div style={{ fontSize: 11, color: '#666' }}>
+                                                            <span style={{ color: '#4FC3F7' }}>#{b.batch_number}</span> • {b.fabric_name} ({b.color})
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div style={{ textAlign: 'right', marginLeft: 15 }}>
+                                                    {l.quantity && (
+                                                        <div style={{ fontWeight: '800', fontSize: 15, color: color }}>
+                                                            {Number(l.quantity).toFixed(1)}
+                                                            <small style={{ fontSize: 9, marginLeft: 2, fontWeight: 'normal', color: '#444' }}>
+                                                                {b?.color_code === 'meter' ? 'm' : 'kg'}
+                                                            </small>
+                                                        </div>
+                                                    )}
+                                                    <div style={{ fontSize: 9, color: '#333', marginTop: 4 }}>
+                                                        {date.toLocaleDateString()}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </motion.div>
-                                );
-                            })}
-
-                        {(data.whLog || []).length === 0 && (
-                            <div style={{ textAlign: 'center', padding: 100, opacity: 0.2 }}>
-                                <History size={48} style={{ marginBottom: 15 }} />
-                                <div>Tarix hali bo'sh</div>
-                            </div>
+                                        </motion.div>
+                                    );
+                                })
                         )}
                     </div>
                 </motion.div>
