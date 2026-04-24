@@ -48,7 +48,7 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
     const batches = data.whBatches || [];
 
     const readyBatches = batches.filter(b =>
-        rolls.some(r => r.batch_id === b.id && r.status === 'BRUTO')
+        rolls.some(r => String(r.batch_id) === String(b.id) && r.status === 'BRUTO')
     );
 
     const handleInspect = async () => {
@@ -311,7 +311,7 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                             {parseColor(activeBatch.color).type} | {parseColor(activeBatch.color).col}
                         </p>
                         <div style={{ padding: '10px 0', borderTop: '1px solid #2a2a40', marginTop: 15 }}>
-                            {rolls.filter(r => r.batch_id === activeBatch.id).map((r, i) => (
+                            {rolls.filter(r => String(r.batch_id) === String(activeBatch.id)).map((r, i) => (
                                 <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #1a1a2e' }}>
                                     <div>
                                         <span style={{ color: '#555', marginRight: 10 }}>{i + 1}.</span>
@@ -343,7 +343,7 @@ export default function OmborchiPanel({ tab, data, load, showMsg }) {
                         <div style={{ ...S.card, textAlign: 'center', opacity: 0.5, padding: 50 }}>Partiyalar mavjud emas</div>
                     ) : (
                         readyBatches.map(b => {
-                            const batchRolls = rolls.filter(r => r.batch_id === b.id);
+                            const batchRolls = rolls.filter(r => String(r.batch_id) === String(b.id));
                             const inspectedCount = batchRolls.filter(r => r.status !== 'BRUTO').length;
                             return (
                                 <div key={b.id} style={{ ...S.card, cursor: 'pointer' }} onClick={() => setActiveBatch(b)}>
