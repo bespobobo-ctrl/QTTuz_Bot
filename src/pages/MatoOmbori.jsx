@@ -1389,79 +1389,76 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                     </div>
 
                     <div style={{ display: 'grid', gap: 10 }}>
-                        {[...(data.whLog || [])]
+                        {(data.whLog || [])
                             .filter(l => {
+                                if (!l) return false;
                                 if (histFilter === 'all') return true;
                                 if (histFilter === 'kirim') return l.action_type === 'KIRIM';
                                 if (histFilter === 'inspect') return ['INSPECTION_START', 'KONTROLDAN_OTDI', 'BRAK'].includes(l.action_type);
                                 if (histFilter === 'delete') return l.action_type === 'DELETE';
                                 return true;
                             })
-                            .sort((a, b) => new Date(b.timestamp || b.created_at) - new Date(a.timestamp || a.created_at))
                             .map((l, idx) => {
                                 const date = new Date(l.timestamp || l.created_at);
+                                const aType = l.action_type || '';
                                 const actionColor =
-                                    l.action_type === 'KIRIM' ? '#4FC3F7' :
-                                        l.action_type === 'DELETE' ? '#ff5252' :
-                                            l.action_type === 'VERDICT_CONFIRMED' ? '#81C784' :
-                                                l.action_type === 'BRAK' ? '#ff5252' :
-                                                    l.action_type === 'WEIGHT_BRUTO' ? '#FFD700' :
-                                                        l.action_type === 'KONTROLDAN_OTDI' ? '#00e676' :
-                                                            l.action_type === 'INSPECTION_START' ? '#FFAB40' :
-                                                                l.action_type === 'BATCH_COMPLETED' ? '#FFD700' :
-                                                                    '#FFAB40';
+                                    aType === 'KIRIM' ? '#4FC3F7' :
+                                        aType === 'DELETE' ? '#ff5252' :
+                                            aType === 'VERDICT_CONFIRMED' ? '#81C784' :
+                                                aType === 'BRAK' ? '#ff5252' :
+                                                    aType === 'KONTROLDAN_OTDI' ? '#00e676' :
+                                                        ['WEIGHT_BRUTO', 'INSPECTION_START', 'BATCH_COMPLETED'].includes(aType) ? '#FFD700' :
+                                                            '#FFAB40';
 
-                                const bId = String(l.batch_id);
-                                const b = batches.find(x => String(x.id) === bId);
+                                const b = batches.find(x => String(x.id) === String(l.batch_id));
 
                                 return (
                                     <motion.div
                                         key={l.id}
-                                        initial={{ opacity: 0, y: 10 }}
+                                        initial={{ opacity: 0, y: 5 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: Math.min(idx * 0.01, 0.4) }}
+                                        transition={{ delay: Math.min(idx * 0.01, 0.3) }}
                                         style={{
                                             ...S.card,
-                                            padding: '14px',
+                                            padding: '12px 14px',
                                             borderLeft: `4px solid ${actionColor}`,
-                                            background: 'rgba(255,255,255,0.03)',
+                                            background: 'rgba(255,255,255,0.02)',
                                             marginBottom: 0
                                         }}
                                     >
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                                                    <b style={{ color: actionColor, textTransform: 'uppercase', fontSize: 9, letterSpacing: 0.5 }}>
-                                                        {l.action_type?.replace(/_/g, ' ')}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                                                    <b style={{ color: actionColor, textTransform: 'uppercase', fontSize: 9 }}>
+                                                        {aType.replace(/_/g, ' ')}
                                                     </b>
-                                                    <span style={{ fontSize: 9, color: '#444' }}>•</span>
-                                                    <span style={{ fontSize: 10, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    <span style={{ fontSize: 9, color: '#333' }}>•</span>
+                                                    <span style={{ fontSize: 10, color: '#666', display: 'flex', alignItems: 'center', gap: 3 }}>
                                                         <Clock size={10} /> {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                 </div>
 
-                                                <div style={{ fontWeight: 'bold', color: '#fff', marginBottom: 4, fontSize: 14 }}>
+                                                <div style={{ fontWeight: 'bold', color: '#eee', marginBottom: 2, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                     {l.item_name}
                                                 </div>
 
                                                 {b && (
-                                                    <div style={{ fontSize: 11, color: '#888', display: 'flex', gap: 8 }}>
-                                                        <span style={{ color: '#4FC3F7' }}>#{b.batch_number}</span>
-                                                        <span>{b.fabric_name} • {b.color}</span>
+                                                    <div style={{ fontSize: 11, color: '#777', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                        <span style={{ color: '#4FC3F7' }}>#{b.batch_number}</span> • {b.fabric_name}
                                                     </div>
                                                 )}
                                             </div>
 
-                                            <div style={{ textAlign: 'right', minWidth: 70 }}>
+                                            <div style={{ textAlign: 'right', marginLeft: 10 }}>
                                                 {l.quantity && (
-                                                    <div style={{ fontWeight: '900', fontSize: 16, color: actionColor }}>
+                                                    <div style={{ fontWeight: '800', fontSize: 14, color: actionColor }}>
                                                         {Number(l.quantity).toFixed(1)}
-                                                        <small style={{ fontSize: 9, marginLeft: 2, fontWeight: 'normal', color: '#666' }}>
+                                                        <small style={{ fontSize: 8, marginLeft: 2, fontWeight: 'normal', color: '#555' }}>
                                                             {b?.color_code === 'meter' ? 'm' : 'kg'}
                                                         </small>
                                                     </div>
                                                 )}
-                                                <div style={{ fontSize: 9, color: '#444', marginTop: 4 }}>
+                                                <div style={{ fontSize: 9, color: '#444', marginTop: 2 }}>
                                                     {date.toLocaleDateString()}
                                                 </div>
                                             </div>
@@ -1469,18 +1466,10 @@ export default function MatoOmboriPanel({ tab, data, load, showMsg }) {
                                     </motion.div>
                                 );
                             })}
-                        {((data.whLog || []).filter(l => {
-                            if (histFilter === 'all') return true;
-                            if (histFilter === 'kirim') return l.action_type === 'KIRIM';
-                            if (histFilter === 'inspect') return ['INSPECTION_START', 'KONTROLDAN_OTDI', 'BRAK'].includes(l.action_type);
-                            if (histFilter === 'delete') return l.action_type === 'DELETE';
-                            return true;
-                        })).length === 0 && (
-                                <div style={{ textAlign: 'center', padding: 60, background: 'rgba(255,255,255,0.01)', borderRadius: 20 }}>
-                                    <History size={40} color="#222" style={{ marginBottom: 15 }} />
-                                    <div style={{ color: '#555', fontSize: 14 }}>Ushbu turdagi amallar topilmadi</div>
-                                </div>
-                            )}
+
+                        {(data.whLog || []).length === 0 && (
+                            <div style={{ textAlign: 'center', padding: 50, opacity: 0.2 }}>Bo'sh</div>
+                        )}
                     </div>
                 </motion.div>
             )}
