@@ -10,7 +10,8 @@ import {
 export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
     const [f, setF] = useState({
         name: '', cat: 'Tugma', unit: 'dona', qty: '', dept: '', status: 'OMBORDA', supplier: '', supplier_phone: '',
-        color: '', size: '', description: ''
+        color: '', size: '', description: '',
+        order_date: new Date().toISOString().split('T')[0], expected_date: ''
     });
     const [kStep, setKStep] = useState('dept'); // dept, mode, form
     const [kMode, setKMode] = useState('new'); // new, existing
@@ -60,7 +61,9 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                     target_dept: f.dept,
                     color: f.color,
                     size: f.size,
-                    description: f.description
+                    description: f.description,
+                    order_date: f.order_date,
+                    expected_date: f.expected_date
                 }).select().single();
 
                 if (error) throw error;
@@ -70,7 +73,9 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                     action_type: f.status === 'KUTILMOQDA' ? 'ORDER' : 'KIRIM',
                     quantity: Number(f.qty),
                     party_number: f.supplier,
-                    notes: `Yangi kirim: ${f.name} - ${f.supplier} (${f.supplier_phone}) (${f.dept})`
+                    notes: f.status === 'KUTILMOQDA'
+                        ? `Buyurtma qilindi: ${f.name} (Kutilmoqda: ${f.expected_date})`
+                        : `Yangi kirim: ${f.name} - ${f.supplier} (${f.supplier_phone}) (${f.dept})`
                 });
 
                 showMsg("Yangi mahsulot saqlandi!");
@@ -288,6 +293,19 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                                 <option value="KUTILMOQDA">KUTILMOQDA ⏳</option>
                             </select>
                         </div>
+
+                        {f.status === 'KUTILMOQDA' && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, padding: 20, background: 'rgba(255,171,64,0.05)', borderRadius: 18, border: '1px solid rgba(255,171,64,0.2)' }}>
+                                <div>
+                                    <label style={S.label}><Calendar size={14} color="#FFAB40" /> Zakaz sanasi</label>
+                                    <input style={S.input} type="date" value={f.order_date} onChange={e => setF({ ...f, order_date: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label style={S.label}><Calendar size={14} color="#00e676" /> Kelish sanasi</label>
+                                    <input style={S.input} type="date" value={f.expected_date} onChange={e => setF({ ...f, expected_date: e.target.value })} />
+                                </div>
+                            </div>
+                        )}
 
                         <div style={{ display: 'flex', gap: 12 }}>
                             <button onClick={() => setKStep('mode')} style={{ ...S.btn, background: '#333', flex: 1 }}>BEKOR</button>
