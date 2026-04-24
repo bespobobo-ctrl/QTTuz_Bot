@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
-    const [f, setF] = useState({ name: '', cat: 'Tugma', unit: 'dona', qty: '', dept: 'Ombor bo\'limi', status: 'OMBORDA' });
+    const [f, setF] = useState({ name: '', cat: 'Tugma', unit: 'dona', qty: '', dept: 'Ombor bo\'limi', status: 'OMBORDA', supplier: '' });
     const [qrData, setQrData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [selDept, setSelDept] = useState('HAMMASI');
@@ -41,12 +41,13 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                 accessory_id: inserted.id,
                 action_type: f.status === 'KUTILMOQDA' ? 'ORDER' : 'KIRIM',
                 quantity: Number(f.qty),
-                notes: `${f.status === 'KUTILMOQDA' ? 'Buyurtma' : 'Kirim'}: ${f.name} (${f.dept})`
+                party_number: f.supplier, // Taminochi sifatida party_number ishlatamiz
+                notes: `${f.status === 'KUTILMOQDA' ? 'Buyurtma' : 'Kirim'}: ${f.name} - ${f.supplier} (${f.dept})`
             });
 
             showMsg("Muvaffaqiyatli saqlandi!");
-            if (f.status === 'OMBORDA') setQrData({ ...inserted, target_dept: f.dept });
-            setF(p => ({ ...p, name: '', qty: '', status: 'OMBORDA' }));
+            if (f.status === 'OMBORDA') setQrData({ ...inserted, target_dept: f.dept, supplier: f.supplier });
+            setF(p => ({ ...p, name: '', qty: '', status: 'OMBORDA', supplier: '' }));
             load(true);
         } catch (e) {
             showMsg("Xata: " + e.message, "err");
@@ -57,145 +58,147 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
     const S = {
         page: { paddingBottom: 80 },
         card: {
-            background: 'rgba(30, 30, 50, 0.6)',
-            backdropFilter: 'blur(10px)',
-            padding: 24,
-            borderRadius: 24,
-            border: '1px solid rgba(255,255,255,0.08)',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.4)',
-            marginBottom: 20
+            background: 'rgba(30, 31, 55, 0.7)',
+            backdropFilter: 'blur(16px)',
+            padding: '28px 24px',
+            borderRadius: 28,
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 15px 45px rgba(0,0,0,0.45)',
+            marginBottom: 24,
+            overflow: 'hidden'
         },
-        statBox: (color) => ({
-            flex: 1,
-            padding: '20px 15px',
-            background: `linear-gradient(135deg, ${color}22, ${color}05)`,
-            borderRadius: 22,
-            border: `1px solid ${color}33`,
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 5
-        }),
-        inputGroup: { display: 'grid', gap: 18 },
         input: {
             width: '100%',
-            padding: '16px 20px',
-            background: 'rgba(0,0,0,0.2)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 16,
+            padding: '16px 18px',
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 18,
             color: '#fff',
             outline: 'none',
-            fontSize: 16,
-            transition: 'all 0.3s ease',
+            fontSize: 15,
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             boxSizing: 'border-box'
         },
-        label: { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' },
+        label: { fontSize: 11, color: 'rgba(255,255,255,0.45)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 7, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' },
         btn: {
             padding: '18px 24px',
-            background: 'linear-gradient(90deg, #BA68C8, #9C27B0)',
+            background: 'linear-gradient(135deg, #BA68C8 0%, #8E24AA 100%)',
             color: '#fff',
-            borderRadius: 18,
+            borderRadius: 20,
             border: 'none',
             fontWeight: '900',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 10,
+            gap: 12,
             cursor: 'pointer',
-            boxShadow: '0 8px 25px rgba(186, 104, 200, 0.4)',
+            boxShadow: '0 10px 30px rgba(186, 104, 200, 0.35)',
             width: '100%',
             fontSize: 16,
-            textTransform: 'uppercase'
+            textTransform: 'uppercase',
+            letterSpacing: '1px'
         },
         overlay: { position: 'fixed', inset: 0, background: '#fff', zIndex: 9999, overflow: 'auto', padding: 25, color: '#000' }
     };
 
     if (tab === 'kirim') {
         return (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={S.page}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 25 }}>
-                    <div style={{ padding: 12, background: 'rgba(186, 104, 200, 0.15)', borderRadius: 15 }}>
+            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} style={S.page}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 30 }}>
+                    <div style={{ width: 56, height: 56, background: 'linear-gradient(135deg, rgba(186,104,200,0.2), rgba(186,104,200,0.05))', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Download size={28} color="#BA68C8" />
                     </div>
-                    <h1 style={{ fontSize: 24, margin: 0, color: '#fff', fontWeight: '800' }}>Yangi Kirim</h1>
+                    <div>
+                        <h1 style={{ fontSize: 26, margin: 0, color: '#fff', fontWeight: '900' }}>Kirim Bo'limi</h1>
+                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', fontWeight: '500' }}>Yangi aksesuarlar va buyurtmalarni ro'yxatga olish</div>
+                    </div>
                 </div>
 
                 <div style={S.card}>
-                    <div style={S.inputGroup}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 15 }}>
+                    <div style={{ display: 'grid', gap: 24 }}>
+                        {/* Row 1: Name & Status */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 18 }}>
                             <div>
-                                <label style={S.label}><Box size={14} /> Mahsulot Nomi</label>
+                                <label style={S.label}><Box size={14} color="#BA68C8" /> Mahsulot Nomi</label>
                                 <input style={S.input} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} placeholder="Masalan: Ip 40/2 Qizil" />
                             </div>
                             <div>
-                                <label style={S.label}><Clock size={14} /> Status</label>
-                                <select style={{ ...S.input, border: f.status === 'KUTILMOQDA' ? '1px solid #FFAB40' : '1px solid rgba(255,255,255,0.1)' }}
-                                    value={f.status} onChange={e => setF({ ...f, status: e.target.value })}>
+                                <label style={S.label}><Clock size={14} color="#FFAB40" /> Status</label>
+                                <select style={{ ...S.input, color: f.status === 'KUTILMOQDA' ? '#FFAB40' : '#00e676' }} value={f.status} onChange={e => setF({ ...f, status: e.target.value })}>
                                     <option value="OMBORDA">OMBORDA ✅</option>
                                     <option value="KUTILMOQDA">KUTILMOQDA ⏳</option>
                                 </select>
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+                        {/* Row 2: Category & Unit */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
                             <div>
-                                <label style={S.label}><Tag size={14} /> Toifa (Qo'lda yozish mumkin)</label>
+                                <label style={S.label}><Tag size={14} color="#BA68C8" /> Mahsulot Toifasi</label>
                                 <input list="cats" style={S.input} value={f.cat} onChange={e => setF({ ...f, cat: e.target.value })} placeholder="Toifani yozing..." />
                                 <datalist id="cats">
                                     {CATS_SUGGEST.map(c => <option key={c} value={c} />)}
                                 </datalist>
                             </div>
                             <div>
-                                <label style={S.label}><Hash size={14} /> O'lchov Birligi</label>
+                                <label style={S.label}><Hash size={14} color="#BA68C8" /> O'lchov Birligi</label>
                                 <select style={S.input} value={f.unit} onChange={e => setF({ ...f, unit: e.target.value })}>
                                     {UNITS.map(u => <option key={u} value={u}>{u.toUpperCase()}</option>)}
                                 </select>
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: 15 }}>
+                        {/* Row 3: Supplier (Taminochi) - NEW */}
+                        <div>
+                            <label style={S.label}><MapPin size={14} color="#BA68C8" /> Taminochi (Yetkazib beruvchi)</label>
+                            <input style={S.input} value={f.supplier} onChange={e => setF({ ...f, supplier: e.target.value })} placeholder="Kompaniya yoki shaxs nomi..." />
+                        </div>
+
+                        {/* Row 4: Qty & Dept */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: 18 }}>
                             <div>
-                                <label style={S.label}><Package size={14} /> Miqdori</label>
+                                <label style={S.label}><Package size={14} color="#BA68C8" /> Miqdori</label>
                                 <input style={S.input} type="number" value={f.qty} onChange={e => setF({ ...f, qty: e.target.value })} placeholder="0" />
                             </div>
                             <div>
-                                <label style={S.label}><MapPin size={14} /> Qaysi Bo'limga?</label>
+                                <label style={S.label}><ChevronRight size={14} color="#BA68C8" /> Qaysi Bo'limga?</label>
                                 <select style={S.input} value={f.dept} onChange={e => setF({ ...f, dept: e.target.value })}>
                                     {DEPTS.map(d => <option key={d} value={d}>{d}</option>)}
                                 </select>
                             </div>
                         </div>
 
-                        <motion.button whileTap={{ scale: 0.97 }} onClick={handleKirim} disabled={loading}
+                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleKirim} disabled={loading}
                             style={{
-                                ...S.btn, background: f.status === 'KUTILMOQDA' ? 'linear-gradient(90deg, #FF9100, #FF6D00)' : S.btn.background,
-                                boxShadow: f.status === 'KUTILMOQDA' ? '0 8px 25px rgba(255, 145, 0, 0.4)' : S.btn.boxShadow
+                                ...S.btn, background: f.status === 'KUTILMOQDA' ? 'linear-gradient(135deg, #FF9100, #F57C00)' : S.btn.background,
+                                boxShadow: f.status === 'KUTILMOQDA' ? '0 10px 30px rgba(255, 145, 0, 0.3)' : S.btn.boxShadow
                             }}>
-                            {loading ? 'YUKLANMOQDA...' : f.status === 'KUTILMOQDA' ? 'BUYURTMANI SAQLASH' : 'KIRIM QILISH'}
+                            {loading ? 'YUKLANMOQDA...' : f.status === 'KUTILMOQDA' ? 'BUYURTMANI RO\'YXATGA OLISH' : 'KIRIM QILISH VA PASPORT'}
                         </motion.button>
                     </div>
                 </div>
 
                 <AnimatePresence>
                     {qrData && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={S.overlay}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
-                                <button onClick={() => window.print()} style={{ ...S.btn, width: 'auto', background: '#000' }}><Printer size={20} /> CHOP ETISH</button>
-                                <button onClick={() => setQrData(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={32} /></button>
+                        <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 100 }} style={S.overlay}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
+                                <motion.button whileTap={{ scale: 0.95 }} onClick={() => window.print()} style={{ ...S.btn, width: 'auto', background: '#111', padding: '16px 32px' }}><Printer size={22} /> CHOP ETISH</motion.button>
+                                <motion.button whileTap={{ scale: 0.95 }} onClick={() => setQrData(null)} style={{ background: '#f0f0f0', border: 'none', width: 50, height: 50, borderRadius: 25, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={28} color="#000" /></motion.button>
                             </div>
-                            <div style={{ border: '3px solid #000', padding: 40, borderRadius: 30, textAlign: 'center', maxWidth: 450, margin: '0 auto', fontFamily: 'sans-serif' }}>
-                                <div style={{ fontSize: 32, fontWeight: '900', letterSpacing: 2, marginBottom: 10 }}>AKSESUAR</div>
-                                <div style={{ fontSize: 18, color: '#666', borderBottom: '2px solid #000', display: 'inline-block', paddingBottom: 5, marginBottom: 25 }}>PASPORTI</div>
+                            <div style={{ border: '4px solid #000', padding: 50, borderRadius: 40, textAlign: 'center', maxWidth: 450, margin: '0 auto', background: '#fff' }}>
+                                <div style={{ fontSize: 36, fontWeight: '1000', letterSpacing: 4, marginBottom: 5 }}>AKSESUAR</div>
+                                <div style={{ fontSize: 16, color: '#000', borderBottom: '3px solid #000', display: 'inline-block', paddingBottom: 5, marginBottom: 35, fontWeight: '800' }}>PASPORTI</div>
 
-                                <div style={{ textAlign: 'left', background: '#f9f9f9', padding: 25, borderRadius: 15, marginBottom: 30, fontSize: 18 }}>
-                                    <div style={{ marginBottom: 10 }}><b>NOMI:</b> {qrData.name}</div>
-                                    <div style={{ marginBottom: 10 }}><b>MIQDORI:</b> <span style={{ fontSize: 24 }}>{qrData.quantity} {qrData.unit}</span></div>
-                                    <div style={{ color: '#d32f2f' }}><b>BO'LIM:</b> {qrData.target_dept}</div>
+                                <div style={{ textAlign: 'left', background: '#f5f5f5', padding: 30, borderRadius: 25, marginBottom: 40, border: '1px solid #ddd' }}>
+                                    <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}><b>NOMI:</b> <span>{qrData.name}</span></div>
+                                    <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}><b>TAMINOCHI:</b> <span>{qrData.supplier || '-'}</span></div>
+                                    <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}><b>MIQDORI:</b> <span style={{ fontSize: 28, fontWeight: '900' }}>{qrData.quantity} {qrData.unit}</span></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#d32f2f', borderTop: '2px dashed #ccc', paddingTop: 15, marginTop: 10 }}><b>MANZIL:</b> <b style={{ fontSize: 18 }}>{qrData.target_dept}</b></div>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                    <QRCodeCanvas value={`AKSESUAR:${qrData.id}`} size={220} level="H" includeMargin={true} />
+                                    <QRCodeCanvas value={`AKSESUAR:${qrData.id}`} size={240} level="H" includeMargin={true} />
                                 </div>
-                                <div style={{ marginTop: 20, fontSize: 12, color: '#aaa' }}>RADAR ORQALI SKANERLANG</div>
+                                <div style={{ marginTop: 25, fontSize: 13, color: '#666', fontWeight: 'bold' }}>QTTURBINA AUTOMATION SYSTEM</div>
                             </div>
                         </motion.div>
                     )}
