@@ -150,6 +150,10 @@ export default function App() {
             ...(user.role !== 'omborchi' ? [{ id: 'kirim', icon: Download, l: 'Kirim' }] : []),
             { id: 'ombor', icon: Package, l: user.role === 'omborchi' ? 'Tayyor (Dam)' : user.role === 'aksesuvar_ombori' ? 'Ombor' : 'Bruto' },
             ...(user.role === 'mato_ombori' ? [{ id: 'neto', icon: CheckCircle2, l: 'Neto' }] : []),
+            ...(user.role === 'bichuv' ? [
+              { id: 'orders', icon: ShoppingCart, l: 'Buyurtma' },
+              { id: 'nastil', icon: Layers, l: 'Nastil' }
+            ] : []),
             ...(user.role === 'mato_ombori' ? [{ id: 'history', icon: History, l: 'Istoriya' }] : []),
             ...(user.role === 'bichuv' ? [{ id: 'history', icon: History, l: 'Tarix' }] : []),
             ...(user.role === 'aksesuvar_ombori' ? [{ id: 'analytics', icon: TrendingUp, l: 'Tahlil' }] : [])
