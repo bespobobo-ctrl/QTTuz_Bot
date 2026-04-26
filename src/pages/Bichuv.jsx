@@ -273,12 +273,7 @@ export default function BichuvPanel({ tab, data, load, showMsg }) {
                     </div>
                 ) : (
                     <div>
-                        {accessories.filter(a =>
-                            !a.category?.toLowerCase().includes('ip') &&
-                            !a.name?.toLowerCase().includes('ip') &&
-                            !a.category?.toLowerCase().includes('tikuv') &&
-                            !a.name?.toLowerCase().includes('tikuv')
-                        ).map(a => (
+                        {accessories.filter(a => a.target_dept === 'Bichuv bo\'limi').map(a => (
                             <div key={a.id} style={S.card}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
