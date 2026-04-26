@@ -145,6 +145,7 @@ export default function App() {
         <nav style={S.nav}>
           {[
             { id: 'dashboard', icon: LayoutDashboard, l: user.role === 'omborchi' ? 'Bruto Partiyalar' : 'Asosiy' },
+            ...(user.role === 'bichuv' ? [{ id: 'ombor', icon: Package, l: 'Ombor' }] : []),
             ...(user.role === 'aksesuvar_ombori' || user.role === 'bichuv' ? [{ id: 'orders', icon: ShoppingCart, l: 'Buyurtma' }] : []),
             ...(user.role === 'bichuv' ? [{ id: 'nastil', icon: Layers, l: 'Nastil' }] : []),
             { id: 'scan', icon: Scan, l: 'Skayner' },
