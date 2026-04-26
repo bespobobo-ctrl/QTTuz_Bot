@@ -123,8 +123,16 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
     const handleDelete = async (item) => {
         setLoading(true);
         try {
+            // Avval log yozamiz (chunki keyin mahsulot ochib ketsa accessory_id topilmasligi mumkin)
+            await supabase.from('accessory_log').insert({
+                action_type: 'DELETE',
+                quantity: item.quantity,
+                notes: `MAHSULOT O'CHIRILDI: ${item.name} (${item.target_dept} bo'limidan)`
+            });
+
             const { error } = await supabase.from('accessories').delete().eq('id', item.id);
             if (error) throw error;
+
             showMsg("O'chirildi!");
             setConfirmDelete(null);
             load(true);
@@ -603,8 +611,9 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                 };
 
                 const aLogs = getFilteredLogs();
-                const totalOut = aLogs.filter(l => l.action_type === 'ADJUSTMENT' && l.quantity < 0).reduce((a, b) => a + Math.abs(b.quantity), 0);
-                const totalIn = aLogs.filter(l => l.action_type === 'KIRIM' || l.action_type === 'ORDER').reduce((a, b) => a + b.quantity, 0);
+                const totalOut = aLogs.filter(l => (l.action_type === 'ADJUSTMENT' && l.quantity < 0) || l.action_type === 'DELETE').reduce((a, b) => a + Math.abs(b.quantity), 0);
+                const totalIn = aLogs.filter(l => l.action_type === 'KIRIM' || l.action_type === 'ORDER' || (l.action_type === 'ADJUSTMENT' && l.quantity > 0)).reduce((a, b) => a + b.quantity, 0);
+                const totalUpdates = aLogs.filter(l => l.action_type === 'UPDATE').length;
 
                 // Bo'limlar bo'yicha sarf (Chiqim)
                 const usageByDept = {};
@@ -630,14 +639,18 @@ export default function AksesuarlarOmbori({ tab, data, load, showMsg }) {
                             ))}
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 25 }}>
-                            <div style={{ ...S.card, marginBottom: 0, background: 'rgba(0,230,118,0.05)', border: '1px solid rgba(0,230,118,0.2)' }}>
-                                <div style={{ fontSize: 10, opacity: 0.5, fontWeight: '800' }}>JAMI KIRIM</div>
-                                <div style={{ fontSize: 24, fontWeight: '900', color: '#00e676', marginTop: 5 }}>+{totalIn}</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 25 }}>
+                            <div style={{ ...S.card, marginBottom: 0, padding: 12, background: 'rgba(0,230,118,0.05)', border: '1px solid rgba(0,230,118,0.2)' }}>
+                                <div style={{ fontSize: 9, opacity: 0.5, fontWeight: '800' }}>JAMI KIRIM</div>
+                                <div style={{ fontSize: 18, fontWeight: '900', color: '#00e676', marginTop: 5 }}>+{totalIn}</div>
                             </div>
-                            <div style={{ ...S.card, marginBottom: 0, background: 'rgba(255,82,82,0.05)', border: '1px solid rgba(255,82,82,0.2)' }}>
-                                <div style={{ fontSize: 10, opacity: 0.5, fontWeight: '800' }}>JAMI SARF</div>
-                                <div style={{ fontSize: 24, fontWeight: '900', color: '#ff5252', marginTop: 5 }}>-{totalOut}</div>
+                            <div style={{ ...S.card, marginBottom: 0, padding: 12, background: 'rgba(255,82,82,0.05)', border: '1px solid rgba(255,82,82,0.2)' }}>
+                                <div style={{ fontSize: 9, opacity: 0.5, fontWeight: '800' }}>JAMI SARF</div>
+                                <div style={{ fontSize: 18, fontWeight: '900', color: '#ff5252', marginTop: 5 }}>-{totalOut}</div>
+                            </div>
+                            <div style={{ ...S.card, marginBottom: 0, padding: 12, background: 'rgba(37,117,252,0.05)', border: '1px solid rgba(37,117,252,0.2)' }}>
+                                <div style={{ fontSize: 9, opacity: 0.5, fontWeight: '800' }}>TAHRIRLAR</div>
+                                <div style={{ fontSize: 18, fontWeight: '900', color: '#2575FC', marginTop: 5 }}>{totalUpdates}</div>
                             </div>
                         </div>
 
